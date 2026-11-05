@@ -302,6 +302,17 @@
     return { score, xp, coins, mult, prevBest, newBest: score > prevBest && score > 0, unlocked, dailyDone, levelUp: lvAfter > lvBefore ? lvAfter : 0, levelRewards };
   };
 
+  /* ---------- Récompense hors partie (grands jeux : énigme résolue, île terminée…) ---------- */
+  PA.award = function (xp, coins) {
+    const lvBefore = PA.levelInfo().level;
+    xp = Math.max(0, Math.round(xp || 0)); coins = Math.max(0, Math.round(coins || 0));
+    state.xp += xp; addCoins(coins);
+    const lvAfter = PA.levelInfo().level;
+    const levelRewards = lvAfter > lvBefore && PA.levelRewards ? PA.levelRewards(lvBefore, lvAfter) : [];
+    save();
+    return { xp, coins, levelUp: lvAfter > lvBefore ? lvAfter : 0, levelRewards };
+  };
+
   /* ---------- Boutique : thèmes ---------- */
   PA.themes = [
     { id: 'prisme', name: 'Prisme', price: 0, colors: ['#a855f7', '#22d3ee', '#facc15'] },
