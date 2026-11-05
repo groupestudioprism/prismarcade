@@ -1,0 +1,369 @@
+/* =========================================================
+   Prism Arcade — noyau de la plateforme
+   Profil joueur, XP / niveaux, pièces, succès, défis du jour,
+   sons synthétisés et petits outils de dessin partagés.
+   Studio Prism — Prism Game
+   ========================================================= */
+(function () {
+  'use strict';
+
+  const PA = (window.PA = { games: [], gameById: {}, version: '1.0.0' });
+
+  /* ---------- Registre des jeux ---------- */
+  PA.register = function (def) {
+    def.achievements = def.achievements || [];
+    def.daily = def.daily || [10, 20, 40];
+    def.xp = def.xp || ((s) => s);
+    PA.games.push(def);
+    PA.gameById[def.id] = def;
+  };
+
+  /* ---------- Petit système d'événements ---------- */
+  const listeners = {};
+  PA.on = (ev, fn) => ((listeners[ev] = listeners[ev] || []).push(fn));
+  PA.emit = (ev, data) => (listeners[ev] || []).forEach((fn) => fn(data));
+
+  /* ---------- Palette spectrale ---------- */
+  PA.spectrum = ['#a855f7', '#6366f1', '#22d3ee', '#34d399', '#facc15', '#fb923c', '#f43f5e'];
+
+  /* ---------- Hasard déterministe ---------- */
+  PA.mulberry = function (seed) {
+    let a = seed >>> 0;
+    return function () {
+      a |= 0; a = (a + 0x6d2b79f5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  };
+  PA.hash = function (str) {
+    let h = 2166136261;
+    for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return h >>> 0;
+  };
+
+  /* =========================================================
+     Sauvegarde (localStorage). Toute la persistance passe par
+     load()/save() : c'est ici qu'on branchera Firebase plus tard.
+     ========================================================= */
+  const KEY = 'prismarcade.v1';
+  const defaults = () => ({
+    version: 1,
+    name: 'Joueur',
+    xp: 0,
+    coins: 0,
+    coinsEarned: 0,
+    theme: 'prisme',
+    themes: ['prisme'],
+    muted: false,
+    games: {},
+    ach: {},
+    daily: null,
+    dailyStreak: 0,
+    lastDailyDone: '',
+    totals: { plays: 0, time: 0 },
+    created: Date.now(),
+  });
+
+  let state = defaults();
+  function load() {
+    try {
+      const raw = localStorage.getItem(KEY);
+      if (raw) state = Object.assign(defaults(), JSON.parse(raw));
+    } catch (e) { state = defaults(); }
+  }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* stockage indisponible */ }
+    PA.emit('change', state);
+  }
+  load();
+
+  PA.state = () => state;
+  PA.save = save;
+  PA.reset = function () { state = defaults(); save(); };
+  PA.exportData = () => JSON.stringify(state, null, 2);
+  PA.importData = function (json) {
+    const obj = JSON.parse(json);
+    if (typeof obj !== 'object' || obj === null || typeof obj.xp !== 'number') throw new Error('Fichier invalide');
+    state = Object.assign(defaults(), obj);
+    save();
+  };
+
+  PA.gameStats = function (id) {
+    if (!state.games[id]) state.games[id] = { best: 0, plays: 0, total: 0, last: 0, extra: {}, data: {} };
+    const g = state.games[id];
+    g.extra = g.extra || {}; g.data = g.data || {};
+    return g;
+  };
+
+  /* ---------- Niveaux ---------- */
+  PA.xpNeeded = (lvl) => Math.round(120 * Math.pow(lvl, 1.35));
+  PA.levelInfo = function (xp = state.xp) {
+    let level = 1, rest = xp, need = PA.xpNeeded(1);
+    while (rest >= need) { rest -= need; level++; need = PA.xpNeeded(level); }
+    return { level, into: rest, need, pct: rest / need };
+  };
+  const TITLES = [
+    [1, 'Novice'], [3, 'Apprenti'], [5, 'Joueur confirmé'], [8, 'Vétéran'],
+    [12, 'Expert'], [16, 'Maître du prisme'], [20, 'Légende Arcade'],
+  ];
+  PA.title = function (level = PA.levelInfo().level) {
+    let t = TITLES[0][1];
+    for (const [l, name] of TITLES) if (level >= l) t = name;
+    return t;
+  };
+
+  /* ---------- Succès globaux ---------- */
+  PA.globalAchievements = [
+    { id: 'first', name: 'Première partie', desc: 'Jouer une partie', test: (s) => s.totals.plays >= 1 },
+    { id: 'p25', name: 'Habitué', desc: 'Jouer 25 parties', test: (s) => s.totals.plays >= 25 },
+    { id: 'p100', name: 'Accro du joystick', desc: 'Jouer 100 parties', test: (s) => s.totals.plays >= 100 },
+    { id: 'all', name: 'Touche-à-tout', desc: 'Jouer à tous les jeux', test: (s) => PA.games.every((g) => s.games[g.id] && s.games[g.id].plays > 0) },
+    { id: 'lv5', name: 'Niveau 5', desc: 'Atteindre le niveau 5', test: () => PA.levelInfo().level >= 5 },
+    { id: 'lv10', name: 'Niveau 10', desc: 'Atteindre le niveau 10', test: () => PA.levelInfo().level >= 10 },
+    { id: 'rich', name: 'Collectionneur', desc: 'Gagner 1 000 pièces au total', test: (s) => s.coinsEarned >= 1000 },
+    { id: 'daily3', name: 'Régulier', desc: 'Finir les défis du jour 3 jours de suite', test: (s) => s.dailyStreak >= 3 },
+  ];
+
+  PA.allAchievements = function () {
+    const list = PA.globalAchievements.map((a) => ({ key: 'global:' + a.id, game: null, ...a }));
+    PA.games.forEach((g) => g.achievements.forEach((a) => list.push({ key: g.id + ':' + a.id, game: g, ...a })));
+    return list;
+  };
+
+  /* ---------- Défis du jour ---------- */
+  const dateKey = (d = new Date()) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  PA.dateKey = dateKey;
+
+  PA.getDaily = function () {
+    const today = dateKey();
+    if (state.daily && state.daily.date === today && state.daily.list) return state.daily;
+    const rng = PA.mulberry(PA.hash('prism-' + today));
+    const pool = PA.games.slice();
+    const pick = () => pool.splice(Math.floor(rng() * pool.length), 1)[0];
+    const g1 = pick(), g2 = pick();
+    const tier = (g) => g.daily[Math.min(g.daily.length - 1, Math.floor(rng() * g.daily.length))];
+    const list = [
+      { id: 'c1', type: 'score', game: g1.id, target: tier(g1), progress: 0, done: false },
+      { id: 'c2', type: 'score', game: g2.id, target: tier(g2), progress: 0, done: false },
+      rng() < 0.5
+        ? { id: 'c3', type: 'plays', target: 3 + Math.floor(rng() * 3), progress: 0, done: false }
+        : { id: 'c3', type: 'variety', target: 3, progress: 0, done: false, seen: [] },
+    ];
+    state.daily = { date: today, list, reward: { xp: 80, coins: 40 }, bonusClaimed: false };
+    save();
+    return state.daily;
+  };
+
+  PA.dailyLabel = function (c) {
+    const g = PA.gameById[c.game];
+    if (c.type === 'score') return `Atteindre ${c.target.toLocaleString('fr-FR')} points à ${g ? g.name : '?'}`;
+    if (c.type === 'plays') return `Jouer ${c.target} parties`;
+    return `Jouer à ${c.target} jeux différents`;
+  };
+
+  function updateDaily(gameId, score) {
+    const d = PA.getDaily();
+    const done = [];
+    d.list.forEach((c) => {
+      if (c.done) return;
+      if (c.type === 'score' && c.game === gameId) c.progress = Math.max(c.progress, score);
+      if (c.type === 'plays') c.progress++;
+      if (c.type === 'variety') {
+        c.seen = c.seen || [];
+        if (!c.seen.includes(gameId)) c.seen.push(gameId);
+        c.progress = c.seen.length;
+      }
+      if (c.progress >= c.target) {
+        c.done = true;
+        state.xp += d.reward.xp; addCoins(d.reward.coins);
+        done.push(c);
+      }
+    });
+    if (!d.bonusClaimed && d.list.every((c) => c.done)) {
+      d.bonusClaimed = true;
+      addCoins(100);
+      const y = new Date(); y.setDate(y.getDate() - 1);
+      state.dailyStreak = state.lastDailyDone === dateKey(y) ? state.dailyStreak + 1 : 1;
+      state.lastDailyDone = d.date;
+      done.push({ bonus: true });
+    }
+    return done;
+  }
+
+  function addCoins(n) { state.coins += n; state.coinsEarned += n; }
+
+  /* ---------- Enregistrer le résultat d'une partie ---------- */
+  PA.recordResult = function (gameId, result, seconds = 0) {
+    const def = PA.gameById[gameId];
+    const g = PA.gameStats(gameId);
+    const score = Math.max(0, Math.floor(result.score || 0));
+    const prevBest = g.best;
+    g.plays++; g.total += score; g.last = score;
+    if (score > g.best) g.best = score;
+    for (const k in result) {
+      if (k !== 'score' && typeof result[k] === 'number') g.extra[k] = Math.max(g.extra[k] || 0, result[k]);
+    }
+    state.totals.plays++;
+    state.totals.time += seconds;
+
+    const lvBefore = PA.levelInfo().level;
+    const xp = Math.max(5, Math.round(def.xp(score, result)));
+    const coins = Math.max(1, Math.round(xp / 4));
+    state.xp += xp; addCoins(coins);
+
+    const unlocked = [];
+    def.achievements.forEach((a) => {
+      const key = gameId + ':' + a.id;
+      if (!state.ach[key] && a.test(result, g)) {
+        state.ach[key] = Date.now(); state.xp += 60; addCoins(25);
+        unlocked.push({ ...a, game: def });
+      }
+    });
+    const dailyDone = updateDaily(gameId, score);
+    // les succès globaux se vérifient après la mise à jour du reste
+    PA.globalAchievements.forEach((a) => {
+      const key = 'global:' + a.id;
+      if (!state.ach[key] && a.test(state)) {
+        state.ach[key] = Date.now(); state.xp += 100; addCoins(50);
+        unlocked.push({ ...a, game: null });
+      }
+    });
+    const lvAfter = PA.levelInfo().level;
+    save();
+    return { score, xp, coins, prevBest, newBest: score > prevBest && score > 0, unlocked, dailyDone, levelUp: lvAfter > lvBefore ? lvAfter : 0 };
+  };
+
+  /* ---------- Boutique : thèmes ---------- */
+  PA.themes = [
+    { id: 'prisme', name: 'Prisme', price: 0, colors: ['#a855f7', '#22d3ee', '#facc15'] },
+    { id: 'aurore', name: 'Aurore boréale', price: 200, colors: ['#34d399', '#22d3ee', '#818cf8'] },
+    { id: 'magma', name: 'Magma', price: 300, colors: ['#f43f5e', '#fb923c', '#facc15'] },
+    { id: 'ocean', name: 'Abysses', price: 300, colors: ['#0ea5e9', '#6366f1', '#2dd4bf'] },
+    { id: 'neon', name: 'Néon rose', price: 450, colors: ['#ec4899', '#a855f7', '#f0abfc'] },
+    { id: 'or', name: 'Lingot', price: 900, colors: ['#fde047', '#f59e0b', '#fef3c7'] },
+  ];
+  PA.buyTheme = function (id) {
+    const t = PA.themes.find((x) => x.id === id);
+    if (!t || state.themes.includes(id) || state.coins < t.price) return false;
+    state.coins -= t.price; state.themes.push(id); state.theme = id; save();
+    return true;
+  };
+  PA.setTheme = function (id) { if (state.themes.includes(id)) { state.theme = id; save(); } };
+  PA.setName = function (n) { state.name = String(n).trim().slice(0, 18) || 'Joueur'; save(); };
+
+  /* =========================================================
+     Sons synthétisés (Web Audio, aucun fichier à charger)
+     ========================================================= */
+  let actx = null;
+  function audio() {
+    if (!actx) {
+      try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; }
+    }
+    if (actx.state === 'suspended') actx.resume();
+    return actx;
+  }
+  PA.tone = function (freq, dur = 0.1, type = 'sine', vol = 0.12, slide = 0, delay = 0) {
+    if (state.muted) return;
+    const a = audio(); if (!a) return;
+    const t = a.currentTime + delay;
+    const o = a.createOscillator(), gn = a.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(freq, t);
+    if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(30, freq * slide), t + dur);
+    gn.gain.setValueAtTime(0.0001, t);
+    gn.gain.exponentialRampToValueAtTime(vol, t + 0.008);
+    gn.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(gn); gn.connect(a.destination);
+    o.start(t); o.stop(t + dur + 0.03);
+  };
+  const SFX = {
+    tap: () => PA.tone(540, 0.06, 'triangle', 0.1),
+    move: () => PA.tone(320, 0.05, 'triangle', 0.07, 1.4),
+    point: () => PA.tone(880, 0.09, 'sine', 0.1, 1.5),
+    coin: () => { PA.tone(990, 0.07, 'square', 0.05); PA.tone(1320, 0.12, 'square', 0.05, 1, 0.06); },
+    hit: () => PA.tone(220, 0.1, 'square', 0.06, 0.6),
+    break: () => PA.tone(660, 0.08, 'triangle', 0.09, 0.5),
+    power: () => PA.tone(440, 0.25, 'triangle', 0.1, 3),
+    combo: () => { PA.tone(660, 0.08, 'sine', 0.1); PA.tone(990, 0.12, 'sine', 0.1, 1, 0.07); },
+    perfect: () => { PA.tone(784, 0.1, 'sine', 0.1); PA.tone(1175, 0.16, 'sine', 0.09, 1, 0.08); },
+    shoot: () => PA.tone(900, 0.05, 'square', 0.025, 0.4),
+    boom: () => PA.tone(150, 0.25, 'sawtooth', 0.08, 0.3),
+    over: () => { PA.tone(392, 0.18, 'sawtooth', 0.07, 0.8); PA.tone(262, 0.35, 'sawtooth', 0.07, 0.5, 0.16); },
+    level: () => [523, 659, 784, 1047].forEach((f, i) => PA.tone(f, 0.14, 'triangle', 0.09, 1, i * 0.08)),
+    win: () => [659, 784, 988, 1319].forEach((f, i) => PA.tone(f, 0.16, 'sine', 0.09, 1, i * 0.09)),
+  };
+  PA.sfx = (name) => { const f = SFX[name]; if (f) f(); };
+  PA.toggleMute = function () { state.muted = !state.muted; save(); return state.muted; };
+
+  /* =========================================================
+     Outils de dessin pour les jeux
+     ========================================================= */
+  PA.rr = function (g, x, y, w, h, r) {
+    r = Math.max(0, Math.min(r, w / 2, h / 2));
+    g.beginPath();
+    g.moveTo(x + r, y);
+    g.arcTo(x + w, y, x + w, y + h, r);
+    g.arcTo(x + w, y + h, x, y + h, r);
+    g.arcTo(x, y + h, x, y, r);
+    g.arcTo(x, y, x + w, y, r);
+    g.closePath();
+  };
+  PA.text = function (g, str, x, y, size = 20, color = '#fff', align = 'center', weight = 700) {
+    g.font = `${weight} ${size}px Sora, Inter, system-ui, sans-serif`;
+    g.textAlign = align; g.textBaseline = 'middle';
+    g.fillStyle = color; g.fillText(str, x, y);
+  };
+  PA.bg = function (g, W, H, top = '#12112a', bottom = '#07070f') {
+    const gr = g.createLinearGradient(0, 0, 0, H);
+    gr.addColorStop(0, top); gr.addColorStop(1, bottom);
+    g.fillStyle = gr; g.fillRect(0, 0, W, H);
+  };
+  PA.shade = function (hex, amt) {
+    const n = parseInt(hex.slice(1), 16);
+    let r = (n >> 16) & 255, gg = (n >> 8) & 255, b = n & 255;
+    const f = (c) => Math.round(amt < 0 ? c * (1 + amt) : c + (255 - c) * amt);
+    return '#' + ((1 << 24) | (f(r) << 16) | (f(gg) << 8) | f(b)).toString(16).slice(1);
+  };
+  PA.clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+  /* Particules additives */
+  PA.Particles = class {
+    constructor() { this.list = []; }
+    emit(x, y, color, n = 12, speed = 180, life = 0.6, size = 3) {
+      for (let i = 0; i < n; i++) {
+        const a = Math.random() * Math.PI * 2, s = speed * (0.3 + Math.random() * 0.7);
+        this.list.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: life * (0.6 + Math.random() * 0.4), max: life, color, size: size * (0.6 + Math.random() * 0.8) });
+      }
+    }
+    update(dt, gravity = 0) {
+      for (let i = this.list.length - 1; i >= 0; i--) {
+        const p = this.list[i];
+        p.life -= dt;
+        if (p.life <= 0) { this.list.splice(i, 1); continue; }
+        p.vy += gravity * dt; p.vx *= 0.98; p.vy *= 0.98;
+        p.x += p.vx * dt; p.y += p.vy * dt;
+      }
+    }
+    draw(g) {
+      g.save(); g.globalCompositeOperation = 'lighter';
+      for (const p of this.list) {
+        g.globalAlpha = Math.max(0, p.life / p.max);
+        g.fillStyle = p.color;
+        g.beginPath(); g.arc(p.x, p.y, p.size, 0, Math.PI * 2); g.fill();
+      }
+      g.restore();
+    }
+  };
+
+  /* Textes flottants (+10, Parfait !, …) */
+  PA.Floaters = class {
+    constructor() { this.list = []; }
+    add(str, x, y, color = '#fff', size = 22) { this.list.push({ str, x, y, color, size, t: 0 }); }
+    update(dt) { this.list.forEach((f) => { f.t += dt; f.y -= 40 * dt; }); this.list = this.list.filter((f) => f.t < 0.9); }
+    draw(g) {
+      this.list.forEach((f) => { g.globalAlpha = 1 - f.t / 0.9; PA.text(g, f.str, f.x, f.y, f.size, f.color, 'center', 800); });
+      g.globalAlpha = 1;
+    }
+  };
+})();
