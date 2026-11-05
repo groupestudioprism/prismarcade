@@ -2,11 +2,11 @@
 
 **Prism Arcade** est la plateforme de jeux en ligne de **Prism Game**, le pôle jeu vidéo de **Studio Prism**.
 
-Elle propose 10 mini-jeux d'arcade, tous en solo, avec une progression commune à toute la plateforme.
+Elle propose 14 mini-jeux d'arcade, tous en solo, avec une progression commune à toute la plateforme.
 
 ![Logo Prism Arcade](assets/logo.svg)
 
-## Les 10 mini-jeux
+## Les 14 mini-jeux
 
 | Jeu | Principe | Commandes |
 |---|---|---|
@@ -20,14 +20,20 @@ Elle propose 10 mini-jeux d'arcade, tous en solo, avec une progression commune �
 | **Flap** | Franchir les portes de cristal avec un seul bouton | Espace, clic, toucher |
 | **Astro Blast** | Shoot spatial en vagues (tir triple, tir rapide, bouclier) | Glisser, souris, flèches |
 | **Memory Pulse** | Mémoriser des séquences de couleurs et de sons | Toucher, 1 2 3 4 |
+| **Sky Jump** | Rebondir de plateforme en plateforme (tremplins, fissurées, mobiles) | ← →, toucher gauche/droite |
+| **Shard Hit** | Planter des éclats dans un cristal qui tourne, gardien tous les 5 niveaux | Espace, toucher |
+| **Color Sort** | Trier les couleurs dans les tubes, contre la montre | Toucher, 1 à 9 |
+| **Tap Tiles** | Toucher les tuiles en rythme, de plus en plus vite | Toucher, D F J K |
 
 ## La progression
 
-- **XP et niveaux** : chaque partie rapporte de l'XP selon le score. Un titre accompagne le niveau, de « Novice » à « Légende Arcade ».
-- **Pièces** : gagnées à chaque partie, avec chaque succès et chaque défi. Elles se dépensent dans la **boutique**, qui propose pour l'instant des thèmes de couleur pour le site.
-- **Succès** : 3 par jeu, plus 8 succès globaux, soit 38 au total.
-- **Défis du jour** : 3 défis tirés au sort chaque jour (les mêmes pour tous les joueurs). Les finir tous rapporte un bonus de 100 pièces et alimente une série de jours consécutifs.
-- **Profil** : pseudo, statistiques, records par jeu, export et import de la progression.
+- **XP et niveaux** : la courbe est volontairement exigeante (≈ 350 XP pour le niveau 2, ≈ 5 500 XP par niveau vers le niveau 10, ≈ 16 000 vers le niveau 20). Un titre accompagne le niveau, de « Novice » à « Mythe vivant ». Chaque niveau rapporte des pièces ; certains offrent un objet (avatar, cadre) ou un boost.
+- **Pièces** : gagnées à chaque partie, avec les succès, les défis, le cadeau du jour et les classements.
+- **Boutique** (`js/economy.js`) : apparences pour les jeux (oiseau de Flap, serpent, vaisseau, raquette, tuiles, blocs…), avatars, cadres d'avatar (certains animés), thèmes du site, boosts XP ×2 / pièces ×2 et coffres prismatiques (un objet non possédé, tiré selon sa rareté). Rareté : commun, rare, épique, légendaire, exclusif.
+- **Cadeau du jour** : une récompense par jour sur une série de 7 jours (le 7e est un coffre) ; la série repart à zéro si un jour est manqué.
+- **Succès** : 3 par jeu, plus 8 succès globaux.
+- **Défis du jour** : 3 défis tirés au sort chaque jour, avec un bonus de 100 pièces pour les 3.
+- **Classements à cadeaux** : chaque jeu a un classement de la **semaine** (du lundi au dimanche, heure UTC), du **mois** et des records. À la fin d'une période, le podium reçoit automatiquement à sa visite suivante des pièces, de l'XP, des coffres et, pour le 1er, des objets **exclusifs** (cadre « Champion », avatars 🏆 / 👑, thème « Sacre du champion »). Les gains dépendent du rang, de la période et du jeu (coefficient `prize` de chaque jeu). Les trophées s'affichent dans le profil.
 
 ## Compte Studio Prism, sauvegarde en ligne et classements
 
@@ -36,13 +42,15 @@ On peut jouer **sans compte** : la progression reste alors dans le navigateur.
 Avec un **compte Studio Prism** (même projet Firebase `archivision-studioprism` que le site et les autres applications) :
 - la progression est sauvegardée en ligne dans `paPlayers/{uid}` et se retrouve sur tous les appareils ;
 - à la première connexion, la progression « invité » de l'appareil est ajoutée au compte (fusion sans doublon : maxima et unions) ;
-- chaque record est publié dans `paBoards/{jeu}/scores/{uid}` (pseudo + score), et la page **Classements** affiche le top 20 de chaque jeu, ainsi que le rang du joueur.
+- chaque record est publié dans `paBoards/{jeu}/scores/{uid}`, et chaque score de la semaine ou du mois dans `paPeriods/{jeu__w<semaine> | jeu__m<mois>}/scores/{uid}` (pseudo, avatar, cadre, score). Les règles n'acceptent un score que pour la période en cours, calculée avec l'heure du serveur : un podium terminé est définitif.
 
 Prism Arcade **ne crée pas de compte** : l'inscription et la gestion du compte restent sur [studio-prism.com](https://studio-prism.com/). Un compte suspendu, en attente ou supprimé n'entre pas.
 
 Le jeu continue de fonctionner entièrement si Firebase est injoignable : une copie locale par compte est gardée sur l'appareil.
 
-**Règles Firestore** : elles vivent dans le dépôt `Studio-Prism` (`firebase/rules/31-prism-arcade.rules`, assemblées dans `firebase/firestore.rules`). Quand on ajoute un jeu, il faut ajouter son identifiant dans `paGames()`, sinon son classement est refusé.
+**Règles Firestore** : elles vivent dans le dépôt `Studio-Prism` (`firebase/rules/31-prism-arcade.rules`, assemblées dans `firebase/firestore.rules`). Quand on ajoute un jeu, il faut ajouter son identifiant dans `paGames()`, sinon ses classements sont refusés.
+
+Limite connue : les scores sont calculés dans le navigateur, sans serveur (forfait Spark). Un tricheur motivé peut envoyer un faux score ; l'administration peut supprimer une entrée de classement.
 
 Fichiers concernés : `js/cloud.js` (connexion, synchronisation, classements), `js/core.js` (`PA.merge`, `PA.useStore`) et `js/prism-presence.js` (présence dans le tableau de bord Studio Prism, copie de `shared/` du site).
 
@@ -52,6 +60,7 @@ Fichiers concernés : `js/cloud.js` (connexion, synchronisation, classements), `
 index.html            page unique (accueil, profil, boutique, écran de jeu)
 css/style.css         styles
 js/core.js            profil, XP, pièces, succès, défis, sons synthétisés, outils de dessin
+js/economy.js         boutique, coffres, boosts, cadeau du jour, récompenses de niveau et de classement
 js/cloud.js           compte Studio Prism, sauvegarde en ligne, classements
 js/app.js             interface, navigation, lanceur de jeux (pause, résultats)
 js/games/*.js         un fichier par jeu

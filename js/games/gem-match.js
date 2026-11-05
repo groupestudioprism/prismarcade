@@ -4,6 +4,7 @@ PA.register({
   name: 'Gem Match',
   tagline: 'Échange les gemmes, enchaîne les cascades.',
   colors: ['#d946ef', '#1e1b4b'],
+  prize: 1.5,
   icon: '<svg viewBox="0 0 64 64"><path d="M14 8l8 8-8 8-8-8z" fill="#22d3ee"/><circle cx="32" cy="16" r="7" fill="#f43f5e"/><path d="M50 9l7 13H43z" fill="#34d399"/><path d="M14 38l8 8-8 8-8-8z" fill="#22d3ee"/><path d="M32 38l8 8-8 8-8-8z" fill="#22d3ee"/><path d="M50 38l8 8-8 8-8-8z" fill="#22d3ee"/><rect x="4" y="34" width="56" height="24" rx="8" fill="none" stroke="#fff" stroke-width="2.5"/></svg>',
   controls: '<b>Glisser</b> une gemme vers sa voisine, ou <b>toucher</b> deux gemmes côte à côte, pour les échanger.<br>Atteins l\'<b>objectif de points</b> avant la fin des coups pour passer au niveau suivant.',
   daily: [3000, 6000, 10000],

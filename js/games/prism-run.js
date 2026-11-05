@@ -4,6 +4,7 @@ PA.register({
   name: 'Prism Run',
   tagline: 'Change de voie et traverse la bonne couleur.',
   colors: ['#22d3ee', '#7c3aed'],
+  prize: 1,
   icon: '<svg viewBox="0 0 64 64"><rect x="4" y="10" width="17" height="9" rx="3" fill="#f43f5e"/><rect x="23.5" y="10" width="17" height="9" rx="3" fill="#22d3ee"/><rect x="43" y="10" width="17" height="9" rx="3" fill="#facc15"/><circle cx="32" cy="45" r="11" fill="#22d3ee" stroke="#fff" stroke-width="3.5"/><path d="M32 22v8" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".6"/></svg>',
   controls: '<b>← →</b>, <b>Q D</b>, <b>toucher à gauche / à droite</b> ou <b>glisser</b> : changer de voie.<br>Passe chaque barrière dans la case de <b>ta couleur</b>. Ta couleur change après chaque barrière.',
   daily: [15, 30, 50],
@@ -18,6 +19,7 @@ PA.register({
     const COLS = ['#f43f5e', '#22d3ee', '#facc15'];
     const LANES = [100, 240, 380];
     const PY = 590, BAR_H = 34, SPACING = 330;
+    const sk = api.skin() || { ring: '#fff', trail: 14 };
     const fx = new PA.Particles(), fl = new PA.Floaters();
     let lane = 1, px = LANES[1], pc = 1, speed = 280, bars = [], dead = false, t = 0, trail = [], streak = 0, flash = 0;
     let nextY = -60;
@@ -54,7 +56,7 @@ PA.register({
         speed = Math.min(720, 280 + api.score * 6.5);
         px += (LANES[lane] - px) * Math.min(1, dt * 18);
         trail.push({ x: px, y: PY, c: COLS[pc] });
-        if (trail.length > 14) trail.shift();
+        if (trail.length > sk.trail) trail.shift();
         bars.forEach((b) => {
           b.y += speed * dt;
           b.glow = Math.max(0, b.glow - dt * 2);
@@ -109,7 +111,7 @@ PA.register({
           g.save(); g.shadowColor = COLS[pc]; g.shadowBlur = 26;
           g.fillStyle = COLS[pc]; g.beginPath(); g.arc(px, PY, 24, 0, 7); g.fill();
           g.restore();
-          g.lineWidth = 4; g.strokeStyle = '#fff'; g.beginPath(); g.arc(px, PY, 24, 0, 7); g.stroke();
+          g.lineWidth = 4; g.strokeStyle = sk.ring; if (sk.ghost) g.globalAlpha = 0.75 + Math.sin(t * 6) * 0.2; g.beginPath(); g.arc(px, PY, 24, 0, 7); g.stroke(); g.globalAlpha = 1;
           g.fillStyle = 'rgba(255,255,255,.55)'; g.beginPath(); g.arc(px - 8, PY - 8, 6, 0, 7); g.fill();
         }
         fx.draw(g); fl.draw(g);

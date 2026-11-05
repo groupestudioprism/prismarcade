@@ -4,6 +4,7 @@ PA.register({
   name: 'Block Drop',
   tagline: 'Place les pièces, efface lignes et colonnes.',
   colors: ['#facc15', '#c2410c'],
+  prize: 1.25,
   icon: '<svg viewBox="0 0 64 64"><g fill="#fff"><rect x="6" y="6" width="15" height="15" rx="3"/><rect x="24" y="6" width="15" height="15" rx="3"/><rect x="6" y="24" width="15" height="15" rx="3" opacity=".6"/><rect x="43" y="43" width="15" height="15" rx="3" opacity=".6"/></g><g fill="#1e1b4b"><rect x="24" y="24" width="15" height="15" rx="3"/><rect x="24" y="43" width="15" height="15" rx="3"/><rect x="6" y="43" width="15" height="15" rx="3"/></g></svg>',
   controls: '<b>Glisser</b> une pièce depuis le bas jusque sur la grille.<br>Une ligne ou une colonne pleine s\'efface. Effacer plusieurs lignes d\'un coup rapporte un <b>combo</b>. La partie s\'arrête quand plus aucune pièce ne rentre.',
   daily: [800, 1600, 3000],

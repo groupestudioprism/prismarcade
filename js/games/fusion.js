@@ -4,6 +4,7 @@ PA.register({
   name: 'Fusion',
   tagline: 'Fais glisser, fusionne les tuiles, vise 2048.',
   colors: ['#8b5cf6', '#4338ca'],
+  prize: 1.5,
   icon: '<svg viewBox="0 0 64 64"><rect x="6" y="6" width="24" height="24" rx="6" fill="#fff"/><rect x="34" y="6" width="24" height="24" rx="6" fill="#fff" opacity=".55"/><rect x="6" y="34" width="24" height="24" rx="6" fill="#fff" opacity=".55"/><rect x="34" y="34" width="24" height="24" rx="6" fill="#facc15"/><text x="46" y="51" text-anchor="middle" font-family="Sora,sans-serif" font-weight="800" font-size="14" fill="#3b2300">8</text></svg>',
   controls: '<b>Flèches</b>, <b>ZQSD</b> ou <b>glisser</b> : déplacer toutes les tuiles.<br>Deux tuiles identiques fusionnent. La partie s\'arrête quand plus rien ne bouge.',
   daily: [800, 1600, 3000],
@@ -16,7 +17,8 @@ PA.register({
   ],
   create(api) {
     const N = 4, GAP = 12, BX = 30, BY = 190, SIZE = 420, CS = (SIZE - GAP * (N + 1)) / N;
-    const COLORS = ['#5b4fd6', '#7c5cf0', '#a855f7', '#d946ef', '#ec4899', '#f43f5e', '#fb923c', '#f59e0b', '#facc15', '#a3e635', '#34d399', '#22d3ee', '#38bdf8', '#ffffff'];
+    const SKIN = api.skin();
+    const COLORS = SKIN ? SKIN.colors : ['#5b4fd6', '#7c5cf0', '#a855f7', '#d946ef', '#ec4899', '#f43f5e', '#fb923c', '#f59e0b', '#facc15', '#a3e635', '#34d399', '#22d3ee', '#38bdf8', '#ffffff'];
     const cx = (c) => BX + GAP + c * (CS + GAP);
     const cy = (r) => BY + GAP + r * (CS + GAP);
     const fx = new PA.Particles(), fl = new PA.Floaters();

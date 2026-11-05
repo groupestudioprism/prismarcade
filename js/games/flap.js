@@ -4,6 +4,7 @@ PA.register({
   name: 'Flap',
   tagline: 'Un bouton, des portes de cristal, zéro répit.',
   colors: ['#38bdf8', '#1d4ed8'],
+  prize: 1.25,
   icon: '<svg viewBox="0 0 64 64"><rect x="40" y="0" width="14" height="22" rx="3" fill="#fff" opacity=".85"/><rect x="40" y="42" width="14" height="22" rx="3" fill="#fff" opacity=".85"/><circle cx="20" cy="32" r="10" fill="#facc15"/><path d="M12 30c-6-6-10-2-10 2 4 0 7 2 10 2z" fill="#fff"/><circle cx="24" cy="29" r="2.2" fill="#1e1b4b"/></svg>',
   controls: '<b>Espace</b>, <b>↑</b>, <b>clic</b> ou <b>toucher</b> : battre des ailes.<br>Passe entre les portes de cristal. Les portes se resserrent au fil du temps.',
   daily: [10, 20, 35],
@@ -15,6 +16,7 @@ PA.register({
   ],
   create(api) {
     const W = api.W, H = api.H, BX = 140, R = 17, GROUND = H - 70, PW = 74;
+    const sk = api.skin() || { body: '#facc15', wing: '#fff', beak: '#fb923c', glow: '#facc15' };
     const fx = new PA.Particles(), fl = new PA.Floaters();
     let y = H / 2 - 40, vy = 0, started = false, dead = false, pipes = [], t = 0, scroll = 0, wing = 0;
     let stars = Array.from({ length: 50 }, () => ({ x: Math.random() * W, y: Math.random() * (GROUND - 40), s: Math.random() * 1.8 + 0.4 }));
@@ -36,7 +38,7 @@ PA.register({
     function die() {
       if (dead) return;
       dead = true; api.sfx('boom'); api.shake(10);
-      fx.emit(BX, y, '#facc15', 30, 280, 0.8, 3.5);
+      fx.emit(BX, y, sk.body, 30, 280, 0.8, 3.5);
       api.over({});
     }
 
@@ -103,13 +105,13 @@ PA.register({
         // oiseau
         if (!dead || Math.floor(t * 10) % 2) {
           g.save(); g.translate(BX, y); g.rotate(PA.clamp(vy / 900, -0.5, 1.1));
-          g.shadowColor = '#facc15'; g.shadowBlur = 18;
-          g.fillStyle = '#facc15'; g.beginPath(); g.arc(0, 0, R, 0, 7); g.fill();
+          g.shadowColor = sk.glow; g.shadowBlur = 18;
+          g.fillStyle = sk.body; g.beginPath(); g.arc(0, 0, R, 0, 7); g.fill();
           g.shadowBlur = 0;
-          g.fillStyle = '#fff'; g.beginPath(); g.ellipse(-6, 2 - wing * 8, 10, 6 - wing * 2, -0.4 - wing * 0.6, 0, 7); g.fill();
+          g.fillStyle = sk.wing; g.beginPath(); g.ellipse(-6, 2 - wing * 8, 10, 6 - wing * 2, -0.4 - wing * 0.6, 0, 7); g.fill();
           g.fillStyle = '#fff'; g.beginPath(); g.arc(7, -5, 5.5, 0, 7); g.fill();
           g.fillStyle = '#1e1b4b'; g.beginPath(); g.arc(9, -5, 2.6, 0, 7); g.fill();
-          g.fillStyle = '#fb923c'; g.beginPath(); g.moveTo(14, 0); g.lineTo(24, 3); g.lineTo(14, 7); g.fill();
+          g.fillStyle = sk.beak; g.beginPath(); g.moveTo(14, 0); g.lineTo(24, 3); g.lineTo(14, 7); g.fill();
           g.restore();
         }
         fx.draw(g); fl.draw(g);

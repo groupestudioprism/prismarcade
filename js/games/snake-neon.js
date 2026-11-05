@@ -4,6 +4,7 @@ PA.register({
   name: 'Snake Neon',
   tagline: 'Mange, grandis, ne te mords pas la queue.',
   colors: ['#34d399', '#0f766e'],
+  prize: 1,
   icon: '<svg viewBox="0 0 64 64"><path d="M10 46h18V30h16V18" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/><circle cx="44" cy="16" r="2.4" fill="#0f766e"/><circle cx="52" cy="44" r="6" fill="#facc15"/></svg>',
   controls: '<b>Flèches</b>, <b>ZQSD</b> ou <b>glisser</b> : tourner.<br>Les prismes dorés rapportent un gros bonus mais disparaissent vite. Ne touche ni les murs, ni ta queue.',
   daily: [150, 300, 500],
@@ -15,6 +16,7 @@ PA.register({
   ],
   create(api) {
     const W = api.W, CELL = 24, COLS = 20, ROWS = 26, OY = 72;
+    const sk = api.skin() || { h0: 160, h1: 190, glow: '#34d399' };
     const fx = new PA.Particles(), fl = new PA.Floaters();
     let snake = [{ x: 6, y: 13 }, { x: 5, y: 13 }, { x: 4, y: 13 }];
     let dir = { x: 1, y: 0 }, queue = [], acc = 0, food = null, gold = null, eaten = 0, golds = 0, dead = false, t = 0, grow = 0;
@@ -100,10 +102,10 @@ PA.register({
         }
         // serpent
         if (!dead) {
-          g.save(); g.shadowColor = '#34d399'; g.shadowBlur = 14;
+          g.save(); g.shadowColor = sk.glow; g.shadowBlur = 14;
           for (let i = snake.length - 1; i >= 0; i--) {
             const s = snake[i], k = i / Math.max(1, snake.length - 1);
-            g.fillStyle = `hsl(${160 + k * 30} 80% ${62 - k * 20}%)`;
+            g.fillStyle = sk.rainbow ? `hsl(${(i * 24 + t * 120) % 360} 85% 62%)` : `hsl(${sk.h0 + k * (sk.h1 - sk.h0)} 80% ${62 - k * 20}%)`;
             const pad = i === 0 ? 1 : 3;
             PA.rr(g, s.x * CELL + pad, OY + s.y * CELL + pad, CELL - pad * 2, CELL - pad * 2, 7); g.fill();
           }

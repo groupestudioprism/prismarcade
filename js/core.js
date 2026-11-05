@@ -7,7 +7,7 @@
 (function () {
   'use strict';
 
-  const PA = (window.PA = { games: [], gameById: {}, version: '1.1.0' });
+  const PA = (window.PA = { games: [], gameById: {}, version: '1.2.0' });
 
   /* ---------- Registre des jeux ---------- */
   PA.register = function (def) {
@@ -60,6 +60,14 @@
     games: {},
     ach: {},
     boards: {},
+    inv: {},          // objets possédés (boutique, coffres, récompenses) : id → 1
+    equip: {},        // objets équipés : emplacement → id
+    boost: {},        // boosts actifs : xp / coins → parties restantes
+    periods: {},      // meilleurs scores envoyés aux classements de la semaine / du mois : clé → score
+    claims: {},       // récompenses de classement déjà réclamées : clé → 1
+    trophies: {},     // trophées gagnés : clé → { game, kind, rank, score, at }
+    giftDay: '',      // dernier cadeau du jour récupéré
+    giftStreak: 0,
     daily: null,
     dailyStreak: 0,
     lastDailyDone: '',
@@ -112,6 +120,15 @@
       out.ach[k] = Math.min(...v);
     });
     new Set([...Object.keys(a.boards || {}), ...Object.keys(b.boards || {})]).forEach((k) => (out.boards[k] = mx((a.boards || {})[k], (b.boards || {})[k])));
+    out.inv = Object.assign({}, b.inv, a.inv);
+    out.equip = Object.assign({}, b.equip, a.equip);
+    ['boost', 'periods'].forEach((f) => new Set([...Object.keys(a[f] || {}), ...Object.keys(b[f] || {})]).forEach((k) => (out[f][k] = mx((a[f] || {})[k], (b[f] || {})[k]))));
+    out.claims = Object.assign({}, b.claims, a.claims);
+    out.trophies = Object.assign({}, b.trophies, a.trophies);
+    const ga = a.giftDay || '', gb = b.giftDay || '';
+    out.giftDay = ga >= gb ? ga : gb;
+    out.giftStreak = ga === gb ? mx(a.giftStreak, b.giftStreak) : ga > gb ? (a.giftStreak || 0) : (b.giftStreak || 0);
+    if (out.equip.theme) out.theme = String(out.equip.theme).replace(/^theme:/, '');
     const da = a.daily, db = b.daily;
     if (da && db && da.date === db.date && Array.isArray(da.list) && Array.isArray(db.list)) {
       out.daily = JSON.parse(JSON.stringify(da));
@@ -143,15 +160,17 @@
   };
 
   /* ---------- Niveaux ---------- */
-  PA.xpNeeded = (lvl) => Math.round(120 * Math.pow(lvl, 1.35));
+  /* Courbe exigeante : ~350 XP pour le niveau 2, ~2 000 au niveau 5, ~5 500 au niveau 10, ~16 000 au niveau 20 (XP par niveau).
+     Une partie moyenne rapporte 40 à 150 XP : le niveau 10 demande environ 150 parties. */
+  PA.xpNeeded = (lvl) => Math.round(200 + 150 * Math.pow(lvl, 1.55));
   PA.levelInfo = function (xp = state.xp) {
     let level = 1, rest = xp, need = PA.xpNeeded(1);
     while (rest >= need) { rest -= need; level++; need = PA.xpNeeded(level); }
     return { level, into: rest, need, pct: rest / need };
   };
   const TITLES = [
-    [1, 'Novice'], [3, 'Apprenti'], [5, 'Joueur confirmé'], [8, 'Vétéran'],
-    [12, 'Expert'], [16, 'Maître du prisme'], [20, 'Légende Arcade'],
+    [1, 'Novice'], [3, 'Apprenti'], [6, 'Joueur confirmé'], [10, 'Vétéran'],
+    [15, 'Expert'], [20, 'Maître du prisme'], [30, 'Légende Arcade'], [40, 'Mythe vivant'],
   ];
   PA.title = function (level = PA.levelInfo().level) {
     let t = TITLES[0][1];
@@ -254,8 +273,10 @@
     state.totals.time += seconds;
 
     const lvBefore = PA.levelInfo().level;
-    const xp = Math.max(5, Math.round(def.xp(score, result)));
-    const coins = Math.max(1, Math.round(xp / 4));
+    const mult = PA.consumeBoosts ? PA.consumeBoosts() : { xp: 1, coins: 1 };   // boosts achetés en boutique (js/economy.js)
+    const baseXp = Math.max(5, Math.round(def.xp(score, result)));
+    const xp = baseXp * mult.xp;
+    const coins = Math.max(1, Math.round(baseXp / 4)) * mult.coins;
     state.xp += xp; addCoins(coins);
 
     const unlocked = [];
@@ -276,8 +297,9 @@
       }
     });
     const lvAfter = PA.levelInfo().level;
+    const levelRewards = lvAfter > lvBefore && PA.levelRewards ? PA.levelRewards(lvBefore, lvAfter) : [];
     save();
-    return { score, xp, coins, prevBest, newBest: score > prevBest && score > 0, unlocked, dailyDone, levelUp: lvAfter > lvBefore ? lvAfter : 0 };
+    return { score, xp, coins, mult, prevBest, newBest: score > prevBest && score > 0, unlocked, dailyDone, levelUp: lvAfter > lvBefore ? lvAfter : 0, levelRewards };
   };
 
   /* ---------- Boutique : thèmes ---------- */
@@ -289,13 +311,7 @@
     { id: 'neon', name: 'Néon rose', price: 450, colors: ['#ec4899', '#a855f7', '#f0abfc'] },
     { id: 'or', name: 'Lingot', price: 900, colors: ['#fde047', '#f59e0b', '#fef3c7'] },
   ];
-  PA.buyTheme = function (id) {
-    const t = PA.themes.find((x) => x.id === id);
-    if (!t || state.themes.includes(id) || state.coins < t.price) return false;
-    state.coins -= t.price; state.themes.push(id); state.theme = id; save();
-    return true;
-  };
-  PA.setTheme = function (id) { if (state.themes.includes(id)) { state.theme = id; save(); } };
+  PA.addCoins = addCoins;
   PA.setName = function (n) { state.name = String(n).trim().slice(0, 18) || 'Joueur'; save(); };
 
   /* =========================================================

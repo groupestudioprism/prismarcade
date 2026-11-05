@@ -4,6 +4,7 @@ PA.register({
   name: 'Astro Blast',
   tagline: 'Repousse les vagues ennemies, améliore ton vaisseau.',
   colors: ['#6366f1', '#0f172a'],
+  prize: 1.5,
   icon: '<svg viewBox="0 0 64 64"><path d="M32 6l10 30-10-5-10 5z" fill="#fff"/><path d="M22 36l-8 10 12-4zM42 36l8 10-12-4z" fill="#22d3ee"/><path d="M28 40h8l-4 14z" fill="#fb923c"/><circle cx="12" cy="14" r="5" fill="#f43f5e"/><circle cx="52" cy="20" r="4" fill="#f43f5e"/><rect x="31" y="0" width="2" height="4" fill="#facc15"/></svg>',
   controls: '<b>Glisser</b> / <b>souris</b> ou <b>← →</b> (et <b>↑ ↓</b>) : piloter. Le tir est automatique.<br>Ramasse les bonus : <b>tir double</b>, <b>tir rapide</b>, <b>bouclier</b>. 3 vies.',
   repeatKeys: true,
@@ -17,6 +18,7 @@ PA.register({
   ],
   create(api) {
     const W = api.W, H = api.H;
+    const sk = api.skin() || { hull: '#e0e7ff', wing: '#22d3ee', cockpit: '#6366f1', glow: '#818cf8' };
     const fx = new PA.Particles(), fl = new PA.Floaters();
     let ship = { x: W / 2, y: H - 110 }, target = null, keys = {}, lives = 3, inv = 2, shield = 0, dbl = 0, rapid = 0;
     let bullets = [], ebul = [], enemies = [], pows = [], wave = 0, toSpawn = 0, spawnT = 0, fireT = 0, kills = 0, dead = false, banner = 0, t = 0;
@@ -170,10 +172,10 @@ PA.register({
         if (!dead && (inv <= 0 || Math.floor(t * 14) % 2)) {
           g.save(); g.translate(ship.x, ship.y);
           g.fillStyle = '#fb923c'; g.beginPath(); g.moveTo(-6, 16); g.lineTo(0, 26 + Math.random() * 10); g.lineTo(6, 16); g.fill();
-          g.shadowColor = '#818cf8'; g.shadowBlur = 18;
-          g.fillStyle = '#e0e7ff'; g.beginPath(); g.moveTo(0, -24); g.lineTo(13, 14); g.lineTo(0, 8); g.lineTo(-13, 14); g.closePath(); g.fill();
-          g.fillStyle = '#22d3ee'; g.beginPath(); g.moveTo(-13, 8); g.lineTo(-24, 20); g.lineTo(-9, 15); g.fill(); g.beginPath(); g.moveTo(13, 8); g.lineTo(24, 20); g.lineTo(9, 15); g.fill();
-          g.fillStyle = '#6366f1'; g.beginPath(); g.ellipse(0, -4, 4, 8, 0, 0, 7); g.fill();
+          g.shadowColor = sk.glow; g.shadowBlur = 18;
+          g.fillStyle = sk.hull; g.beginPath(); g.moveTo(0, -24); g.lineTo(13, 14); g.lineTo(0, 8); g.lineTo(-13, 14); g.closePath(); g.fill();
+          g.fillStyle = sk.wing; g.beginPath(); g.moveTo(-13, 8); g.lineTo(-24, 20); g.lineTo(-9, 15); g.fill(); g.beginPath(); g.moveTo(13, 8); g.lineTo(24, 20); g.lineTo(9, 15); g.fill();
+          g.fillStyle = sk.cockpit; g.beginPath(); g.ellipse(0, -4, 4, 8, 0, 0, 7); g.fill();
           if (shield) { g.strokeStyle = `rgba(34,211,238,${0.5 + Math.sin(t * 8) * 0.3})`; g.lineWidth = 3; g.beginPath(); g.arc(0, 0, 32, 0, 7); g.stroke(); }
           g.restore();
         }

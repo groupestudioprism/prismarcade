@@ -4,6 +4,7 @@ PA.register({
   name: 'Stack',
   tagline: 'Pose chaque bloc pile sur le précédent.',
   colors: ['#fb923c', '#db2777'],
+  prize: 1,
   icon: '<svg viewBox="0 0 64 64"><rect x="14" y="44" width="36" height="12" rx="3" fill="#fff" opacity=".55"/><rect x="16" y="30" width="34" height="12" rx="3" fill="#fff" opacity=".8"/><rect x="18" y="16" width="30" height="12" rx="3" fill="#fff"/><rect x="30" y="4" width="28" height="10" rx="3" fill="#facc15"/></svg>',
   controls: '<b>Espace</b>, <b>clic</b> ou <b>toucher</b> : poser le bloc.<br>Ce qui dépasse est coupé. Les poses <b>parfaites</b> enchaînées font grandir le bloc.',
   daily: [15, 30, 45],
@@ -24,12 +25,13 @@ PA.register({
       const n = stack.length;
       const fromLeft = n % 2 === 0;
       const speed = Math.min(520, 210 + n * 8);
-      cur = { x: fromLeft ? -top.w : W, w: top.w, dir: fromLeft ? 1 : -1, speed, hue: (top.hue + 9) % 360 };
+      cur = { x: fromLeft ? -top.w : W, w: top.w, dir: fromLeft ? 1 : -1, speed, hue: (top.hue + ((api.skin() || {}).step || 9)) % 360 };
     }
     spawn();
 
     const yOf = (i) => BASE_Y - i * BH;
-    const col = (hue, l = 60) => `hsl(${hue} 85% ${l}%)`;
+    const sk = api.skin() || { sat: 85, light: 60, step: 9 };
+    const col = (hue, l = 60) => `hsl(${hue} ${sk.sat}% ${l + (sk.light - 60)}%)`;
 
     function drop() {
       if (dead || !cur) return;

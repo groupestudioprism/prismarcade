@@ -4,6 +4,7 @@ PA.register({
   name: 'Brick Break',
   tagline: 'Casse toutes les briques, niveau après niveau.',
   colors: ['#f43f5e', '#7c2d12'],
+  prize: 1.5,
   icon: '<svg viewBox="0 0 64 64"><rect x="6" y="8" width="16" height="8" rx="2" fill="#fff"/><rect x="24" y="8" width="16" height="8" rx="2" fill="#facc15"/><rect x="42" y="8" width="16" height="8" rx="2" fill="#fff"/><rect x="15" y="19" width="16" height="8" rx="2" fill="#fff" opacity=".7"/><rect x="33" y="19" width="16" height="8" rx="2" fill="#fff" opacity=".7"/><circle cx="40" cy="40" r="5" fill="#fff"/><rect x="18" y="52" width="28" height="6" rx="3" fill="#fff"/></svg>',
   controls: '<b>Souris</b> / <b>glisser</b> ou <b>← →</b> : déplacer la raquette.<br><b>Espace</b> ou <b>toucher</b> : lancer la balle. 3 vies. Attrape les bonus qui tombent.',
   repeatKeys: true,
@@ -20,6 +21,7 @@ PA.register({
     const OX = (W - (COLS * (BW + GAP) - GAP)) / 2;
     const HP_COL = ['#38bdf8', '#a855f7', '#f43f5e', '#facc15'];
     const POW = { wide: ['#34d399', 'L'], multi: ['#22d3ee', '×3'], slow: ['#a855f7', 'S'], life: ['#f43f5e', '♥'] };
+    const sk = api.skin() || { pad: ['#f43f5e', '#fff'], ball: '#fff', glow: '#fb7185' };
     const fx = new PA.Particles(), fl = new PA.Floaters();
     let level = 1, lives = 3, bricks = [], balls = [], pows = [], keys = {}, dead = false, banner = 0;
     let pad = { x: W / 2, w: 96, wideT: 0 }, slowT = 0, targetX = null, combo = 0;
@@ -190,12 +192,13 @@ PA.register({
           PA.text(g, s, p.x, p.y + 1, 13, '#0b0b16', 'center', 800);
         });
         // raquette
-        g.save(); g.shadowColor = '#fb7185'; g.shadowBlur = 18;
+        g.save(); g.shadowColor = sk.glow; g.shadowBlur = 18;
         const pg = g.createLinearGradient(pad.x - pad.w / 2, 0, pad.x + pad.w / 2, 0);
-        pg.addColorStop(0, '#f43f5e'); pg.addColorStop(0.5, '#fff'); pg.addColorStop(1, '#f43f5e');
+        pg.addColorStop(0, sk.pad[0]); pg.addColorStop(0.5, sk.pad[1]); pg.addColorStop(1, sk.pad[0]);
         PA.rr(g, pad.x - pad.w / 2, PY, pad.w, 14, 7); g.fillStyle = pg; g.fill(); g.restore();
         balls.forEach((b) => {
-          g.save(); g.shadowColor = '#fff'; g.shadowBlur = 16; g.fillStyle = '#fff';
+          if (sk.trail && !b.stuck) { g.save(); g.globalAlpha = 0.35; g.fillStyle = sk.glow; g.beginPath(); g.arc(b.x - b.vx * 0.03, b.y - b.vy * 0.03, 7, 0, 7); g.fill(); g.globalAlpha = 0.15; g.beginPath(); g.arc(b.x - b.vx * 0.06, b.y - b.vy * 0.06, 6, 0, 7); g.fill(); g.restore(); }
+          g.save(); g.shadowColor = sk.ball; g.shadowBlur = 16; g.fillStyle = sk.ball;
           g.beginPath(); g.arc(b.x, b.y, 8, 0, 7); g.fill(); g.restore();
         });
         fx.draw(g); fl.draw(g);

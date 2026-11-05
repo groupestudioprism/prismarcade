@@ -102,7 +102,8 @@
   async function forceOut(code) { pendingNotice = code; stopWatch(); if (fb) await fb.A.signOut(fb.auth).catch(() => {}); }
 
   /* ---------- Conversion pour Firestore ---------- */
-  const CLOUD_KEYS = ['name', 'xp', 'coins', 'coinsEarned', 'theme', 'themes', 'muted', 'games', 'ach', 'boards', 'daily', 'dailyStreak', 'lastDailyDone', 'totals', 'created'];
+  const CLOUD_KEYS = ['name', 'xp', 'coins', 'coinsEarned', 'theme', 'themes', 'muted', 'games', 'ach', 'boards', 'daily', 'dailyStreak', 'lastDailyDone', 'totals', 'created',
+    'inv', 'equip', 'boost', 'periods', 'claims', 'trophies', 'giftDay', 'giftStreak'];
   function toCloud(s) {
     const o = {};
     CLOUD_KEYS.forEach((k) => (o[k] = s[k] === undefined ? null : s[k]));
@@ -143,6 +144,7 @@
     watchProfile(u.uid);
     await push();
     submitBests();
+    claimRewards();
   }
 
   function leave(notice) {
@@ -179,11 +181,37 @@
   document.addEventListener('visibilitychange', () => { if (document.hidden && pushT) push(); });
 
   /* ---------- Classements ---------- */
+  /* Entrée publique : pseudo, avatar et cadre équipés (jamais l'e-mail ni le vrai nom). */
+  function entry(uid, score, F) {
+    const s = PA.state(), av = PA.equipped && PA.equipped('avatar'), fr = PA.equipped && PA.equipped('frame');
+    const o = { uid, name: String(s.name || 'Joueur').slice(0, 18) || 'Joueur', score: Math.floor(score), updatedAt: F.serverTimestamp() };
+    if (av && PA.item(av)) o.avatar = PA.item(av).data.glyph;
+    if (fr) o.frame = String(fr).slice(0, 40);
+    return o;
+  }
+  const boardRef = (F, db, path, uid) => (path.period ? F.doc(db, 'paPeriods', path.period, 'scores', uid) : F.doc(db, 'paBoards', path.game, 'scores', uid));
+
+  /* Score d'une partie : met à jour les classements de la semaine et du mois s'il améliore le score de la période. */
+  async function submitPeriods(gameId, score) {
+    if (C.status !== 'in' || !fb || !fb.auth.currentUser || !(score > 0)) return;
+    const { db, F } = fb, uid = fb.auth.currentUser.uid, s = PA.state();
+    s.periods = s.periods || {};
+    for (const kind of ['w', 'm']) {
+      const key = PA.periodKey(gameId, kind);
+      if ((s.periods[key] || 0) >= score) continue;
+      try {
+        await withTimeout(F.setDoc(boardRef(F, db, { period: key }, uid), entry(uid, score, F)), 15000);
+        s.periods[key] = Math.floor(score); PA.save();
+        delete boardCache[key];
+      } catch (e) { console.warn('[Prism Arcade] classement', key, 'non mis à jour :', e.code || e); }
+    }
+  }
+
   async function submit(gameId, score) {
     if (C.status !== 'in' || !fb || !fb.auth.currentUser || !(score > 0)) return false;
     const { db, F } = fb, uid = fb.auth.currentUser.uid;
     try {
-      await withTimeout(F.setDoc(F.doc(db, 'paBoards', gameId, 'scores', uid), { uid, name: PA.state().name, score: Math.floor(score), updatedAt: F.serverTimestamp() }), 15000);
+      await withTimeout(F.setDoc(F.doc(db, 'paBoards', gameId, 'scores', uid), entry(uid, score, F)), 15000);
       const s = PA.state();
       s.boards = s.boards || {};
       if ((s.boards[gameId] || 0) < score) { s.boards[gameId] = Math.floor(score); PA.save(); }
@@ -205,26 +233,53 @@
   }
 
   const boardCache = {};
-  async function top(gameId, n = 10) {
-    const c = boardCache[gameId];
+  const col = (F, db, gameId, period) => (period ? F.collection(db, 'paPeriods', period, 'scores') : F.collection(db, 'paBoards', gameId, 'scores'));
+  /* period : clé « jeu__w123 » / « jeu__m456 », ou rien pour le classement des records. */
+  async function top(gameId, n = 10, period) {
+    const ck = period || gameId, c = boardCache[ck];
     if (c && Date.now() - c.at < 30000 && c.n >= n) return c.list.slice(0, n);
     if (!fb) fb = await sdk();
     const { db, F } = fb;
-    const q = F.query(F.collection(db, 'paBoards', gameId, 'scores'), F.orderBy('score', 'desc'), F.limit(n));
+    const q = F.query(col(F, db, gameId, period), F.orderBy('score', 'desc'), F.limit(n));
     const snap = await withTimeout(F.getDocs(q), 15000);
-    const list = snap.docs.map((d) => ({ uid: d.id, name: String(d.data().name || 'Joueur').slice(0, 18), score: Number(d.data().score) || 0 }));
-    boardCache[gameId] = { at: Date.now(), n, list };
+    const list = snap.docs.map((d) => { const x = d.data(); return { uid: d.id, name: String(x.name || 'Joueur').slice(0, 18), score: Number(x.score) || 0, avatar: typeof x.avatar === 'string' ? x.avatar.slice(0, 8) : '', frame: typeof x.frame === 'string' ? x.frame : '' }; });
+    boardCache[ck] = { at: Date.now(), n, list };
     return list;
   }
   /* Rang du joueur connecté : 1 + nombre de scores strictement supérieurs (requête de comptage, sans index composite). */
-  async function rank(gameId, score) {
+  async function rank(gameId, score, period) {
     if (!(score > 0)) return null;
     if (!fb) fb = await sdk();
     const { db, F } = fb;
     if (!F.getCountFromServer) return null;
-    const q = F.query(F.collection(db, 'paBoards', gameId, 'scores'), F.where('score', '>', Math.floor(score)));
+    const q = F.query(col(F, db, gameId, period), F.where('score', '>', Math.floor(score)));
     const snap = await withTimeout(F.getCountFromServer(q), 15000);
     return snap.data().count + 1;
+  }
+
+  /* ---------- Cadeaux des classements terminés ----------
+     Pour chaque période terminée où le joueur a envoyé un score et qu'il n'a pas encore réclamée : lecture du podium ;
+     s'il y figure, le cadeau est ajouté à sa progression (une seule fois, mémorisé dans « claims »). */
+  let claiming = false;
+  async function claimRewards() {
+    if (claiming || C.status !== 'in' || !fb || !fb.auth.currentUser) return [];
+    claiming = true;
+    const won = [];
+    try {
+      const uid = fb.auth.currentUser.uid, s = PA.state();
+      const keys = Object.keys(s.periods || {}).filter((k) => PA.periodOver(k) && !(s.claims || {})[k]);
+      for (const key of keys) {
+        const p = PA.parseKey(key);
+        try {
+          const podium = await top(p.game, 3, key);
+          const i = podium.findIndex((r) => r.uid === uid);
+          const res = PA.grantPrize(key, i + 1, i >= 0 ? podium[i].score : 0);
+          if (res) won.push(res);
+        } catch (e) { console.warn('[Prism Arcade] podium illisible', key, e.code || e); }
+      }
+    } finally { claiming = false; }
+    if (won.length) PA.emit('prizes', won);
+    return won;
   }
 
   /* ---------- Actions de l'interface ---------- */
@@ -249,7 +304,9 @@
     catch (e) { if (e && e.code === 'auth/user-not-found') return; throw e; }   // même réponse que l'adresse existe ou non
   }
 
-  Object.assign(C, { signIn, signOut, resetPassword, top, rank, submit, retry: () => push() });
+  Object.assign(C, { signIn, signOut, resetPassword, top, rank, submit, submitPeriods, claimRewards, retry: () => push() });
+  // une période peut se terminer pendant que la page est ouverte
+  setInterval(() => { if (C.status === 'in') claimRewards(); }, 10 * 60 * 1000);
 
   /* ---------- Démarrage ---------- */
   // affiche tout de suite la progression du dernier compte connecté sur cet appareil, le temps que la session se restaure

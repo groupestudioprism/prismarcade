@@ -4,6 +4,7 @@ PA.register({
   name: 'Memory Pulse',
   tagline: 'Mémorise la séquence, rejoue-la sans faute.',
   colors: ['#ec4899', '#581c87'],
+  prize: 1.25,
   icon: '<svg viewBox="0 0 64 64"><path d="M30 30H6A24 24 0 0 1 30 6z" fill="#22d3ee"/><path d="M34 30V6a24 24 0 0 1 24 24z" fill="#facc15"/><path d="M30 34v24A24 24 0 0 1 6 34z" fill="#34d399"/><path d="M34 34h24a24 24 0 0 1-24 24z" fill="#fff"/><circle cx="32" cy="32" r="8" fill="#581c87"/></svg>',
   controls: '<b>Toucher</b> les pavés, ou les touches <b>1 2 3 4</b> (ou <b>flèches</b> ↖ ↗ ↙ ↘ : ← ↑ ↓ →).<br>Regarde la séquence, puis rejoue-la. Elle s\'allonge et accélère à chaque manche.',
   daily: [6, 10, 15],
