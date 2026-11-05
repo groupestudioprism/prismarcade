@@ -18,11 +18,17 @@
   }
 
   /* ---------- Puce joueur ---------- */
+  const CL = () => PA.cloud || { status: 'error' };
   function renderChip() {
-    const s = PA.state(), lv = PA.levelInfo();
+    const s = PA.state(), lv = PA.levelInfo(), c = CL();
+    const dot = c.status === 'in' ? `<span class="sync-dot ${c.sync === 'saving' ? 'saving' : c.sync === 'error' ? 'error' : ''}" title="${c.sync === 'error' ? 'Sauvegarde en ligne impossible' : 'Progression sauvegardée sur ton compte'}"></span>` : '';
+    $('#auth-slot').innerHTML = c.status === 'out' || (c.status === 'error' && !c.user)
+      ? '<button class="btn sm primary" data-login>Se connecter</button>' : '';
+    const fs = $('#foot-sync');
+    if (fs) fs.textContent = c.status === 'in' ? 'progression sauvegardée sur ton compte Studio Prism' : 'progression sauvegardée sur cet appareil';
     $('#player-chip').innerHTML =
       `<span class="avatar">${esc(s.name.charAt(0).toUpperCase())}</span>
-       <span class="chip-info"><b>${esc(s.name)}</b><small>Niveau ${lv.level}</small>
+       <span class="chip-info"><b>${esc(s.name)}${dot}</b><small>Niveau ${lv.level}</small>
        <span class="mini-bar"><i style="width:${(lv.pct * 100).toFixed(1)}%"></i></span></span>
        <span class="coins"><span class="coin-ico"></span>${fmt(s.coins)}</span>`;
   }
@@ -102,11 +108,12 @@
       <div class="profile-head">
         <span class="avatar lg">${esc(s.name.charAt(0).toUpperCase())}</span>
         <div class="who">
-          <div class="name-row"><input class="name-input" id="name-in" value="${esc(s.name)}" maxlength="18" aria-label="Pseudo"></div>
+          <div class="name-row"><input class="name-input" id="name-in" value="${esc(s.name)}" maxlength="18" aria-label="Pseudo (visible dans les classements)" title="Pseudo visible dans les classements"></div>
           <span class="title-badge">${esc(PA.title(lv.level))}</span>
           <div class="lvl-block"><div class="row"><span>Niveau <b style="color:var(--text)">${lv.level}</b></span><span>${fmt(lv.into)} / ${fmt(lv.need)} XP</span></div><div class="bar"><i style="width:${lv.pct * 100}%"></i></div></div>
         </div>
       </div>
+      ${accountPanel()}
       <div class="stats-grid">
         <div class="stat"><small>XP totale</small><b>${fmt(s.xp)}</b></div>
         <div class="stat"><small>Pièces</small><b style="color:var(--a3)">${fmt(s.coins)}</b></div>
@@ -138,6 +145,18 @@
     $('#rst').onclick = () => { if (confirm('Effacer toute ta progression (XP, pièces, records, succès) ? Cette action est définitive.')) { PA.reset(); route(); toast('🧹', 'Progression réinitialisée'); } };
   }
 
+  function accountPanel() {
+    const c = CL();
+    if (c.status === 'in') {
+      const sync = c.sync === 'error' ? `<span style="color:#fb7185">Sauvegarde en ligne impossible : ${esc(PA.errText(c.syncError))}</span> <button class="link-btn" data-sync>Réessayer</button>`
+        : c.sync === 'saving' ? 'Sauvegarde en cours…' : 'Progression sauvegardée en ligne : retrouve-la sur tous tes appareils.';
+      return `<div class="panel account-panel"><div><b>Compte Studio Prism</b><p>${esc(c.user.email)} · ${sync}</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn sm" href="${PA.SITE}#/compte" target="_blank" rel="noopener">Gérer mon compte</a><button class="btn sm" data-logout>Se déconnecter</button></div></div>`;
+    }
+    if (c.status === 'loading') return '<div class="panel account-panel"><div><b>Compte Studio Prism</b><p>Connexion en cours…</p></div></div>';
+    const err = c.status === 'error' && c.notice ? `<p style="color:#fb7185">${esc(PA.errText(c.notice))}</p>` : c.notice ? `<p style="color:#fb7185">${esc(PA.errText(c.notice))}</p>` : '';
+    return `<div class="panel account-panel"><div><b>Joue avec ton compte Studio Prism</b><p>Sauvegarde ta progression en ligne, retrouve-la sur tous tes appareils et entre dans les classements.</p>${err}</div><button class="btn sm primary" data-login>Se connecter</button></div>`;
+  }
+
   function shop() {
     const s = PA.state();
     const cards = PA.themes.map((t) => {
@@ -157,6 +176,99 @@
       shop();
     }));
     view.querySelectorAll('[data-use]').forEach((b) => (b.onclick = () => { PA.setTheme(b.dataset.use); shop(); }));
+  }
+
+  /* =========================================================
+     Compte : fenêtre de connexion
+     ========================================================= */
+  const modal = $('#modal');
+  function closeModal() { modal.hidden = true; modal.innerHTML = ''; }
+  modal.addEventListener('click', (e) => { if (e.target === modal || e.target.closest('[data-close]')) closeModal(); });
+  window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !modal.hidden) closeModal(); });
+  document.addEventListener('click', async (e) => {
+    if (e.target.closest('[data-login]')) { e.preventDefault(); loginModal(); return; }
+    if (e.target.closest('[data-sync]')) { PA.cloud.retry(); return; }
+    const lo = e.target.closest('[data-logout]');
+    if (lo) { lo.disabled = true; await PA.cloud.signOut().catch(() => {}); toast('👋', 'Déconnecté', 'Ta progression reste sauvegardée sur ton compte.'); }
+  });
+
+  function loginModal(mode = 'login') {
+    const c = CL();
+    if (c.status === 'error' && c.notice === 'app/sdk-unavailable') { toast('⚠️', 'Comptes indisponibles', PA.errText('app/sdk-unavailable')); return; }
+    modal.hidden = false;
+    const signup = PA.SITE + '#/compte/inscription';
+    if (mode === 'reset') {
+      modal.innerHTML = `<form class="ov-card" id="f-reset" novalidate><h2>Mot de passe oublié</h2>
+        <p class="muted" style="margin:6px 0 0;font-size:14px">Indique l'adresse de ton compte Studio Prism : un lien pour choisir un nouveau mot de passe t'est envoyé.</p>
+        <div class="field"><label for="r-mail">Adresse e-mail</label><input id="r-mail" type="email" autocomplete="email" required></div>
+        <p class="form-err" id="r-err" role="alert"></p>
+        <div class="actions" style="display:flex;flex-direction:column;gap:8px;margin-top:10px"><button class="btn primary" type="submit">Envoyer le lien</button><button class="btn" type="button" data-back>Retour</button></div></form>`;
+      $('#r-mail').focus();
+      modal.querySelector('[data-back]').onclick = () => loginModal();
+      $('#f-reset').onsubmit = async (e) => {
+        e.preventDefault();
+        const b = e.target.querySelector('[type=submit]'); b.disabled = true;
+        try { await PA.cloud.resetPassword($('#r-mail').value); $('#r-err').className = 'form-ok'; $('#r-err').textContent = 'Si un compte existe pour cette adresse, un e-mail vient d’être envoyé.'; }
+        catch (err) { $('#r-err').className = 'form-err'; $('#r-err').textContent = PA.errText(err); }
+        b.disabled = false;
+      };
+      return;
+    }
+    modal.innerHTML = `<form class="ov-card" id="f-login" novalidate>
+      <div style="display:flex;align-items:center;gap:12px"><img src="assets/logo-mark.svg" width="44" height="44" alt="" style="border-radius:12px"><div><h2>Connexion</h2><p class="muted" style="margin:2px 0 0;font-size:13px">avec ton compte Studio Prism</p></div></div>
+      <div class="field"><label for="l-mail">Adresse e-mail</label><input id="l-mail" type="email" autocomplete="email" required></div>
+      <div class="field"><label for="l-pass">Mot de passe</label><input id="l-pass" type="password" autocomplete="current-password" required></div>
+      <label class="check-row"><input type="checkbox" id="l-rem" checked> Rester connecté sur cet appareil</label>
+      <p class="form-err" id="l-err" role="alert"></p>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px"><button class="btn primary" type="submit">Se connecter</button><button class="btn" type="button" data-close>Plus tard</button></div>
+      <p class="small-note"><button class="link-btn" type="button" data-reset>Mot de passe oublié ?</button></p>
+      <p class="small-note">Pas encore de compte ? <a href="${signup}" target="_blank" rel="noopener">Créer un compte Studio Prism</a> (gratuit), puis reviens te connecter ici.</p>
+      <p class="small-note">Ta progression actuelle sur cet appareil sera ajoutée à ton compte. Ton pseudo apparaît dans les classements publics.</p></form>`;
+    $('#l-mail').focus();
+    modal.querySelector('[data-reset]').onclick = () => loginModal('reset');
+    $('#f-login').onsubmit = async (e) => {
+      e.preventDefault();
+      const b = e.target.querySelector('[type=submit]'); b.disabled = true; b.textContent = 'Connexion…';
+      $('#l-err').textContent = '';
+      try {
+        await PA.cloud.signIn($('#l-mail').value, $('#l-pass').value, $('#l-rem').checked);
+        closeModal();
+        toast('✅', 'Connecté', PA.cloud.notice === 'merged' ? 'Ta progression a été ajoutée à ton compte.' : 'Ta progression est sauvegardée en ligne.');
+        route();
+      } catch (err) {
+        $('#l-err').textContent = PA.errText(err);
+        b.disabled = false; b.textContent = 'Se connecter';
+      }
+    };
+  }
+
+  /* =========================================================
+     Classements
+     ========================================================= */
+  function boardRows(list, myUid, limit) {
+    return list.slice(0, limit).map((r, i) => `<li class="${r.uid === myUid ? 'me' : ''}"><span class="rk">${i + 1}</span><span class="nm">${esc(r.name)}${r.uid === myUid ? ' (toi)' : ''}</span><span class="sc">${fmt(r.score)}</span></li>`).join('');
+  }
+  let boardGame = null;
+  function leaderboards() {
+    if (!boardGame || !PA.gameById[boardGame]) boardGame = PA.games[0].id;
+    const c = CL(), g = PA.gameById[boardGame];
+    view.innerHTML = `<div class="section-head"><div><h2>Classements</h2><p>Les 20 meilleurs joueurs de chaque jeu.${c.status === 'in' ? '' : ' Connecte-toi pour y apparaître.'}</p></div>
+        ${c.status === 'in' ? '' : '<button class="btn sm primary" data-login>Se connecter</button>'}</div>
+      <div class="board-tabs" role="tablist">${PA.games.map((x) => `<button class="board-tab ${x.id === boardGame ? 'on' : ''}" data-board="${x.id}" role="tab" aria-selected="${x.id === boardGame}">${swatch(x)}${esc(x.name)}</button>`).join('')}</div>
+      <div class="panel"><div id="board-me"></div><ol class="board" id="board-list"><li><span></span><span class="muted">Chargement…</span><span></span></li></ol></div>`;
+    view.querySelectorAll('[data-board]').forEach((b) => (b.onclick = () => { boardGame = b.dataset.board; leaderboards(); }));
+    const t = view.querySelector('.board-tab.on'); if (t) t.scrollIntoView({ inline: 'center', block: 'nearest' });
+    if (!PA.cloud || !PA.cloud.top) { $('#board-list').innerHTML = '<li><span></span><span class="muted">Classements indisponibles.</span><span></span></li>'; return; }
+    const id = boardGame, myUid = c.user && c.user.uid;
+    PA.cloud.top(id, 20).then(async (list) => {
+      if (boardGame !== id || !$('#board-list')) return;
+      $('#board-list').innerHTML = list.length ? boardRows(list, myUid, 20) : `<li><span></span><span class="muted">Personne n'est encore classé à ${esc(g.name)}. À toi de jouer !</span><span></span></li>`;
+      const best = PA.gameStats(id).best;
+      if (c.status === 'in' && best > 0 && !list.some((r) => r.uid === myUid)) {
+        const r = await PA.cloud.rank(id, best).catch(() => null);
+        if (r && $('#board-me')) $('#board-me').innerHTML = `<p class="muted" style="margin:0 0 10px">Ton record : <b style="color:var(--text)">${fmt(best)}</b> · rang <b style="color:var(--text)">${r}</b></p>`;
+      }
+    }).catch((err) => { if ($('#board-list')) $('#board-list').innerHTML = `<li><span></span><span class="muted">${esc(PA.errText(err))}</span><span></span></li>`; });
   }
 
   /* =========================================================
@@ -238,8 +350,21 @@
     overlay.innerHTML = `<div class="ov-card">${ovIcon(def)}<h2>${esc(def.name)}</h2><p>${esc(def.tagline)}</p>
       <div class="controls">${def.controls}</div>
       ${st.best ? `<p style="margin-top:14px">Ton record : <b style="color:var(--text)">${fmt(st.best)}</b></p>` : ''}
+      <div class="mini-board" id="ov-board"></div>
       <div class="actions"><button class="btn primary" data-act="start">Jouer</button><button class="btn" data-act="quit">Retour aux jeux</button></div></div>`;
     focusFirst();
+    miniBoard(def.id, 3, 'Meilleurs joueurs');
+  }
+
+  function miniBoard(id, n, title, extra = '') {
+    if (!PA.cloud || !PA.cloud.top || PA.cloud.status === 'error') return;
+    const myUid = PA.cloud.user && PA.cloud.user.uid;
+    PA.cloud.top(id, n).then((list) => {
+      const el = $('#ov-board');
+      if (!el || !cur || cur.def.id !== id) return;
+      if (!list.length && !extra) return;
+      el.innerHTML = `${extra}${list.length ? `<h4>${esc(title)}</h4><ol>${list.map((r, i) => `<li class="${r.uid === myUid ? 'me' : ''}"><span>${i + 1}. ${esc(r.name)}</span><b>${fmt(r.score)}</b></li>`).join('')}</ol>` : ''}`;
+    }).catch(() => {});
   }
 
   function showPause() {
@@ -262,6 +387,7 @@
       <div class="gains"><div class="gain">+${fmt(res.xp)}<small>XP</small></div><div class="gain" style="color:var(--a3)">+${fmt(res.coins)}<small>pièces</small></div></div>
       <div class="ov-lvl"><div class="row"><span>Niveau ${lv.level}${res.levelUp ? ' — niveau supérieur !' : ''}</span><span>${fmt(lv.into)} / ${fmt(lv.need)} XP</span></div><div class="bar"><i style="width:${lv.pct * 100}%"></i></div></div>
       ${unl || daily ? `<div class="unlocks">${unl}${daily}</div>` : ''}
+      <div class="mini-board" id="ov-board">${CL().status !== 'in' && res.score > 0 ? `<p class="small-note" style="margin:0"><button class="link-btn" data-login>Connecte-toi</button> pour sauvegarder ta progression en ligne et entrer dans le classement.</p>` : ''}</div>
       <div class="actions"><button class="btn primary" data-act="restart">Rejouer</button><button class="btn" data-act="quit">Retour aux jeux</button></div></div>`;
     focusFirst();
   }
@@ -284,6 +410,13 @@
     const res = PA.recordResult(def.id, Object.assign({}, cur.extra, { score: cur.score }), cur.time);
     showResults(res);
     setScore(cur.score);
+    if (PA.cloud && PA.cloud.status === 'in') {
+      const id = def.id, best = PA.gameStats(id).best;
+      (res.newBest ? PA.cloud.submit(id, res.score) : Promise.resolve())
+        .then(() => PA.cloud.rank(id, best))
+        .then((r) => miniBoard(id, 5, 'Classement', r ? `<p class="muted" style="margin:0 0 8px;font-size:13px">Ton rang : <b style="color:var(--text)">${r}</b>${res.newBest ? ' — record envoyé au classement' : ''}</p>` : ''))
+        .catch(() => {});
+    }
     if (res.levelUp) { setTimeout(() => PA.sfx('level'), 350); toast('⬆️', `Niveau ${res.levelUp} atteint !`, PA.title(res.levelUp)); }
     res.unlocked.forEach((a, i) => setTimeout(() => toast('🏆', 'Succès débloqué', a.name), 300 + i * 500));
   }
@@ -391,12 +524,21 @@
     if (!layer.hidden) closeGame();
     if (page === 'profil') profile();
     else if (page === 'boutique') shop();
+    else if (page === 'classements') { if (arg && PA.gameById[arg]) boardGame = arg; leaderboards(); }
     else home();
-    document.title = page === 'profil' ? 'Profil — Prism Arcade' : page === 'boutique' ? 'Boutique — Prism Arcade' : 'Prism Arcade';
+    document.title = ({ profil: 'Profil', boutique: 'Boutique', classements: 'Classements' }[page] ? { profil: 'Profil', boutique: 'Boutique', classements: 'Classements' }[page] + ' — ' : '') + 'Prism Arcade';
     window.scrollTo(0, 0);
   }
 
   PA.on('change', () => { renderChip(); applyTheme(); });
+  /* Changement d'état du compte : rafraîchit la puce, et la page affichée si elle dépend du compte (jamais pendant une partie). */
+  let lastStatus = CL().status;
+  PA.on('cloud', (c) => {
+    renderChip();
+    if (c.status === lastStatus) { if (/^#\/profil/.test(location.hash)) { const ap = view.querySelector('.account-panel'); if (ap) ap.outerHTML = accountPanel(); } return; }
+    lastStatus = c.status;
+    if (layer.hidden && modal.hidden) route();
+  });
   applyTheme(); renderChip();
   window.addEventListener('hashchange', route);
   route();

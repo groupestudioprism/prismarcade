@@ -29,7 +29,22 @@ Elle propose 10 mini-jeux d'arcade, tous en solo, avec une progression commune �
 - **Défis du jour** : 3 défis tirés au sort chaque jour (les mêmes pour tous les joueurs). Les finir tous rapporte un bonus de 100 pièces et alimente une série de jours consécutifs.
 - **Profil** : pseudo, statistiques, records par jeu, export et import de la progression.
 
-La progression est enregistrée dans le navigateur (`localStorage`). Toute la persistance passe par `load()` et `save()` dans `js/core.js`. C'est l'endroit où brancher un compte Studio Prism (Firebase) plus tard.
+## Compte Studio Prism, sauvegarde en ligne et classements
+
+On peut jouer **sans compte** : la progression reste alors dans le navigateur.
+
+Avec un **compte Studio Prism** (même projet Firebase `archivision-studioprism` que le site et les autres applications) :
+- la progression est sauvegardée en ligne dans `paPlayers/{uid}` et se retrouve sur tous les appareils ;
+- à la première connexion, la progression « invité » de l'appareil est ajoutée au compte (fusion sans doublon : maxima et unions) ;
+- chaque record est publié dans `paBoards/{jeu}/scores/{uid}` (pseudo + score), et la page **Classements** affiche le top 20 de chaque jeu, ainsi que le rang du joueur.
+
+Prism Arcade **ne crée pas de compte** : l'inscription et la gestion du compte restent sur [studio-prism.com](https://studio-prism.com/). Un compte suspendu, en attente ou supprimé n'entre pas.
+
+Le jeu continue de fonctionner entièrement si Firebase est injoignable : une copie locale par compte est gardée sur l'appareil.
+
+**Règles Firestore** : elles vivent dans le dépôt `Studio-Prism` (`firebase/rules/31-prism-arcade.rules`, assemblées dans `firebase/firestore.rules`). Quand on ajoute un jeu, il faut ajouter son identifiant dans `paGames()`, sinon son classement est refusé.
+
+Fichiers concernés : `js/cloud.js` (connexion, synchronisation, classements), `js/core.js` (`PA.merge`, `PA.useStore`) et `js/prism-presence.js` (présence dans le tableau de bord Studio Prism, copie de `shared/` du site).
 
 ## Structure
 
@@ -37,6 +52,7 @@ La progression est enregistrée dans le navigateur (`localStorage`). Toute la pe
 index.html            page unique (accueil, profil, boutique, écran de jeu)
 css/style.css         styles
 js/core.js            profil, XP, pièces, succès, défis, sons synthétisés, outils de dessin
+js/cloud.js           compte Studio Prism, sauvegarde en ligne, classements
 js/app.js             interface, navigation, lanceur de jeux (pause, résultats)
 js/games/*.js         un fichier par jeu
 assets/logo.svg       logo complet
@@ -75,7 +91,7 @@ Ouvrir ensuite http://localhost:8000.
 
 ## Mise en ligne
 
-Le site est publié avec GitHub Pages, depuis la branche `main`, à la racine du dépôt.
+Le site est publié avec GitHub Pages, depuis la branche `main`, à la racine du dépôt, sur **https://prismarcade.studio-prism.com/** (fichier `CNAME`).
 
 ---
 

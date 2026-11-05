@@ -7,7 +7,7 @@
 (function () {
   'use strict';
 
-  const PA = (window.PA = { games: [], gameById: {}, version: '1.0.0' });
+  const PA = (window.PA = { games: [], gameById: {}, version: '1.1.0' });
 
   /* ---------- Registre des jeux ---------- */
   PA.register = function (def) {
@@ -46,7 +46,8 @@
      Sauvegarde (localStorage). Toute la persistance passe par
      load()/save() : c'est ici qu'on branchera Firebase plus tard.
      ========================================================= */
-  const KEY = 'prismarcade.v1';
+  const GUEST_KEY = 'prismarcade.v1';   // progression « invité » (sans compte)
+  let KEY = GUEST_KEY;                   // clé active : invité, ou cache local du compte connecté (js/cloud.js)
   const defaults = () => ({
     version: 1,
     name: 'Joueur',
@@ -58,6 +59,7 @@
     muted: false,
     games: {},
     ach: {},
+    boards: {},
     daily: null,
     dailyStreak: 0,
     lastDailyDone: '',
@@ -65,21 +67,65 @@
     created: Date.now(),
   });
 
-  let state = defaults();
-  function load() {
-    try {
-      const raw = localStorage.getItem(KEY);
-      if (raw) state = Object.assign(defaults(), JSON.parse(raw));
-    } catch (e) { state = defaults(); }
-  }
+  const readKey = (key) => {
+    try { const raw = localStorage.getItem(key); return raw ? Object.assign(defaults(), JSON.parse(raw)) : null; } catch (e) { return null; }
+  };
+  let state = readKey(KEY) || defaults();
   function save() {
     try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* stockage indisponible */ }
     PA.emit('change', state);
   }
-  load();
 
   PA.state = () => state;
   PA.save = save;
+  PA.defaults = defaults;
+  PA.GUEST_KEY = GUEST_KEY;
+  PA.readStore = readKey;
+  PA.clearStore = (key) => { try { localStorage.removeItem(key); } catch (e) { /* rien */ } };
+  /* Change de sauvegarde active (connexion / déconnexion d'un compte). */
+  PA.useStore = function (key, s) { KEY = key; state = Object.assign(defaults(), s || readKey(key) || {}); save(); };
+  PA.hasProgress = (s) => !!s && ((s.totals && s.totals.plays > 0) || s.xp > 0);
+
+  /* Fusion de deux progressions (même joueur sur deux appareils, ou partie « invité » rattachée à un compte).
+     Maxima et unions : fusionner deux fois donne le même résultat (aucun gain dupliqué). « a » est prioritaire pour les réglages. */
+  PA.merge = function (a, b) {
+    a = Object.assign(defaults(), a || {}); b = Object.assign(defaults(), b || {});
+    const mx = (x, y) => Math.max(Number(x) || 0, Number(y) || 0);
+    const out = defaults();
+    out.name = a.name !== 'Joueur' ? a.name : b.name;
+    ['xp', 'coins', 'coinsEarned', 'dailyStreak'].forEach((k) => (out[k] = mx(a[k], b[k])));
+    out.themes = Array.from(new Set([...(a.themes || []), ...(b.themes || []), 'prisme']));
+    out.theme = out.themes.includes(a.theme) ? a.theme : 'prisme';
+    out.muted = !!a.muted;
+    out.lastDailyDone = [a.lastDailyDone || '', b.lastDailyDone || ''].sort().pop();
+    out.totals = { plays: mx(a.totals.plays, b.totals.plays), time: mx(a.totals.time, b.totals.time) };
+    out.created = Math.min(a.created || Date.now(), b.created || Date.now());
+    const ids = new Set([...Object.keys(a.games || {}), ...Object.keys(b.games || {})]);
+    ids.forEach((id) => {
+      const x = (a.games || {})[id] || {}, y = (b.games || {})[id] || {};
+      const extra = {};
+      new Set([...Object.keys(x.extra || {}), ...Object.keys(y.extra || {})]).forEach((k) => (extra[k] = mx((x.extra || {})[k], (y.extra || {})[k])));
+      out.games[id] = { best: mx(x.best, y.best), plays: mx(x.plays, y.plays), total: mx(x.total, y.total), last: Number(x.last || y.last) || 0, extra, data: Object.assign({}, y.data, x.data) };
+    });
+    new Set([...Object.keys(a.ach || {}), ...Object.keys(b.ach || {})]).forEach((k) => {
+      const v = [(a.ach || {})[k], (b.ach || {})[k]].filter(Boolean);
+      out.ach[k] = Math.min(...v);
+    });
+    new Set([...Object.keys(a.boards || {}), ...Object.keys(b.boards || {})]).forEach((k) => (out.boards[k] = mx((a.boards || {})[k], (b.boards || {})[k])));
+    const da = a.daily, db = b.daily;
+    if (da && db && da.date === db.date && Array.isArray(da.list) && Array.isArray(db.list)) {
+      out.daily = JSON.parse(JSON.stringify(da));
+      out.daily.bonusClaimed = !!(da.bonusClaimed || db.bonusClaimed);
+      out.daily.list.forEach((c) => {
+        const o = db.list.find((z) => z.id === c.id && z.type === c.type);
+        if (!o) return;
+        c.progress = mx(c.progress, o.progress); c.done = !!(c.done || o.done);
+        if (c.seen || o.seen) c.seen = Array.from(new Set([...(c.seen || []), ...(o.seen || [])]));
+      });
+    } else out.daily = (da && db ? (da.date >= db.date ? da : db) : da || db) || null;
+    return out;
+  };
+
   PA.reset = function () { state = defaults(); save(); };
   PA.exportData = () => JSON.stringify(state, null, 2);
   PA.importData = function (json) {

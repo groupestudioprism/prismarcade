@@ -22,17 +22,19 @@
     </a>
     <nav class="nav">
       <a href="#/" data-nav="home">Jeux</a>
+      <a href="#/classements" data-nav="classements">Classements</a>
       <a href="#/profil" data-nav="profil">Profil</a>
       <a href="#/boutique" data-nav="boutique">Boutique</a>
     </nav>
     <a class="player-chip" href="#/profil" id="player-chip" aria-label="Mon profil"></a>
+    <div id="auth-slot"></div>
   </header>
 
   <main id="view" tabindex="-1"></main>
 
   <footer class="footer">
     <span>Prism Arcade · une branche Prism Game de <b>Studio Prism</b></span>
-    <span class="muted">v<span id="ver"></span> · progression sauvegardée sur cet appareil</span>
+    <span class="muted">v<span id="ver"></span> · <span id="foot-sync">progression sauvegardée sur cet appareil</span></span>
   </footer>
 
   <!-- Écran de jeu -->
@@ -57,9 +59,12 @@
     </div>
   </section>
 
+  <div id="modal" class="modal" hidden role="dialog" aria-modal="true"></div>
+
   <div id="toasts" class="toasts" aria-live="polite"></div>
 
   <script src="js/core.js"></script>
+  <script src="js/cloud.js"></script>
   <script src="js/games/fusion.js"></script>
   <script src="js/games/prism-run.js"></script>
   <script src="js/games/stack.js"></script>
@@ -71,5 +76,6 @@
   <script src="js/games/astro-blast.js"></script>
   <script src="js/games/memory-pulse.js"></script>
   <script src="js/app.js"></script>
+  <script async src="js/prism-presence.js" data-app="prismarcade"></script>
 </body>
 </html>
