@@ -1,0 +1,6 @@
+{
+  "name": "lumen",
+  "private": true,
+  "type": "module",
+  "description": "LUMEN : les Îles Brisées — Prism Game / Studio Prism. Ce fichier sert seulement aux outils (node tools/verify.mjs)."
+}

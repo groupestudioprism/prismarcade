@@ -18,7 +18,7 @@ export const COLOR_NAMES = { w: 'blanc', r: 'rouge', g: 'vert', b: 'bleu' };
 
 const BLOCK_TERRAIN = new Set(['#', 'T']);
 const BLOCKING_ENTS = new Set(['lantern', 'mirror', 'prism', 'receiver', 'beacon', 'relay']);
-const PICKUPS = new Set(['shard', 'page', 'start']);
+const PICKUPS = new Set(['shard', 'page', 'wisp', 'start']);
 
 /* Assemble les zones d'une île en une seule grille. */
 export function buildIsland(def) {

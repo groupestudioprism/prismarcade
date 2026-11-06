@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <title>Lumen : les Îles Brisées — Prism Arcade</title>
+  <meta name="description" content="Lumen : les Îles Brisées — aventure et énigmes de lumière en 3D. Un jeu Prism Game, Studio Prism.">
+  <meta name="theme-color" content="#1b1640">
+  <link rel="icon" type="image/svg+xml" href="assets/icon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/lumen.css">
+  <script type="importmap">
+    { "imports": { "three": "./vendor/three.module.min.js", "three/addons/": "./vendor/addons/" } }
+  </script>
+</head>
+<body>
+  <canvas id="c" aria-label="Lumen, vue du jeu"></canvas>
+
+  <div id="loader" class="loader"><div class="spark"></div><p>Chargement de l’archipel…</p></div>
+
+  <header id="hud" class="hud" hidden>
+    <div class="hud-left">
+      <button class="icon-btn" id="b-pause" aria-label="Pause"><svg viewBox="0 0 24 24"><path d="M9 5v14M15 5v14"/></svg></button>
+      <div class="where"><small>LUMEN</small><b id="h-where"></b></div>
+    </div>
+    <div class="hud-right">
+      <span class="chip" title="Énigmes principales résolues">◈ <b id="h-puz">0</b></span>
+      <span class="chip shard" title="Éclats de prisme">✦ <b id="h-shard">0</b></span>
+      <button class="icon-btn" id="b-journal" aria-label="Journal"><svg viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"/><path d="M5 17a3 3 0 0 1 3-3h11"/></svg></button>
+      <button class="icon-btn" id="b-mute" aria-label="Son"></button>
+    </div>
+  </header>
+
+  <div id="banner" class="banner" aria-live="polite"></div>
+  <div id="prompt" class="prompt" hidden></div>
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+
+  <div id="touch" class="touch" hidden>
+    <div id="joy" class="joy"><div id="knob" class="knob"></div></div>
+    <p class="touch-hint">Glisse à gauche pour marcher · à droite pour tourner la vue</p>
+    <button id="b-act" class="act" aria-label="Tourner l’objet">↻</button>
+  </div>
+
+  <section id="menu" class="overlay menu" hidden></section>
+  <section id="pause" class="overlay" hidden></section>
+  <section id="journal" class="overlay" hidden></section>
+  <section id="reader" class="overlay" hidden></section>
+  <section id="end" class="overlay end" hidden></section>
+
+  <noscript><p class="noscript">Lumen a besoin de JavaScript et de WebGL.</p></noscript>
+
+  <!-- Progression, compte et récompenses Prism Arcade (utilisés par js/platform.js) -->
+  <script src="../js/core.js"></script>
+  <script src="../js/economy.js"></script>
+  <script src="../js/cloud.js"></script>
+  <script type="module">
+    import('./js/main.js').catch((e) => {
+      console.error(e);
+      const l = document.getElementById('loader');
+      l.hidden = false;
+      l.innerHTML = '<p>Impossible de lancer Lumen sur cet appareil (WebGL indisponible ou navigateur trop ancien).</p><a href="../#/">Retour à Prism Arcade</a>';
+    });
+  </script>
+</body>
+</html>
