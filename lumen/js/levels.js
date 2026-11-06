@@ -5,12 +5,19 @@
    spawn (arrivée), entryGate (pont d'accès), barrier (porte des barrières « x »), hint, title.
    ========================================================= */
 import aube from './islands/aube.js';
+import foret from './islands/foret.js';
 
-export const ISLANDS = [aube];
+export const ISLANDS = [aube, foret];
+
+/* Données propres à chaque île, utilisées par le moteur (point de repos, ville, voyage).
+   home : lit où l'on se repose et où l'on réapparaît · town : zone du village · title : nom affiché */
+export const ISLAND_META = {
+  foret: { home: { zone: 'auberge_f', cell: [9, 3] }, town: 'vitrebourg', title: 'La Forêt de Verre', inn: 'à la Rosée', warp: 'vitrebourg', boss: 'boss_verre', first: 'q_verre' },
+  aube: { home: { zone: 'auberge_in', cell: [9, 3] }, town: 'havre', title: 'L’Île de l’Aube', inn: 'au Lampion', warp: 'havre', boss: 'boss_colosse' },
+};
 
 /* Îles prévues (voir DESIGN.md) */
 export const UPCOMING = [
-  { num: 2, name: 'La Forêt de Verre', what: 'vitraux et mélange des couleurs' },
   { num: 3, name: 'Le Désert des Échos', what: 'porter les miroirs et les prismes' },
   { num: 4, name: 'Les Abysses Miroirs', what: 'Lyra devient une source de lumière' },
   { num: 5, name: 'Les Pics du Vent', what: 'planer et relais temporisés' },

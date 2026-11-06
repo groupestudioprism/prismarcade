@@ -9,18 +9,18 @@
              'c' roche fissurée (marteau) · 'x' porte (voir doors)
    ========================================================= */
 
-const hash = (x, y, k = 0) => { let h = Math.imul(x, 374761393) + Math.imul(y, 668265263) + Math.imul(k, 2147483647); h = Math.imul(h ^ (h >>> 13), 1274126177); h ^= h >>> 16; return (h >>> 0) / 4294967296; };
+export const hash = (x, y, k = 0) => { let h = Math.imul(x, 374761393) + Math.imul(y, 668265263) + Math.imul(k, 2147483647); h = Math.imul(h ^ (h >>> 13), 1274126177); h ^= h >>> 16; return (h >>> 0) / 4294967296; };
 
-function grid(w, h, ch = ' ') { return Array.from({ length: h }, () => Array(w).fill(ch)); }
+export function grid(w, h, ch = ' ') { return Array.from({ length: h }, () => Array(w).fill(ch)); }
 const inside = (g, x, y) => y >= 0 && y < g.length && x >= 0 && x < g[0].length;
-function blob(g, cx, cy, rx, ry, seed, rough = 0.16) {
+export function blob(g, cx, cy, rx, ry, seed, rough = 0.16) {
   for (let y = 0; y < g.length; y++) for (let x = 0; x < g[0].length; x++) {
     const d = ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2;
     if (d < 1 + (hash(x, y, seed) - 0.5) * rough * 2) g[y][x] = '.';
   }
 }
 /* Bord de l'île : roches et arbres sur les cases de terre qui touchent le vide */
-function rim(g, seed, treeP = 0.3) {
+export function rim(g, seed, treeP = 0.3) {
   const out = [];
   for (let y = 0; y < g.length; y++) for (let x = 0; x < g[0].length; x++) {
     if (g[y][x] === ' ') continue;
@@ -29,8 +29,8 @@ function rim(g, seed, treeP = 0.3) {
   }
   out.forEach(([x, y]) => (g[y][x] = hash(x, y, seed) < treeP ? 'T' : '#'));
 }
-function rect(g, x, y, w, h, ch) { for (let j = y; j < y + h; j++) for (let i = x; i < x + w; i++) if (inside(g, i, j)) g[j][i] = ch; }
-function disk(g, cx, cy, r, ch, onlyLand = true) {
+export function rect(g, x, y, w, h, ch) { for (let j = y; j < y + h; j++) for (let i = x; i < x + w; i++) if (inside(g, i, j)) g[j][i] = ch; }
+export function disk(g, cx, cy, r, ch, onlyLand = true) {
   for (let y = Math.floor(cy - r); y <= Math.ceil(cy + r); y++) for (let x = Math.floor(cx - r); x <= Math.ceil(cx + r); x++) {
     if (!inside(g, x, y) || (x - cx) ** 2 + (y - cy) ** 2 > r * r) continue;
     if (onlyLand && g[y][x] === ' ') continue;
@@ -38,7 +38,7 @@ function disk(g, cx, cy, r, ch, onlyLand = true) {
   }
 }
 /* Chemin en L entre deux points (horizontal puis vertical), largeur 1 ou 2 */
-function road(g, pts, ch = ',', wide = 1) {
+export function road(g, pts, ch = ',', wide = 1) {
   for (let i = 0; i < pts.length - 1; i++) {
     let [x, y] = pts[i]; const [x1, y1] = pts[i + 1];
     const put = (a, b) => { for (let k = 0; k < wide; k++) { if (inside(g, a, b + k)) g[b + k][a] = ch; } };
@@ -48,10 +48,10 @@ function road(g, pts, ch = ',', wide = 1) {
     put(x, y);
   }
 }
-function scatter(g, ch, p, seed, ok = (c) => c === '.') {
+export function scatter(g, ch, p, seed, ok = (c) => c === '.') {
   for (let y = 1; y < g.length - 1; y++) for (let x = 1; x < g[0].length - 1; x++) if (ok(g[y][x], x, y) && hash(x, y, seed) < p) g[y][x] = ch;
 }
-const toRows = (g) => g.map((r) => r.join(''));
+export const toRows = (g) => g.map((r) => r.join(''));
 
 /* Accessibilité (pour vérifier qu'aucun PNJ, porte ou objet n'est enfermé) */
 export function flood(rows, from, passable = (c) => '.,~'.includes(c) === false ? c === 'x' || c === '=' : c !== '~') {
@@ -131,6 +131,7 @@ function village() {
       { id: 'lison', x: 25.2, y: 4.2, face: 'S' },
       { id: 'mira', x: 17.6, y: 15.6, wander: 1.6 },
       { id: 'aldo', x: 16.6, y: 21.6, face: 'S' },
+      { id: 'calixte', x: 27.4, y: 8.4, face: 'N' },
     ],
     pickups: [{ t: 'item', id: 'pendentif', item: 'pendentif', x: 26, y: 20 }],
   };

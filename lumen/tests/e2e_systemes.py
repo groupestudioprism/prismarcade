@@ -53,7 +53,7 @@ try:
           const b=c.enemies.find(e=>e.boss);return b?JSON.stringify({x:b.x,z:b.z,hp:b.hp,r:b.def.radius,state:b.state}):'absent'})()"""))
         step("boss: corps à corps", lambda: ev("""(async()=>{const L=__lumen,c=L.combat;const b=c.enemies.find(e=>e.boss);
           const hp0=b.hp;let hits=0;
-          for(let i=0;i<40;i++){L.st.player.hp=100;L.P.x=b.x;L.P.z=b.z+b.def.radius+1.2;L.P.face=Math.PI;hits+=c.melee({mult:1});await T.tick(120);}
+          for(let i=0;i<40&&b.hp>b.maxHp*0.6;i++){L.st.player.hp=100;L.P.x=b.x;L.P.z=b.z+b.def.radius+1.2;L.P.face=Math.PI;hits+=c.melee({mult:1});await T.tick(120);}
           return JSON.stringify({hp0,hp:b.hp,hits,state:b.state,phase:b.phase})})()"""))
         step("boss: phase 2", lambda: ev("""(async()=>{const L=__lumen,c=L.combat;const b=c.enemies.find(e=>e.boss);
           b.hp=b.maxHp*0.45;await T.tick(2500);const adds=c.enemies.filter(e=>e.adds&&e.state!=='dead').length;

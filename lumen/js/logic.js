@@ -13,13 +13,28 @@ const MIRROR = [
   { E: 'N', N: 'E', W: 'S', S: 'W' },
   { E: 'S', S: 'E', W: 'N', N: 'W' },
 ];
-export const COLORS = { w: '#fff4d6', r: '#ff4d6d', g: '#3ee08f', b: '#4d8dff' };
-export const COLOR_NAMES = { w: 'blanc', r: 'rouge', g: 'vert', b: 'bleu' };
+export const COLORS = { w: '#fff4d6', r: '#ff4d6d', g: '#3ee08f', b: '#4d8dff', y: '#ffd84d', m: '#ff6bd6', c: '#4dd8ff' };
+export const COLOR_NAMES = { w: 'blanc', r: 'rouge', g: 'vert', b: 'bleu', y: 'jaune', m: 'magenta', c: 'cyan' };
+
+/* Mélange des couleurs (Forêt de Verre) : une couleur est un ensemble de primaires.
+   jaune = rouge + vert · magenta = rouge + bleu · cyan = vert + bleu · blanc = les trois. */
+const PARTS = { w: 'rgb', r: 'r', g: 'g', b: 'b', y: 'rg', m: 'rb', c: 'gb' };
+const BY_PARTS = { r: 'r', g: 'g', b: 'b', rg: 'y', rb: 'm', gb: 'c', rgb: 'w' };
+/* couleur obtenue en réunissant des faisceaux (relais mélangeur) */
+export function mixColors(list) {
+  const set = new Set(); list.forEach((c) => (PARTS[c] || '').split('').forEach((p) => set.add(p)));
+  return BY_PARTS[['r', 'g', 'b'].filter((p) => set.has(p)).join('')] || null;
+}
+/* couleur qui traverse un vitrail : le vitrail ne laisse passer que ses propres primaires */
+export function filterColor(beam, glass) {
+  const a = PARTS[beam] || '', b = PARTS[glass] || '';
+  return b && [...b].every((p) => a.includes(p)) ? glass : null;
+}
 
 /* Terrain : '.' herbe · ',' chemin · '#' roche / mur · 'T' arbre · 'H' bâtiment ou décor · '~' eau
    'r' ronces (coupées par une lame) · 'c' roche fissurée (brisée au marteau) · 'x' porte · '=' pont */
 export const BLOCK_TERRAIN = new Set(['#', 'T', 'H', '~', 'r', 'c']);
-const BLOCKING_ENTS = new Set(['lantern', 'mirror', 'prism', 'receiver', 'beacon', 'relay']);
+const BLOCKING_ENTS = new Set(['lantern', 'mirror', 'prism', 'receiver', 'beacon', 'relay', 'vitrail']);
 const PICKUPS = new Set(['shard', 'page', 'wisp', 'start']);
 
 /* Assemble les zones d'une île en une seule grille. */
@@ -140,6 +155,12 @@ export function trace(isl, active = {}) {
         stack.push({ x, y, d: MIRROR[e.state][b.d], c: b.c });
         break;
       }
+      if (e.t === 'vitrail') {   // vitrail : ne laisse passer que sa couleur
+        segs.push({ x0: sx, y0: sy, x1: x, y1: y, c: b.c });
+        const f = filterColor(b.c, e.color);
+        if (f) stack.push({ x, y, d: b.d, c: f, from: 0.3 });
+        break;
+      }
       if (e.t === 'prism') {
         segs.push({ x0: sx, y0: sy, x1: x, y1: y, c: b.c });
         if (b.c === 'w') {
@@ -171,7 +192,7 @@ export function traceAll(isl) {
     isl.ents.forEach((e) => {
       if (e.t !== 'relay' || !res.hits[e.id]) return;
       const h = res.hits[e.id];
-      next[e.id] = h.has('w') ? 'w' : ['r', 'g', 'b'].find((c) => h.has(c));
+      next[e.id] = e.mix ? mixColors([...h]) : h.has('w') ? 'w' : ['r', 'g', 'b', 'y', 'm', 'c'].find((c) => h.has(c));
     });
     const same = Object.keys(next).length === Object.keys(active).length && Object.keys(next).every((k) => active[k] === next[k]);
     active = next;

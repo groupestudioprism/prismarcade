@@ -17,6 +17,8 @@ const THEMES = {
   puzzle: { grass: '#6aae5c', edge: '#86a85a', path: '#c9b48e', dirt: '#8a6650', under: '#5d4b66', rock: '#9097ab', tuft: '#86c46a', leaves: [['#4f9a6a', '#5fae76', '#468a5f'], ['#f4a7c4', '#ec8db3', '#f7c1d6']], blossom: 0.65 },
   village: { grass: '#74b862', edge: '#8fae5e', path: '#d2bf9c', dirt: '#8a6650', under: '#5d4b66', rock: '#a29fb3', tuft: '#8cca6e', leaves: [['#4f9a6a', '#5fae76', '#468a5f'], ['#f4a7c4', '#ec8db3', '#f7c1d6']], blossom: 0.5 },
   lande: { grass: '#8ea85a', edge: '#a3a560', path: '#b9a47e', dirt: '#7a5a46', under: '#4e4060', rock: '#8a8698', tuft: '#a9b86a', leaves: [['#3f7a4f', '#4f8a5a', '#5a7a3f'], ['#c9a050', '#b98a3f', '#d9b060']], blossom: 0.25 },
+  foret: { grass: '#5fb89a', edge: '#7fc9a8', path: '#cfe0c4', dirt: '#6a5a4a', under: '#3f5a6a', rock: '#8fa8b8', tuft: '#7fd6b4', leaves: [['#3fb4a8', '#4fc9bb', '#35a094'], ['#a8e8f4', '#86d6ec', '#c2f0fa']], blossom: 0.55 },
+  temple: { grass: '#6a8aa0', edge: '#5a7a90', path: '#7a9ab0', dirt: '#34485a', under: '#243444', rock: '#4a6a82', tuft: '#7fd6e8', leaves: [['#4a8aa0', '#5a9ab0', '#3a7a90'], ['#4a8aa0', '#5a9ab0', '#3a7a90']], blossom: 0, floor: true },
   sanctuaire: { grass: '#6c6788', edge: '#5d5878', path: '#7a7596', dirt: '#3f3a55', under: '#2e2840', rock: '#4a4362', tuft: '#8f7ad6', leaves: [['#5a4a8a', '#6a5a9a', '#4a3a7a'], ['#5a4a8a', '#6a5a9a', '#4a3a7a']], blossom: 0, floor: true },
   interieur: { grass: '#a0714f', edge: '#8f6446', path: '#a0714f', dirt: '#5a3f2f', under: '#3a2a22', rock: '#e9dcc2', tuft: '#a0714f', leaves: [['#5fae76', '#4f9a6a', '#468a5f'], ['#5fae76', '#4f9a6a', '#468a5f']], blossom: 0, floor: true, wood: true },
 };
@@ -311,6 +313,14 @@ export function buildWorld(scene, isl, def, opts = {}) {
       const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.45, 6), M.metal); stand.position.y = -0.62; frame.add(stand);
       frame.rotation.y = e.state ? -Math.PI / 4 : Math.PI / 4;
       v.head = frame; v.target = () => (e.state ? -Math.PI / 4 : Math.PI / 4);
+    } else if (e.t === 'vitrail') {
+      // vitrail : deux vitres croisées dans un cadre doré (se lit bien de toutes les directions)
+      pedestal(g, false);
+      const col = new THREE.Color(COLORS[e.color] || '#ffffff');
+      const gm = new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 0.9, transparent: true, opacity: 0.72, flatShading: true, roughness: 0.15, side: THREE.DoubleSide });
+      [0, Math.PI / 2].forEach((ry) => { const p = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.7, 0.07), gm); p.position.y = BEAM_Y + 0.15; p.rotation.y = ry; g.add(p); const fr = new THREE.Mesh(new THREE.BoxGeometry(1.58, 0.07, 0.11), M.gold); fr.position.y = BEAM_Y + 1.02; fr.rotation.y = ry; g.add(fr); const fb = fr.clone(); fb.position.y = BEAM_Y - 0.72; g.add(fb); });
+      const lamp = new THREE.PointLight(col, 1.2, 4.5); lamp.position.y = BEAM_Y + 0.2; if (!LOW) g.add(lamp);
+      v.float = null; v.glass = gm;
     } else if (e.t === 'prism') {
       pedestal(g, false);
       const p = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.62, 1.3, 3), M.glass); p.position.y = BEAM_Y + 0.1; p.castShadow = true; g.add(p);
@@ -325,7 +335,8 @@ export function buildWorld(scene, isl, def, opts = {}) {
     } else if (e.t === 'relay') {
       pedestal(g, true);
       const m = new THREE.MeshStandardMaterial({ color: 0xf3e9ff, emissive: 0xffffff, emissiveIntensity: 0.12, flatShading: true, roughness: 0.3 });
-      const c = new THREE.Mesh(new THREE.IcosahedronGeometry(0.36, 0), m); c.position.y = BEAM_Y; g.add(c);
+      const c = new THREE.Mesh(e.mix ? new THREE.DodecahedronGeometry(0.4, 0) : new THREE.IcosahedronGeometry(0.36, 0), m); c.position.y = BEAM_Y; g.add(c);
+      if (e.mix) { const ring = new THREE.Mesh(new THREE.TorusGeometry(0.52, 0.04, 6, 24), M.gold); ring.position.y = BEAM_Y; ring.rotation.x = Math.PI / 2; g.add(ring); const ring2 = ring.clone(); ring2.rotation.set(0, Math.PI / 2, 0); g.add(ring2); }
       const head = new THREE.Group(); head.position.y = BEAM_Y; g.add(head);
       const arrow = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.38, 6), M.gold); arrow.rotation.z = -Math.PI / 2; arrow.position.x = 0.6; head.add(arrow);
       const arm = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.06, 0.06), M.gold); arm.position.x = 0.3; head.add(arm);
@@ -544,7 +555,7 @@ export function buildWorld(scene, isl, def, opts = {}) {
   /* ---------- Faisceaux ---------- */
   const beamGeo = new THREE.CylinderGeometry(1, 1, 1, 10, 1, true), flareGeo = new THREE.SphereGeometry(1, 12, 8);
   const beamMats = {};
-  ['w', 'r', 'g', 'b'].forEach((c) => {
+  ['w', 'r', 'g', 'b', 'y', 'm', 'c'].forEach((c) => {
     beamMats[c] = {
       outer: new THREE.MeshBasicMaterial({ color: new THREE.Color(COLORS[c]).multiplyScalar(1.4), transparent: true, opacity: 0.26, blending: THREE.AdditiveBlending, depthWrite: false }),
       core: new THREE.MeshBasicMaterial({ color: new THREE.Color(COLORS[c]).lerp(new THREE.Color('#ffffff'), c === 'w' ? 0.2 : 0.45).multiplyScalar(c === 'w' ? 2.2 : 3) }),

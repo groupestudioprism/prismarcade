@@ -5,12 +5,15 @@
 import { ITEMS, UPGRADES, isStackable } from '../data/items.js';
 import { DEFAULT_LOOK, HAIR_COLORS, SKIN, EYES, CLOAK_COLORS, TRIMS, HEIGHTS, byId } from '../data/looks.js';
 
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 5;
+
+/* Monde d'une île : tout ce qui change quand on joue (une île = un monde, voir otherWorlds) */
+export const newWorld = (firstWarp) => ({ dev: {}, gates: {}, picked: {}, cut: {}, broken: {}, chests: {}, lamps: {}, warps: firstWarp ? { [firstWarp]: 1 } : {}, killed: {} });
 
 export function newState() {
   return {
     v: SAVE_VERSION, created: Date.now(), updated: Date.now(), playTime: 0, name: 'Lyra',
-    player: { zone: 'havre', x: null, z: null, face: 0, hp: 100, en: 60, lvl: 1, xp: 0, ecus: 20, fragments: 0, abilities: {}, respawn: { zone: 'havre', cell: [6, 6] } },
+    player: { island: 'aube', zone: 'havre', x: null, z: null, face: 0, hp: 100, en: 60, lvl: 1, xp: 0, ecus: 20, fragments: 0, abilities: {}, respawn: { zone: 'havre', cell: [6, 6] } },
     look: Object.assign({}, DEFAULT_LOOK),
     unlocks: {},
     inv: {},          // id → quantité
@@ -18,8 +21,9 @@ export function newState() {
     equip: { weapon: null, armor: null, acc1: null, acc2: null, quick: 'potion' },
     quests: {},       // id → { state: 'active' | 'done', step, base: {} }
     flags: {},
-    world: { dev: {}, gates: {}, picked: {}, cut: {}, broken: {}, chests: {}, lamps: {}, warps: { havre: 1 }, killed: {} },
+    world: newWorld('havre'),
     shops: {},
+    otherWorlds: {},  // monde (énigmes, coffres, objets ramassés…) des îles où l'on n'est pas en ce moment
     stats: { kills: 0, deaths: 0, killsBy: {}, chests: 0, dmgDealt: 0 },
     seen: {},
   };

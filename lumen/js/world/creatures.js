@@ -108,25 +108,26 @@ function gardien() {
   } };
 }
 
-function colosse() {
+function colosse(tint) {
+  const T = tint || '#b98cff', T2 = tint || '#c9a0ff', T3 = tint || '#9f7aff';
   const root = new THREE.Group(), body = new THREE.Group(); root.add(body);
-  const rock = mat('#5d5470', { roughness: 0.95 }), rock2 = mat('#4a4260', { roughness: 0.95 });
+  const rock = mat(tint ? '#4a7a8a' : '#5d5470', { roughness: tint ? 0.35 : 0.95, emissive: tint ? '#1f5a6a' : '#000000', emissiveIntensity: tint ? 0.35 : 0 }), rock2 = mat(tint ? '#3a6272' : '#4a4260', { roughness: tint ? 0.35 : 0.95, emissive: tint ? '#144a5a' : '#000000', emissiveIntensity: tint ? 0.3 : 0 });
   const torso = new THREE.Mesh(new THREE.DodecahedronGeometry(1.25, 0), rock); torso.position.y = 2.5; torso.scale.set(1.15, 1.05, 0.9); body.add(torso);
   const hips = new THREE.Mesh(new THREE.DodecahedronGeometry(0.85, 0), rock2); hips.position.y = 1.35; body.add(hips);
   const head = new THREE.Mesh(new THREE.DodecahedronGeometry(0.6, 0), rock2); head.position.set(0, 3.75, 0.25); body.add(head);
-  [-1, 1].forEach((s) => { const e = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.08, 0.05), glow('#c9a0ff', 3)); e.position.set(s * 0.22, 3.8, 0.78); body.add(e); });
-  const coreM = new THREE.MeshBasicMaterial({ color: new THREE.Color('#b98cff').multiplyScalar(2.2) });
+  [-1, 1].forEach((s) => { const e = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.08, 0.05), glow(T2, 3)); e.position.set(s * 0.22, 3.8, 0.78); body.add(e); });
+  const coreM = new THREE.MeshBasicMaterial({ color: new THREE.Color(T).multiplyScalar(2.2) });
   const core = new THREE.Mesh(new THREE.OctahedronGeometry(0.42, 0), coreM); core.position.set(0, 2.55, 1.0); body.add(core);
   const arms = [-1, 1].map((s) => {
     const p = new THREE.Group(); p.position.set(s * 1.45, 3.0, 0); body.add(p);
     const up = new THREE.Mesh(new THREE.DodecahedronGeometry(0.5, 0), rock); up.position.y = -0.5; p.add(up);
     const fist = new THREE.Mesh(new THREE.DodecahedronGeometry(0.72, 0), rock2); fist.position.y = -1.55; p.add(fist);
-    for (let k = 0; k < 3; k++) { const c = new THREE.Mesh(new THREE.OctahedronGeometry(0.16, 0), glow('#9f7aff', 1.6)); c.position.set(s * 0.3, -1.0 - k * 0.3, 0.3); p.add(c); }
+    for (let k = 0; k < 3; k++) { const c = new THREE.Mesh(new THREE.OctahedronGeometry(0.16, 0), glow(T3, 1.6)); c.position.set(s * 0.3, -1.0 - k * 0.3, 0.3); p.add(c); }
     return p;
   });
   const legs = [-1, 1].map((s) => { const l = new THREE.Mesh(new THREE.DodecahedronGeometry(0.6, 0), rock2); l.position.set(s * 0.7, 0.55, 0); body.add(l); return l; });
   // couronne de brume
-  const mistM = new THREE.MeshBasicMaterial({ color: '#b39cff', transparent: true, opacity: 0.25, depthWrite: false });
+  const mistM = new THREE.MeshBasicMaterial({ color: tint || '#b39cff', transparent: true, opacity: 0.25, depthWrite: false });
   const mist = []; for (let i = 0; i < 8; i++) { const m = new THREE.Mesh(new THREE.SphereGeometry(0.45, 8, 6), mistM); body.add(m); mist.push(m); }
   shadowAll(root);
   let t = 0;
@@ -142,7 +143,7 @@ function colosse() {
     else body.rotation.x = s.tired ? 0.35 : 0;
     arms[0].rotation.x = la; arms[1].rotation.x = ra;
     const pulse = s.tired ? 3.8 + Math.sin(t * 10) * 1 : 1.6 + Math.sin(t * 3) * 0.3;
-    coreM.color.set('#b98cff').multiplyScalar(pulse);
+    coreM.color.set(T).multiplyScalar(pulse);
     core.rotation.y += dt * 2;
     mist.forEach((m, i) => { const a = t * 0.6 + i * 0.8; m.position.set(Math.cos(a) * 1.6, 3.3 + Math.sin(t + i) * 0.4, Math.sin(a) * 1.2); });
   } };

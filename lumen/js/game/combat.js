@@ -38,6 +38,18 @@ export function createCombat(G) {
     add(m); add(edge); fx.push({ m, edge, t: 0, dur, kind: 'warn' });
   }
 
+  /* ---------- Variantes de couleur (Forêt de Verre) ---------- */
+  const sparkCol = (def, big) => def.spark || (def.family === 'brume' ? (big ? '#d8b4fe' : '#c9b6ff') : '#b5e08a');
+  function tintView(root, hex) {
+    const tc = new THREE.Color(hex);
+    root.traverse((o) => {
+      if (!o.isMesh || !o.material) return;
+      o.material = o.material.clone();
+      if (o.material.color) o.material.color.lerp(tc, o.material.type === 'MeshBasicMaterial' ? 0.35 : 0.6);
+      if (o.material.emissive) o.material.emissive.lerp(tc, 0.5);
+    });
+  }
+
   /* ---------- Apparition ---------- */
   function spawnZone(zi) {
     const z = G.zones[zi];
@@ -47,12 +59,13 @@ export function createCombat(G) {
         if (enemies.some((e) => e.key === key)) continue;
         if (G.st.world.killed[key]) continue;                         // élite ou boss vaincu pour de bon
         if (deadAt[key] && clock - deadAt[key] < 90) continue;          // réapparition après un moment
-        if (sp.boss && G.st.flags.boss_colosse) continue;
         const def = ENEMIES[sp.type];
+        if (sp.boss && G.st.flags[def.bossFlag || 'boss_colosse']) continue;
         const a = (k / Math.max(1, sp.n)) * Math.PI * 2;
         let cx = sp.x + (sp.n > 1 ? Math.cos(a) * 1.2 : 0), cy = sp.y + (sp.n > 1 ? Math.sin(a) * 1.2 : 0);
         const x = W(z.ox + cx), zz = W(z.oy + cy);
-        const view = CREATURES[sp.type]();
+        const view = CREATURES[def.model || sp.type](def.tint);
+        if (def.tint && def.model !== 'colosse') tintView(view.root, def.tint);
         view.root.position.set(x, 0, zz);
         add(view.root);
         const hp = Math.round(def.hp * (sp.elite ? 1.2 : 1));
@@ -87,7 +100,7 @@ export function createCombat(G) {
     G.st.stats.dmgDealt += dmg;
     if (!e.boss && opts.knock !== 0) { const a = Math.atan2(e.x - P.x, e.z - P.z), k = (opts.knock || 1.4) * (e.type === 'ronceux' ? 0 : 1); e.kb.x += Math.sin(a) * k * 4; e.kb.z += Math.cos(a) * k * 4; }
     G.ui.damage(e.x, (e.boss ? 4.4 : 1.8), e.z, dmg, crit ? 'crit' : m > 1.05 ? 'weak' : m < 0.95 ? 'resist' : '');
-    G.sparks.burst(new THREE.Vector3(e.x, e.boss ? 2.5 : 0.9, e.z), e.def.family === 'brume' ? '#c9b6ff' : '#b5e08a', 14, 4, 1.5);
+    G.sparks.burst(new THREE.Vector3(e.x, e.boss ? 2.5 : 0.9, e.z), sparkCol(e.def, false), 14, 4, 1.5);
     G.audio.sfx(e.def.family === 'brume' ? 'hitBrume' : 'hit');
     if (!e.seen) { e.seen = true; }
     if (e.state === 'idle') e.state = 'chase';
@@ -98,7 +111,7 @@ export function createCombat(G) {
   function kill(e) {
     e.state = 'dead'; e.t = 0;
     G.audio.sfx('kill');
-    G.sparks.burst(new THREE.Vector3(e.x, 1, e.z), e.def.family === 'brume' ? '#d8b4fe' : '#b5e08a', e.boss ? 120 : 40, e.boss ? 8 : 4, 2.5);
+    G.sparks.burst(new THREE.Vector3(e.x, 1, e.z), sparkCol(e.def, true), e.boss ? 120 : 40, e.boss ? 8 : 4, 2.5);
     deadAt[e.key] = clock;
     if (e.elite || e.boss) G.st.world.killed[e.key] = 1;
     G.st.stats.kills++; G.st.stats.killsBy[e.type] = (G.st.stats.killsBy[e.type] || 0) + 1;
@@ -113,7 +126,7 @@ export function createCombat(G) {
 
   /* ---------- Butin au sol ---------- */
   const coinGeo = new THREE.CylinderGeometry(0.16, 0.16, 0.05, 10), coinMat = new THREE.MeshStandardMaterial({ color: '#f0c66b', metalness: 0.8, roughness: 0.25, emissive: '#c99a3a', emissiveIntensity: 0.4 });
-  const matColors = { brume: '#b39cff', fibre: '#7aa84f', pierre: '#a29fb3', bois: '#c9965a', larme_colosse: '#c9a0ff' };
+  const matColors = { eclat_verre: '#9fe9ff', givre_foret: '#bff3ff', larme_verre: '#9fffe0', brume: '#b39cff', fibre: '#7aa84f', pierre: '#a29fb3', bois: '#c9965a', larme_colosse: '#c9a0ff' };
   function dropPickup(x, z, id, n) {
     const m = id === 'ecus' ? new THREE.Mesh(coinGeo, coinMat) : new THREE.Mesh(new THREE.OctahedronGeometry(0.2, 0), new THREE.MeshStandardMaterial({ color: matColors[id] || '#ffffff', emissive: matColors[id] || '#ffffff', emissiveIntensity: 0.6, flatShading: true }));
     if (id === 'ecus') m.rotation.x = Math.PI / 2;
@@ -388,8 +401,8 @@ export function createCombat(G) {
     for (let i = 0; i < n; i++) {
       const a = Math.random() * Math.PI * 2, x = b.x + Math.cos(a) * 3, z = b.z + Math.sin(a) * 3;
       if (!G.canStand(x, z, 0.4)) continue;
-      const def = ENEMIES.brumelin, view = CREATURES.brumelin(); view.root.position.set(x, 0, z); add(view.root);
-      enemies.push({ key: 'add' + Math.random(), type: 'brumelin', def, zi: b.zi, z: b.z, view, x, z, hx: x, hz: z, vx: 0, vz: 0, face: 0, hp: def.hp, maxHp: def.hp, state: 'chase', t: 0, cd: 1, hurt: 0, kb: { x: 0, z: 0 }, adds: true, seen: true, wanderT: 1 });
+      const at = b.def.adds || 'brumelin', def = ENEMIES[at], view = CREATURES[def.model || at](def.tint); if (def.tint) tintView(view.root, def.tint); view.root.position.set(x, 0, z); add(view.root);
+      enemies.push({ key: 'add' + Math.random(), type: at, def, zi: b.zi, z: b.z, view, x, z, hx: x, hz: z, vx: 0, vz: 0, face: 0, hp: def.hp, maxHp: def.hp, state: 'chase', t: 0, cd: 1, hurt: 0, kb: { x: 0, z: 0 }, adds: true, seen: true, wanderT: 1 });
       G.sparks.burst(new THREE.Vector3(x, 0.6, z), '#b39cff', 20, 3, 2);
     }
   }
