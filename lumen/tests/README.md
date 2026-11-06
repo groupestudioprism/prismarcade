@@ -8,3 +8,7 @@ Les scripts lancent eux-mêmes le serveur local (port 8765) et pilotent le jeu v
 - `e2e_mobile.py` : mode tactile (`?touch`), écran de 844×390.
 
 Chaque script se termine par `ERRORS: []` et `FAILS: []` quand tout est bon.
+- `e2e_quetes_secondaires.py` : les 8 quêtes secondaires (proposition, objectifs, remise, récompenses).
+- `e2e_interactions.py` : lampions (vraie interaction), pendentif, coffre du marteau.
+
+Contrôle d'accessibilité des coffres et objets : `node lumen/tools/reach.mjs`.
