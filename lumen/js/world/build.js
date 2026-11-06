@@ -38,7 +38,7 @@ export function buildWorld(scene, isl, def, opts = {}) {
     ring: new THREE.MeshBasicMaterial({ color: new THREE.Color(0xffc861).multiplyScalar(2.6), transparent: true, opacity: 0.9 }),
     ghost: new THREE.MeshBasicMaterial({ color: 0x9be8ff, transparent: true, opacity: 0.1, depthWrite: false }),
     glass: new THREE.MeshStandardMaterial({ color: 0xdcefff, transparent: true, opacity: 0.55, roughness: 0.05, metalness: 0.1, emissive: 0x9fc4ff, emissiveIntensity: 0.5, flatShading: true }),
-    ronce: mat('#3f5a32', { roughness: 0.9 }), thorn: mat('#c9b48a'), crack: mat('#a6a2b8', { roughness: 0.95 }),
+    ronce: mat('#ffffff', { roughness: 0.9 }), thorn: mat('#c9b48a'), crack: mat('#a6a2b8', { roughness: 0.95 }),
   };
   const envTex = (() => {
     const c = document.createElement('canvas'); c.width = 64; c.height = 32;
@@ -173,7 +173,7 @@ export function buildWorld(scene, isl, def, opts = {}) {
     // ronces et roches fissurées (retirables)
     const ron = cells.filter(([x, y]) => terr(x, y) === 'r');
     if (ron.length) {
-      const m = instanced(G, ronceGeo, M.ronce, ron, (o, [x, y], i) => { cellIndex.r[x + ',' + y] = { m: null, i }; o.position.set(W(x), 0.55, W(y)); o.scale.set(1.1, 0.85 + hash(x, y, 5) * 0.3, 1.1); o.rotation.y = hash(x, y, 6) * 3; return C('#3f5a32').offsetHSL(0, 0, (hash(x, y, 7) - 0.5) * 0.1); }, { cast: true });
+      const m = instanced(G, ronceGeo, M.ronce, ron, (o, [x, y], i) => { cellIndex.r[x + ',' + y] = { m: null, i }; o.position.set(W(x), 0.55, W(y)); o.scale.set(1.1, 0.85 + hash(x, y, 5) * 0.3, 1.1); o.rotation.y = hash(x, y, 6) * 3; return C('#6a9a52').offsetHSL((hash(x, y, 9) - 0.5) * 0.05, 0, (hash(x, y, 7) - 0.5) * 0.12); }, { cast: true });
       const th2 = instanced(G, thornGeo, M.thorn, ron.flatMap(([x, y]) => [0, 1, 2, 3, 4].map((k) => [x, y, k])), (o, [x, y, k]) => { const a = k * 1.3 + hash(x, y, 8); o.position.set(W(x) + Math.cos(a) * 0.7, 0.5 + (k % 3) * 0.25, W(y) + Math.sin(a) * 0.7); o.rotation.set(Math.sin(a) * 1.4, 0, -Math.cos(a) * 1.4); }, { receive: false });
       ron.forEach(([x, y], i) => (cellIndex.r[x + ',' + y] = { m, th: th2, i }));
     }
