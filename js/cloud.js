@@ -304,7 +304,17 @@
     catch (e) { if (e && e.code === 'auth/user-not-found') return; throw e; }   // même réponse que l'adresse existe ou non
   }
 
-  Object.assign(C, { signIn, signOut, resetPassword, top, rank, submit, submitPeriods, claimRewards, retry: () => push() });
+  /* ---------- Documents des grands jeux (ex. Lumen : lumenSaves/{uid}/slots/{slot}) ----------
+     Accès générique, réservé au compte connecté ; les règles Firestore décident de ce qui est permis. */
+  const segs = (path) => String(path).split('/').filter(Boolean);
+  const store = {
+    async get(path) { if (C.status !== 'in' || !fb) throw Object.assign(new Error('out'), { code: 'app/out' }); const snap = await withTimeout(fb.F.getDoc(fb.F.doc(fb.db, ...segs(path))), 15000); return snap.exists() ? Object.assign({ id: snap.id }, snap.data()) : null; },
+    async set(path, data) { if (C.status !== 'in' || !fb) throw Object.assign(new Error('out'), { code: 'app/out' }); await withTimeout(fb.F.setDoc(fb.F.doc(fb.db, ...segs(path)), Object.assign({}, data, { updatedAt: fb.F.serverTimestamp() })), 20000); return true; },
+    async list(path) { if (C.status !== 'in' || !fb) throw Object.assign(new Error('out'), { code: 'app/out' }); const qs = await withTimeout(fb.F.getDocs(fb.F.collection(fb.db, ...segs(path))), 15000); return qs.docs.map((d) => Object.assign({ id: d.id }, d.data())); },
+    async del(path) { if (C.status !== 'in' || !fb) throw Object.assign(new Error('out'), { code: 'app/out' }); await withTimeout(fb.F.deleteDoc(fb.F.doc(fb.db, ...segs(path))), 15000); return true; },
+  };
+
+  Object.assign(C, { signIn, signOut, resetPassword, top, rank, submit, submitPeriods, claimRewards, retry: () => push(), store });
   // une période peut se terminer pendant que la page est ouverte
   setInterval(() => { if (C.status === 'in') claimRewards(); }, 10 * 60 * 1000);
 

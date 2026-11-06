@@ -35,7 +35,7 @@ export const ENEMIES = {
     desc: 'Son bouclier arrête les coups de face. Frappe dans le dos, au marteau ou avec l’Onde de lumière.',
   },
   colosse: {
-    name: 'Colosse de Brume', family: 'brume', hp: 560, atk: 20, def: 2, speed: 1.7, behavior: 'boss', aggro: 12, leash: 40, radius: 1.5, boss: true,
+    name: 'Colosse de Brume', family: 'brume', hp: 440, atk: 20, def: 2, speed: 1.7, behavior: 'boss', aggro: 12, leash: 40, radius: 1.5, boss: true,
     xp: 220, ecus: [150, 150], drops: [['larme_colosse', 1]], weak: { lumiere: 1.3 }, resist: { percant: 0.7 },
     desc: 'Un amas de roche et de brume autour d’un cœur volé. Son cœur brille quand il reprend son souffle.',
   },
