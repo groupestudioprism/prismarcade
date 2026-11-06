@@ -1,0 +1,318 @@
+/* =========================================================
+   LUMEN — personnages et dialogues.
+   Un PNJ parle du premier sujet (talk) dont la condition « if » est vraie.
+   Conditions : fonctions (q) => booléen, avec
+     q.flag(id) · q.quest(id) → 'none' | 'active' | 'done' · q.step(id) → étape en cours
+     q.has(objet, n) · q.count('pages' | 'lampions' | 'shards' | 'kills')
+   Répliques : texte (le PNJ parle) ou { who: 'fia' | 'lyra', t: '…' }.
+   Effets (do) : start, step, give, take, ecus, flag, open, shop, forge, wardrobe, rest,
+                 unlock, teach, equip, heal.
+   ========================================================= */
+
+const S = (q, id, st) => q.quest(id) === 'active' && q.step(id) === st;
+const FIA = (t) => ({ who: 'fia', t });
+const LYRA = (t) => ({ who: 'lyra', t });
+
+export const NPCS = {
+  /* ---------------- Séléné, gardienne du phare ---------------- */
+  selene: {
+    name: 'Séléné', role: 'Gardienne du phare',
+    look: { hair: 'chignon', hairHex: '#d9d5e6', skinHex: '#efd0b4', outfit: 'aube', cloakHex: '#e9e2f5', tunicHex: '#c9b8e8', trimHex: '#f0c66b', scale: 0.98, staff: true },
+    talk: [
+      {
+        if: (q) => S(q, 'q_reveil', 'parler'),
+        say: [
+          'Te voilà debout. La barque t’a déposée sur la grève à l’aube, endormie, avec cette petite lumière posée sur l’épaule.',
+          FIA('Bonjour ! Moi, c’est Fia. Et elle, c’est Lyra. Elle ne se souvient de rien, mais moi je me souviens de tout. Enfin… de presque tout.'),
+          'Une Lueur qui parle… Il n’y en a plus eu depuis le temps d’Orin. Écoute-moi bien, Lyra : la Brume a éteint le phare de l’Aube. Sans lui, les îles dérivent et se perdent.',
+          'Les cristaux du Rivage, à l’est, dorment encore. Les lanternes s’orientent à la main ; tourne-les pour guider la lumière jusqu’aux cristaux.',
+          'Et prends ce bâton. Les Brumelins rôdent jusque dans la lande, au sud. Il ne coupe rien, mais il frappe juste.',
+        ],
+        do: [{ step: 'q_reveil' }, { give: 'baton' }, { equip: 'baton' }, { give: 'veste_voyage' }, { equip: 'veste_voyage' }, { open: 'b_rivage' }, { open: 'b_lande' }],
+      },
+      {
+        if: (q) => S(q, 'q_reveil', 'rivage'),
+        say: ['Le pont du Rivage est à l’est de la grand-rue. Approche-toi d’une lanterne et tourne-la : la lumière fera le reste.', FIA('On y va ? J’adore les cristaux. Ils chantent quand ils s’allument.')],
+      },
+      {
+        if: (q) => S(q, 'q_reveil', 'retour'),
+        say: [
+          'Je l’ai vu d’ici : deux éclairs dorés au-dessus du Rivage. Tu as le don, Lyra. Ou c’est Fia qui l’a.',
+          FIA('C’est nous deux. Et j’ai appris un truc : si je tourne très vite autour de Lyra, ça fait une onde de lumière qui repousse la brume !'),
+          'Une Onde de lumière… Utilise-la avec sagesse, elle épuise ton énergie.',
+          'Mais il y a pire. La Lentille d’Aube, le cœur du phare, a disparu la nuit où la Brume est venue. Une ombre énorme l’a emportée vers le Sanctuaire, au sud de la Lande.',
+          'Un bâton ne suffira pas contre ce qui la garde. Va voir Bran, à la forge. Dis-lui que c’est moi qui t’envoie.',
+        ],
+        do: [{ step: 'q_reveil' }, { teach: 'onde' }, { start: 'q_lentille' }],
+      },
+      {
+        if: (q) => q.quest('q_lentille') === 'active' && q.step('q_lentille') !== 'retour',
+        say: ['Le Sanctuaire de Brume se trouve tout au sud de la Lande des Ronces, derrière la grande haie. Bran saura t’armer.', 'Repose-toi à l’auberge si tu es blessée : Maëlle veille sur les voyageurs.'],
+      },
+      {
+        if: (q) => S(q, 'q_lentille', 'retour'),
+        say: [
+          LYRA('Séléné… la voici. La Lentille d’Aube.'),
+          'Elle est intacte ! Tu as vaincu le Colosse… Orin lui-même n’aurait pas cru ça possible.',
+          'Le phare est au bout du cap, au-delà des Jardins suspendus et des Ruines. Les cristaux y sont plus capricieux : prismes, relais, lumières de couleur.',
+          'Pose la Lentille à l’entrée du phare, puis rallume-le. Rouge, vert et bleu, ensemble.',
+        ],
+        do: [{ step: 'q_lentille' }, { start: 'q_phare' }],
+      },
+      {
+        if: (q) => q.quest('q_phare') === 'active' && q.step('q_phare') !== 'retour',
+        say: ['Les Jardins suspendus commencent au sud du Rivage. Un prisme y sépare la lumière en trois couleurs : rouge à gauche, vert tout droit, bleu à droite.', FIA('Comme un arc-en-ciel coupé en morceaux !')],
+      },
+      {
+        if: (q) => S(q, 'q_phare', 'retour'),
+        say: [
+          'Regarde le ciel, Lyra. Rose et or, comme au premier matin. Le phare de l’Aube brille à nouveau.',
+          'Un éclat rouge du Grand Prisme flotte au-dessus de la flamme. Il pointe vers l’ouest… vers la Forêt de Verre.',
+          'Cette robe était celle des gardiens du phare. Elle te revient.',
+          FIA('La Forêt de Verre ! Il paraît que les arbres y sonnent comme des cloches quand le vent passe.'),
+          'Repose-toi d’abord. La route vers les autres îles s’ouvrira bientôt.',
+        ],
+        do: [{ step: 'q_phare' }, { flag: 'acte1_fini' }],
+      },
+      {
+        if: () => true,
+        say: ['Le vent tourne, Lyra. Que veux-tu savoir ?'],
+        choices: [
+          { t: 'Parle-moi du phare', say: ['Orin l’a construit avec les siens, il y a quarante ans. Quand le Grand Prisme l’a touché la première fois, toute l’île est devenue rose. Depuis, il garde les îles ensemble.'] },
+          { t: 'Qui était Orin ?', say: ['Un cartographe. Le plus curieux de nous tous. Il a voulu une lumière si forte qu’elle retiendrait toutes les îles… et puis il est parti. Sa fille, Lison, l’attend toujours devant sa maison.'] },
+          { t: 'Qu’est-ce que la Brume ?', say: ['Personne ne le sait vraiment. Elle éteint ce qui brille. Ses créatures ont peur de la lumière, mais pas des bâtons.', FIA('Moi j’ai pas peur d’elle. Enfin, un peu.')] },
+          { t: 'Au revoir' },
+        ],
+      },
+    ],
+  },
+
+  /* ---------------- Bran, forgeron ---------------- */
+  bran: {
+    name: 'Bran', role: 'Forgeron',
+    look: { hair: 'court', hairHex: '#3a2a22', skinHex: '#c99772', outfit: 'tablier', tunicHex: '#7a5a48', apronHex: '#4a3a33', trimHex: '#c9805a', beard: '#3a2a22', scale: 1.08 },
+    talk: [
+      {
+        if: (q) => S(q, 'q_lentille', 'bran'),
+        say: [
+          'Séléné t’envoie ? Alors c’est sérieux. Une vraie lame, hein… Je peux forger ça.',
+          'Mais pour qu’elle morde la brume, il faut la tremper dans la brume elle-même. Rapporte-moi trois gouttes de brume condensée. Les Brumelins de la Lande en lâchent quand on les dissipe.',
+        ],
+        do: [{ step: 'q_lentille' }],
+      },
+      {
+        if: (q) => S(q, 'q_lentille', 'brume'),
+        say: ['Trois brumes condensées, pas une de moins. La Lande est au sud du village. Et esquive quand ils te sautent dessus : un Brumelin, ça mord.'],
+        choices: [{ t: 'Voir les marchandises', do: [{ shop: 'bran' }] }, { t: 'À plus tard' }],
+      },
+      {
+        if: (q) => S(q, 'q_lentille', 'forge'),
+        say: [
+          'Ha ! Tu les as. Donne. … Regarde comme le métal boit la brume.',
+          'Voilà l’Épée de l’Aube. Elle tranche les ronces comme du pain et les créatures de brume la craignent. La grande haie de la Lande ne t’arrêtera plus.',
+        ],
+        do: [{ take: 'brume', n: 3 }, { give: 'epee_aube' }, { equip: 'epee_aube' }, { step: 'q_lentille' }, { flag: 'forge_ouverte' }],
+      },
+      {
+        if: (q) => S(q, 's_marteau', 'retour'),
+        say: ['Mon marteau ! Je l’aurais reconnu entre mille. Tiens, pour la peine, prends ces pierres… et reviens me voir quand tu veux améliorer tes armes. Pour toi, c’est le meilleur prix.'],
+        do: [{ take: 'marteau_bran', n: 1 }, { step: 's_marteau' }, { flag: 'forge_remise' }],
+      },
+      {
+        if: () => true,
+        say: (q) => [q.flag('forge_ouverte') ? 'Le feu est chaud. Qu’est-ce que je peux faire pour toi ?' : 'Bienvenue à la forge. Je vends des lames et des vestes solides.'],
+        choices: [
+          { t: 'Améliorer mon équipement', if: (q) => q.flag('forge_ouverte'), do: [{ forge: true }] },
+          { t: 'Voir les marchandises', do: [{ shop: 'bran' }] },
+          { t: 'Tu as l’air soucieux…', if: (q) => q.quest('s_marteau') === 'none' && q.flag('forge_ouverte'), say: ['J’ai perdu mon vieux marteau de forge en courant après un sanglier, dans la Lande. Il a roulé dans un recoin, à l’est, gardé par des ronces vivantes. Si tu le retrouves…'], do: [{ start: 's_marteau' }] },
+          { t: 'Au revoir' },
+        ],
+      },
+    ],
+  },
+
+  /* ---------------- Ysolde, apothicaire ---------------- */
+  ysolde: {
+    name: 'Ysolde', role: 'Apothicaire',
+    look: { hair: 'long', hairHex: '#2a2230', skinHex: '#8d5b3e', outfit: 'robe', tunicHex: '#3f7d5f', trimHex: '#d7dbe8', acc: 'lunettes', scale: 0.98 },
+    talk: [
+      {
+        if: (q) => S(q, 's_ysolde', 'retour'),
+        say: ['Cinq ! Parfaites, elles tremblent encore. Avec ça, je pourrai préparer des grandes potions. Tiens, les premières sont pour toi.'],
+        do: [{ take: 'brume', n: 5 }, { step: 's_ysolde' }, { flag: 'ysolde_plus' }],
+      },
+      {
+        if: () => true,
+        say: (q) => [q.flag('ysolde_plus') ? 'Potions, élixirs, et maintenant de grandes potions. Que te faut-il ?' : 'Potions et élixirs, tout frais. Une piqûre de ronce ? Une morsure de Brumelin ? J’ai ce qu’il faut.'],
+        choices: [
+          { t: 'Acheter', do: [{ shop: 'ysolde' }] },
+          { t: 'Tu as besoin d’aide ?', if: (q) => q.quest('s_ysolde') === 'none', say: ['Justement… J’aimerais étudier la brume condensée. Cinq gouttes devraient suffire. On en trouve sur les créatures de la Lande.'], do: [{ start: 's_ysolde' }] },
+          { t: 'Au revoir' },
+        ],
+      },
+    ],
+  },
+
+  /* ---------------- Pell, tailleur ---------------- */
+  pell: {
+    name: 'Pell', role: 'Tailleur ambulant',
+    look: { hair: 'boucles', hairHex: '#8f3d22', skinHex: '#efd0b4', outfit: 'exploratrice', cloakHex: '#e58fb8', tunicHex: '#f3e6c8', trimHex: '#f0c66b', acc: 'foulard', scale: 1.0 },
+    talk: [
+      {
+        if: (q) => S(q, 's_prisme', 'retour'),
+        say: ['Huit éclats ! Regarde comme ils jettent des couleurs sur le tissu… Laisse-moi une nuit. Voilà : une étoffe prismatique. Et une teinture azur, pour aller avec.'],
+        do: [{ step: 's_prisme' }],
+      },
+      {
+        if: () => true,
+        say: ['Tissus de l’archipel, teintures rares, et un miroir pour essayer. Une nouvelle allure, voyageuse ?'],
+        choices: [
+          { t: 'Changer d’apparence', do: [{ wardrobe: true }] },
+          { t: 'Acheter', do: [{ shop: 'pell' }] },
+          { t: 'Une idée de tenue ?', if: (q) => q.quest('s_prisme') === 'none', say: ['J’en rêve depuis des années : une étoffe tissée de lumière. Avec huit éclats du Grand Prisme, je pourrais essayer. On en trouve un peu partout sur l’île, surtout là où la lumière dort.'], do: [{ start: 's_prisme' }] },
+          { t: 'Au revoir' },
+        ],
+      },
+    ],
+  },
+
+  /* ---------------- Gaspard, marchand de ressources ---------------- */
+  gaspard: {
+    name: 'Gaspard', role: 'Pêcheur de nuages',
+    look: { hair: 'court', hairHex: '#cfcbe0', skinHex: '#d9ab84', outfit: 'tunique', tunicHex: '#c9965a', trimHex: '#6b4a3a', beard: '#d9d5e6', hat: 'chapeau', scale: 0.96 },
+    talk: [
+      {
+        if: () => true,
+        say: (q) => [q.quest('q_lentille') === 'done' ? 'La pêche est bonne depuis que la Lentille est revenue. J’ai même reçu des bottes de l’île du Vent !' : 'J’achète et je vends tout ce que la lande donne : fibres, pierres, brume… Les nuages, eux, ne se vendent pas. Hélas.'],
+        choices: [
+          { t: 'Acheter', do: [{ shop: 'gaspard' }] },
+          { t: 'Vendre', do: [{ shop: 'gaspard', sell: true }] },
+          { t: 'Pêcheur de nuages ?', say: ['Avant la Brume, je pêchais des nuages au filet pour en tirer de l’eau douce. Maintenant ils sont pleins de brume. Un jour, peut-être…', FIA('On pourrait l’aider, plus tard ?')] },
+          { t: 'Au revoir' },
+        ],
+      },
+    ],
+  },
+
+  /* ---------------- Tobias, enfant ---------------- */
+  tobias: {
+    name: 'Tobias', role: 'Enfant du village',
+    look: { hair: 'court', hairHex: '#d6aa5c', skinHex: '#f6e3d3', outfit: 'tunique', tunicHex: '#5f8fd0', trimHex: '#f0c66b', scale: 0.72 },
+    talk: [
+      {
+        if: (q) => S(q, 's_pendentif', 'retour'),
+        say: ['MON PENDENTIF ! Tu l’as trouvé ! Tiens, je te donne ma plus belle plume. Elle vient d’un oiseau de l’aube, c’est très rare.', FIA('Elle va trop bien avec ta capuche !')],
+        do: [{ take: 'pendentif', n: 1 }, { step: 's_pendentif' }],
+      },
+      {
+        if: (q) => q.quest('s_pendentif') === 'active',
+        say: ['La pie l’a lâché près du puits, j’en suis sûr ! Mais il y a des ronces partout… Il faudrait une vraie épée.'],
+      },
+      {
+        if: (q) => q.quest('s_pendentif') === 'none',
+        say: ['Tu es la fille de la barque ? Tu peux m’aider ? Une pie m’a volé mon pendentif ! Elle l’a laissé tomber derrière les ronces, près du puits, à l’est.'],
+        do: [{ start: 's_pendentif' }],
+      },
+      { if: () => true, say: ['Quand je serai grand, je serai gardien du phare. Ou forgeron. Ou pêcheur de nuages !'] },
+    ],
+  },
+
+  /* ---------------- Lison, fille d'Orin ---------------- */
+  lison: {
+    name: 'Lison', role: 'Fille d’Orin',
+    look: { hair: 'tresse', hairHex: '#262033', skinHex: '#efd0b4', outfit: 'voyage', cloakHex: '#2f7d5b', tunicHex: '#e9dcc2', trimHex: '#d7dbe8', hood: false, scale: 0.95 },
+    talk: [
+      {
+        if: (q) => S(q, 's_pages', 'retour'),
+        say: [
+          'Ce sont bien ses pages… son écriture penchée, ses taches d’encre. Merci, Lyra.',
+          'Il parle d’une ombre derrière le Prisme… et il me demande de garder le phare allumé.',
+          'Prends cette clé. C’est celle de sa maison. Il y a un bureau, des cartes… Moi, je n’ai jamais eu le courage d’entrer. Toi, tu sauras quoi en faire.',
+        ],
+        do: [{ step: 's_pages' }],
+      },
+      {
+        if: (q) => q.quest('s_pages') === 'active',
+        say: (q) => [`Tu en as trouvé ${q.count('pages')} sur 3. Mon père cachait toujours ses écrits là où la lumière dort : derrière les passages secrets, au fond des chambres de cristal.`],
+      },
+      {
+        if: (q) => q.quest('s_pages') === 'none',
+        say: ['Mon père, Orin, est parti il y a dix ans. Il a laissé des pages de son journal dans les chambres secrètes de l’île, je le sais. Si tu en trouves, rapporte-les-moi, je t’en prie.'],
+        do: [{ start: 's_pages' }],
+      },
+      {
+        if: () => true,
+        say: ['La maison de mon père est à toi tant que tu en as besoin. Et si tu cherches des objets rares, j’ai gardé quelques trouvailles de ses voyages.'],
+        choices: [{ t: 'Voir les curiosités', do: [{ shop: 'lison' }] }, { t: 'Au revoir' }],
+      },
+    ],
+  },
+
+  /* ---------------- Mira, villageoise ---------------- */
+  mira: {
+    name: 'Mira', role: 'Allumeuse de lampions',
+    look: { hair: 'carre', hairHex: '#ea8fb8', skinHex: '#a8714d', outfit: 'robe', tunicHex: '#f6a5c8', trimHex: '#f0c66b', scale: 0.97 },
+    talk: [
+      {
+        if: (q) => S(q, 's_lampions', 'retour'),
+        say: ['Les sept ! Havre-Aube n’a pas été aussi lumineux depuis des années. Prends cette teinture or pâle : elle ira bien à ta cape.'],
+        do: [{ step: 's_lampions' }],
+      },
+      {
+        if: (q) => q.quest('s_lampions') === 'active',
+        say: (q) => [`${q.count('lampions')} lampion${q.count('lampions') > 1 ? 's' : ''} sur 7. Ils sont le long des rues, du marché jusqu’à la sortie sud.`],
+      },
+      {
+        if: (q) => q.quest('s_lampions') === 'none' && q.quest('q_reveil') !== 'none' && q.step('q_reveil') !== 'parler',
+        say: ['C’est toi, la voyageuse à la Lueur ? Depuis la Brume, mes lampions refusent de s’allumer. Mais ta petite amie lumineuse, elle, pourrait peut-être…', FIA('Je peux ! Je peux !')],
+        do: [{ start: 's_lampions' }],
+      },
+      { if: () => true, say: ['Bonjour, voyageuse. Séléné t’attend sur la place.'] },
+    ],
+  },
+
+  /* ---------------- Aldo, capitaine de la garde ---------------- */
+  aldo: {
+    name: 'Aldo', role: 'Capitaine de la garde',
+    look: { hair: 'court', hairHex: '#5b3a2b', skinHex: '#d9ab84', outfit: 'armure', tunicHex: '#4a5466', trimHex: '#d7dbe8', hat: 'casque', scale: 1.05 },
+    talk: [
+      {
+        if: (q) => S(q, 's_chasse', 'retour'),
+        say: ['Douze ! La lande respire mieux. Prends cette tenue : c’est celle des chasseurs de brume. Tu l’as méritée.'],
+        do: [{ step: 's_chasse' }],
+      },
+      {
+        if: (q) => q.quest('s_chasse') === 'active',
+        say: (q) => [`Créatures vaincues : ${Math.min(12, q.count('kills'))} sur 12. Continue, et pense à esquiver : un bon pas de côté vaut mieux qu’une potion.`],
+      },
+      {
+        if: (q) => q.quest('s_chasse') === 'none' && q.has('baton', 1),
+        say: ['Halte ! Ah, c’est toi. La Lande est infestée. Si tu as le cœur solide, aide-moi à la nettoyer : douze créatures, et je te fais chasseur de brume.', 'Conseil de vieux soldat : esquive (Espace) au dernier moment, puis frappe. Et garde une potion sous la main (F).'],
+        do: [{ start: 's_chasse' }],
+      },
+      { if: () => true, say: ['La Lande des Ronces commence ici. Sans arme, je ne te laisse pas passer… enfin, je ne peux pas t’en empêcher, mais je te le déconseille.'] },
+    ],
+  },
+
+  /* ---------------- Maëlle, aubergiste ---------------- */
+  maelle: {
+    name: 'Maëlle', role: 'Aubergiste',
+    look: { hair: 'chignon', hairHex: '#8f3d22', skinHex: '#f6e3d3', outfit: 'tablier', tunicHex: '#c97a5a', apronHex: '#f3e6c8', trimHex: '#f0c66b', scale: 1.0 },
+    talk: [
+      {
+        if: (q) => S(q, 's_pain', 'retour'),
+        say: ['Des fleurs de miel ! Et bien dorées. Attends… Voilà, trois pains tout chauds. Et cette couronne, je l’ai tressée avec les fleurs qui restaient.'],
+        do: [{ take: 'fleur_miel', n: 3 }, { step: 's_pain' }],
+      },
+      {
+        if: () => true,
+        say: (q) => [q.quest('q_reveil') === 'active' && q.step('q_reveil') === 'parler' ? 'Bien dormi ? Séléné t’attend sur la place, près de la fontaine.' : 'Bienvenue au Lampion ! Un lit chaud, une soupe, et la brume reste dehors.'],
+        choices: [
+          { t: 'Se reposer (soigne et sauvegarde)', do: [{ rest: true }] },
+          { t: 'Tu as l’air embêtée…', if: (q) => q.quest('s_pain') === 'none', say: ['Mon pain au miel… plus une seule fleur de miel ! Il en pousse dans la Lande, entre les ronces. Trois suffiraient.'], do: [{ start: 's_pain' }] },
+          { t: 'Au revoir' },
+        ],
+      },
+    ],
+  },
+};

@@ -16,7 +16,9 @@ const MIRROR = [
 export const COLORS = { w: '#fff4d6', r: '#ff4d6d', g: '#3ee08f', b: '#4d8dff' };
 export const COLOR_NAMES = { w: 'blanc', r: 'rouge', g: 'vert', b: 'bleu' };
 
-const BLOCK_TERRAIN = new Set(['#', 'T']);
+/* Terrain : '.' herbe · ',' chemin · '#' roche / mur · 'T' arbre · 'H' bâtiment ou décor · '~' eau
+   'r' ronces (coupées par une lame) · 'c' roche fissurée (brisée au marteau) · 'x' porte · '=' pont */
+export const BLOCK_TERRAIN = new Set(['#', 'T', 'H', '~', 'r', 'c']);
 const BLOCKING_ENTS = new Set(['lantern', 'mirror', 'prism', 'receiver', 'beacon', 'relay']);
 const PICKUPS = new Set(['shard', 'page', 'wisp', 'start']);
 
@@ -32,7 +34,7 @@ export function buildIsland(def) {
   const zoneAt = Array.from({ length: h }, () => Array(w).fill(-1));
   const gates = {};
   const gateCell = {};
-  const gate = (id, kind) => (gates[id] = gates[id] || { id, kind, cells: [], receivers: [], open: false });
+  const gate = (id, kind, look) => (gates[id] = gates[id] || { id, kind, look: look || kind, cells: [], receivers: [], open: false });
   const ents = [];
   const counters = {};
   def.zones.forEach((z, zi) => {
@@ -43,7 +45,10 @@ export function buildIsland(def) {
         zoneAt[y][x] = zi;
         if (ch === 'x') {
           terrain[y][x] = 'x';
-          const g = gate(z.barrier, 'barrier');
+          // une zone peut avoir plusieurs portes (doors) ; sinon, la barrière de la zone
+          const door = (z.doors || []).find((d) => d.cells.some(([dx, dy]) => dx === lx && dy === ly));
+          const g = door ? gate(door.gate, 'barrier', door.look) : gate(z.barrier, 'barrier', z.barrier === 'lens' ? 'seal' : 'barrier');
+          if (door && door.key) g.key = door.key;
           g.cells.push([x, y]); gateCell[x + ',' + y] = g.id;
         } else terrain[y][x] = ch;
       }
@@ -64,7 +69,8 @@ export function buildIsland(def) {
   ents.forEach((e) => { if (e.t !== 'start') entAt[e.x + ',' + e.y] = e; });
   // limites de chaque zone (pour vérifier qu'aucun faisceau n'en sort)
   const zoneRects = def.zones.map((z) => ({ x0: z.ox, y0: z.oy, x1: z.ox + Math.max(...z.map.map((r) => r.length)) - 1, y1: z.oy + z.map.length - 1 }));
-  return { def, w, h, terrain, zoneAt, zoneRects, ents, entAt, gates, gateCell, initial: snapshot({ ents, gates }) };
+  // solid : cases bloquées par des objets posés en jeu (coffres, PNJ immobiles…)
+  return { def, w, h, terrain, zoneAt, zoneRects, ents, entAt, gates, gateCell, solid: new Set(), initial: snapshot({ ents, gates }) };
 }
 
 /* Copie de l'état modifiable (orientations, portes) */
@@ -99,6 +105,7 @@ export function walkable(isl, x, y) {
   const t = isl.terrain[y][x];
   if (t === ' ' || BLOCK_TERRAIN.has(t)) return false;
   if (t === 'x' || t === '=') { const g = isl.gates[isl.gateCell[x + ',' + y]]; if (!g || !g.open) return false; }
+  if (isl.solid && isl.solid.has(x + ',' + y)) return false;
   const e = isl.entAt[x + ',' + y];
   return !(e && BLOCKING_ENTS.has(e.t));
 }
