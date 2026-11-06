@@ -136,6 +136,7 @@ G.input = input;
 const sparks = createSparks();
 G.sparks = sparks;
 G.hud = createHud(G);
+G.ui = G.hud;   // le combat affiche dégâts, barres d'ennemis et barre de boss via G.ui
 G.quests = createQuests(G);
 G.combat = createCombat(G);
 G.screens = createScreens(G);

@@ -190,21 +190,14 @@ lumen/
 
 ## 5. Ce qui a été testé et ce qui ne l'a pas été
 
-- ✅ Tous les modules passent `node --check`.
-- ✅ `node lumen/tools/verify.mjs` signale que tout est valide et accessible ; `node lumen/tools/build-aube.mjs` régénère l'île.
-- ✅ Navigateur (Playwright, rendu logiciel SwiftShader) : l'écran titre s'affiche, « Nouvelle partie » démarre dans l'auberge, l'intro de Fia fonctionne, le HUD est correct, le village se rend bien (maisons, marché, fontaine, PNJ). **Aucune erreur JavaScript.**
-- ⚠️ La **dernière modification n'a pas été testée** : priorité des cibles d'interaction (`const PRIO` dans `findTarget` de `main.js`). Le test précédent avait montré que la fontaine passait avant Séléné.
-- ❌ **Pas encore testé :**
-  - parler à Séléné et recevoir le bâton ;
-  - combats réels ;
-  - quêtes secondaires, boutiques, forge, garde-robe ;
-  - donjon et boss ;
-  - pose de la Lentille, finale ;
-  - sauvegarde et rechargement ;
-  - mobile ;
-  - performances.
+Mise à jour du 06/11/2026 (session de stabilisation) :
 
----
+- ✅ `node --check` sur tous les modules ; `verify.mjs` : énigmes valides et accessibles.
+- ✅ Test navigateur de l'Acte I complet (`tests/e2e_partie.py`) : intro, Séléné, Rivage, Bran, Sanctuaire, Colosse, Lentille, g3 à g9, sceau, phare, fin ; sauvegarde puis rechargement. Aucune erreur de page.
+- ✅ Test des systèmes (`tests/e2e_systemes.py`) : boss (phase 2), mort et reprise, 5 boutiques, vente, forge, garde-robe, 5 menus, potion.
+- ✅ Mode tactile (`tests/e2e_mobile.py`) : joystick, boutons d'action et HUD s'affichent.
+- 🐞 Bug corrigé : `G.ui` n'était jamais défini, alors que combat.js l'utilise (dégâts, barres d'ennemis, barre de boss). Tout combat plantait avec « Cannot read properties of undefined (reading 'bossBar') ». Correction dans main.js : `G.ui = G.hud`.
+- ❌ Pas encore testé : équilibrage réel au clavier/souris (les tests pilotent l'API), performances sur vrai GPU, sauvegarde en ligne (Firestore : nécessite la publication des règles par l'utilisateur), reprise d'une vraie sauvegarde 0.2, quêtes secondaires une à une.
 
 ## 6. Ce qu'il reste à faire, dans l'ordre
 
