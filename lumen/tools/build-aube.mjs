@@ -7,9 +7,11 @@
    ========================================================= */
 import { writeFileSync } from 'node:fs';
 import { generate, analyse, reach } from './generate.mjs';
+import { areas, flood } from './areas.mjs';
 
 const GRID = 15;   // une zone de 11 cases + 4 cases de pont
-const at = (c, r) => ({ ox: c * GRID, oy: r * GRID });
+const OX = 36;     // les zones d'énigmes sont à l'est du village (zones d'aventure : tools/areas.mjs)
+const at = (c, r) => ({ ox: OX + c * GRID, oy: r * GRID });
 
 /* Chambre au trésor (en bas à droite) pour les zones secrètes : murs, barrière, cases réservées */
 const ROOM = {
@@ -36,7 +38,7 @@ zone(Object.assign(at(0, 0), {
     '#.........#',
     '#.........#',
     '#.........#',
-    '#..........',
+    '...........',
     '#.........#',
     '#.........#',
     '#.........#',
@@ -110,10 +112,10 @@ gen(zone(Object.assign(at(2, 2), { id: 'z9', region: 'ruines', title: 'Les Crois
 
 /* ---------------- Le Phare de l'Aube (dessiné à la main) ---------------- */
 zone(Object.assign(at(2, 3), {
-  id: 'phare', region: 'phare', title: 'Le Phare de l’Aube', num: 10, entry: [6, 0], entryGate: 'g9',
+  id: 'phare', region: 'phare', title: 'Le Phare de l’Aube', num: 10, entry: [6, 1], entryGate: 'g9', barrier: 'lens',
   hint: 'Le phare doit recevoir le rouge, le vert et le bleu en même temps.',
   map: [
-    '######.######',
+    '######x######',
     '#...........#',
     '#...........#',
     '#...........#',
@@ -188,6 +190,44 @@ const PAGES = ['orin1', 'orin2', 'orin3'];
 });
 { const z = byId.z8; const p = farCell(z); z.ents.push({ t: 'wisp', x: p[0], y: p[1] }); }
 
+/* ---------------- Zones d'aventure (village, lande, sanctuaire, intérieurs) ----------------
+   Ajoutées APRÈS les zones d'énigmes : les identifiants des objets des zones d'énigmes ne changent pas
+   (les sauvegardes de la version 0.2 restent valables). */
+const A = areas();
+const place = (z, ox, oy) => { Object.assign(z, { ox, oy }); Z.push(z); byId[z.id] = z; return z; };
+place(A.village, 0, 0);
+place(A.lande, 0, 26);
+place(A.sanctuaire, 2, 56);
+place(A.auberge, 150, 0);
+place(A.orin, 150, 12);
+bridges.push(
+  bridge('b_rivage', 'havre', [29, 5], 'z1', [0, 5]),
+  bridge('b_lande', 'havre', [15, 23], 'lande', [15, 0]),
+  bridge('b_sanct', 'lande', [17, 27], 'sanctuaire', [15, 0]),
+);
+/* tout ce qui compte doit être accessible (ronces, roches fissurées et portes considérées comme franchissables) */
+for (const z of [A.village, A.lande, A.sanctuaire, A.auberge, A.orin]) {
+  const pass = (c) => c === '.' || c === ',' || c === 'r' || c === 'c' || c === 'x';
+  const seen = flood(z.map, z.spawn, pass);
+  const need = [].concat(
+    (z.npcs || []).filter((n) => !n.counter).map((n) => [Math.round(n.x), Math.round(n.y), 'PNJ ' + n.id]),
+    (z.chests || []).map((c) => [c.x, c.y, 'coffre ' + c.id]),
+    (z.pickups || []).map((c) => [c.x, c.y, 'objet ' + c.id]),
+    (z.props || []).filter((p) => p.door).map((p) => [p.door[0], p.door[1], 'porte ' + p.id]),
+    (z.spawns || []).map((s) => [s.x, s.y, 'ennemi ' + s.type]),
+  );
+  // un coffre ou un PNJ derrière un comptoir est atteint depuis une case voisine
+  need.forEach(([x, y, what]) => {
+    const ok = seen.has(x + ',' + y) || [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => seen.has((x + dx) + ',' + (y + dy)));
+    if (!ok) throw new Error(`${z.title} : ${what} inaccessible (${x}, ${y})`);
+  });
+  report.push(`${z.title.padEnd(22)} zone d'aventure     · ${seen.size} cases accessibles`);
+}
+// les coffres et objets doivent être sur des cases libres
+for (const z of [A.village, A.lande, A.sanctuaire, A.auberge, A.orin]) {
+  (z.chests || []).concat(z.pickups || []).forEach((c) => { const ch = z.map[c.y][c.x]; if (ch !== '.' && ch !== ',') throw new Error(`${z.title} : ${c.id} posé sur « ${ch} » (${c.x}, ${c.y})`); });
+}
+
 /* ---------------- Vérification de l'île complète ---------------- */
 for (const z of Z) {
   if (z.id === 'z1' || z.id === 'z2' || z.id === 'phare') {
@@ -208,15 +248,23 @@ const island = {
     ruines: { name: 'Les Ruines', zones: ['z7', 'z8', 'z9'] },
     phare: { name: 'Le Phare de l’Aube', zones: ['phare'] },
     secret: { name: 'Chambres secrètes', zones: ['s1', 's2', 's3'] },
+    havre: { name: 'Havre-Aube', zones: ['havre', 'auberge_in', 'orin_in'], area: true },
+    lande: { name: 'La Lande des Ronces', zones: ['lande'], area: true },
+    sanctuaire: { name: 'Le Sanctuaire de Brume', zones: ['sanctuaire'], area: true },
   },
   pages: {
     orin1: { title: 'Journal d’Orin — I', text: 'J’ai posé la dernière pierre du phare de l’Aube. Quand le Grand Prisme l’a touché, toute l’île est devenue rose, comme si le ciel se souvenait de son premier matin. Séléné dit que nous avons dompté la lumière. Je crois plutôt que nous l’avons empruntée.' },
     orin2: { title: 'Journal d’Orin — II', text: 'Les îles s’éloignent un peu chaque année. Il faudrait plus de phares, plus de lumière. Ou une seule lumière, si forte qu’elle les retiendrait toutes. J’ai commencé les plans d’une lentille, au cœur même du Prisme.' },
     orin3: { title: 'Journal d’Orin — III', text: 'La lentille fonctionne. Trop bien. Là où la lumière se concentre, une ombre est née derrière le Prisme. Elle grandit quand je l’éclaire davantage. Je ne sais plus s’il faut l’arrêter… ou si c’est moi qu’il faudrait arrêter.' },
+    orin4: { title: 'Journal d’Orin — IV', text: 'Lison, si tu lis ceci, c’est que tu as retrouvé mes pages. Je pars vers la Citadelle du Zénith : c’est là que la lumière est la plus forte, et l’ombre aussi. Le phare de l’Aube montrera le chemin aux îles une à une. Ne le laisse jamais s’éteindre. Et garde la Lentille loin de moi.' },
   },
   wisp: { name: 'Lueur de l’Aube', text: 'Une petite Lueur tremble dans les herbes. Elle te suit : quand le Sanctuaire sera accessible, elle y rallumera la fontaine.' },
   ending: 'Le phare de l’Aube brille à nouveau. Un fragment rouge du Grand Prisme flotte au-dessus de la flamme : la route vers la Forêt de Verre s’éclaire au loin.',
-  zones: Z.map((z) => ({ id: z.id, region: z.region, title: z.title, num: z.num || 0, secret: !!z.secret, ox: z.ox, oy: z.oy, spawn: z.entry, entryGate: z.entryGate, barrier: z.barrier, hint: z.hint, seed: z.seed, map: z.map, ents: z.ents })),
+  zones: Z.map((z) => {
+    const o = { id: z.id, region: z.region, title: z.title, num: z.num || 0, secret: !!z.secret, ox: z.ox, oy: z.oy, spawn: z.area ? z.spawn : z.entry, entryGate: z.entryGate, barrier: z.barrier, hint: z.hint, seed: z.seed, map: z.map, ents: z.ents || [] };
+    ['area', 'theme', 'interior', 'dungeon', 'props', 'npcs', 'chests', 'pickups', 'spawns', 'doors', 'warp', 'exit', 'combatRooms'].forEach((k) => { if (z[k] !== undefined) o[k] = z[k]; });
+    return o;
+  }),
   bridges,
 };
 

@@ -22,16 +22,31 @@
 
   <header id="hud" class="hud" hidden>
     <div class="hud-left">
-      <button class="icon-btn" id="b-pause" aria-label="Pause"><svg viewBox="0 0 24 24"><path d="M9 5v14M15 5v14"/></svg></button>
-      <div class="where"><small>LUMEN</small><b id="h-where"></b></div>
+      <div class="vitals">
+        <div class="lvl" id="h-lvl" title="Niveau">1</div>
+        <div class="bars">
+          <div class="bar hp" title="Vie"><i id="h-hp"></i><span id="h-hpt"></span></div>
+          <div class="bar en" title="Énergie"><i id="h-en"></i></div>
+          <div class="bar xp" title="Expérience"><i id="h-xp"></i></div>
+        </div>
+      </div>
+      <div class="tracker" id="h-quest" hidden></div>
     </div>
     <div class="hud-right">
-      <span class="chip" title="Énigmes principales résolues">◈ <b id="h-puz">0</b></span>
+      <span class="chip coin" title="Écus"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 7v10M9 9h4.5a2 2 0 0 1 0 4H10a2 2 0 0 0 0 4H15"/></svg><b id="h-ecus">0</b></span>
       <span class="chip shard" title="Éclats de prisme">✦ <b id="h-shard">0</b></span>
-      <button class="icon-btn" id="b-journal" aria-label="Journal"><svg viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"/><path d="M5 17a3 3 0 0 1 3-3h11"/></svg></button>
-      <button class="icon-btn" id="b-mute" aria-label="Son"></button>
+      <button class="icon-btn" data-ui="inventaire" aria-label="Inventaire"><svg viewBox="0 0 24 24"><path d="M5 8h14l-1 13H6z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg></button>
+      <button class="icon-btn" data-ui="journal" aria-label="Journal"><svg viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"/><path d="M5 17a3 3 0 0 1 3-3h11"/></svg></button>
+      <button class="icon-btn" data-ui="carte" aria-label="Carte"><svg viewBox="0 0 24 24"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/></svg></button>
+      <button class="icon-btn" data-ui="options" aria-label="Menu"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
     </div>
   </header>
+  <button id="quick" class="quick" hidden aria-label="Objet rapide"></button>
+  <div id="bossbar" class="bossbar" hidden></div>
+  <div id="floaters" class="floaters"></div>
+  <div id="hitflash" class="hitflash"></div>
+  <div id="fade" class="fade"></div>
+  <div id="saveflag" class="saveflag"></div>
 
   <div id="banner" class="banner" aria-live="polite"></div>
   <div id="prompt" class="prompt" hidden></div>
@@ -39,15 +54,17 @@
 
   <div id="touch" class="touch" hidden>
     <div id="joy" class="joy"><div id="knob" class="knob"></div></div>
-    <p class="touch-hint">Glisse à gauche pour marcher · à droite pour tourner la vue</p>
-    <button id="b-act" class="act" aria-label="Tourner l’objet">↻</button>
+    <div class="t-btns">
+      <button class="tb big" data-touch="attack" aria-label="Attaquer">⚔</button>
+      <button class="tb" data-touch="special" aria-label="Onde de lumière">✦</button>
+      <button class="tb" data-touch="dodge" aria-label="Esquiver">⤳</button>
+      <button class="tb use" id="t-interact" data-touch="interact" aria-label="Interagir">✋</button>
+      <button class="tb small" data-touch="potion" aria-label="Objet rapide">♥</button>
+    </div>
   </div>
 
-  <section id="menu" class="overlay menu" hidden></section>
-  <section id="pause" class="overlay" hidden></section>
-  <section id="journal" class="overlay" hidden></section>
-  <section id="reader" class="overlay" hidden></section>
-  <section id="end" class="overlay end" hidden></section>
+  <section id="screen" class="overlay" hidden></section>
+  <section id="dialog" class="dialog" hidden></section>
 
   <noscript><p class="noscript">Lumen a besoin de JavaScript et de WebGL.</p></noscript>
 

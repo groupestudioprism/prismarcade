@@ -1,6 +1,6 @@
 # LUMEN : les Îles Brisées — document de conception
 
-*Prism Game · Studio Prism · version 0.3 (novembre 2026)*
+*Prism Game · Studio Prism · version 0.4, Acte I (novembre 2026)*
 
 ---
 
@@ -8,14 +8,23 @@
 
 | | |
 |---|---|
-| **Genre** | Aventure et énigmes de lumière en 3D, solo |
+| **Genre** | Aventure, exploration, combats et énigmes de lumière en 3D, solo |
 | **Plateformes** | Navigateur (Prism Arcade) pendant le développement, puis applications PC (Windows, macOS, Linux) et mobiles (Android, iOS) |
 | **Public** | Dès 10 ans ; amateurs d'énigmes calmes (*The Witness*, *Monument Valley*, *Lara Croft GO*) |
 | **Durée** | Quête principale : 4 h 30 à 5 h 30 · jeu à 100 % : 7 à 9 h |
 | **Modèle** | Jeu complet, sans publicité ni achat intégré ; récompenses reliées au compte Prism Arcade |
-| **Ton** | Contemplatif, lumineux, mélancolique puis plein d'espoir. Aucun combat. |
+| **Ton** | Lumineux, mélancolique puis plein d'espoir. Des zones calmes (énigmes, villages) alternent avec des zones d'exploration et de combat. |
 
-**L'idée en une phrase** : dirige la lumière, à l'aide de lanternes, de miroirs et de prismes, pour rallumer un archipel éteint, île après île.
+**L'idée en une phrase** : dirige la lumière, à l'aide de lanternes, de miroirs et de prismes, pour rallumer un archipel éteint, île après île, en t'appuyant sur une vraie aventure : villages, quêtes, combats, équipements.
+
+### État de la version 0.4 (Acte I, Île de l'Aube)
+- **Monde :** village de Havre-Aube (maisons accessibles, PNJ à dialogues évolutifs, 5 boutiques, forge, garde-robe), Lande des Ronces (ennemis, ronces à couper, coffres), Sanctuaire de Brume (salle scellée, énigme, clé, boss), 10 zones d'énigmes de lumière et 3 chambres secrètes.
+- **Quêtes :** 3 principales (*Une lumière dans la brume*, *La lentille volée*, *Le phare*) et 8 secondaires, avec journal et récompenses.
+- **Combat :** attaque de base, attaque tournoyante, esquive, résistances et faiblesses, 5 types d'ennemis aux comportements différents (poursuivant, territorial, à distance, chargeur, garde à bouclier), un boss à deux phases (le Colosse de Brume), butin et pièces.
+- **Équipement :** inventaire par catégories, armes, tenues, accessoires, consommables, amélioration à la forge, monnaie.
+- **Personnalisation :** coiffure, couleurs, tenues et accessoires visibles sur le modèle 3D ; objets à débloquer par les quêtes.
+- **Technique :** modules indépendants (`game/`, `ui/`, `data/`, `world/`), contenu piloté par les données, sauvegarde versionnée sur l'appareil, passation Prism Arcade via `platform.js`. Tests navigateur dans `tests/` et contrôle d'accessibilité `tools/reach.mjs`.
+- **Durée mesurée :** environ 1 h 15 pour la quête principale de l'Acte I.
 
 ---
 
