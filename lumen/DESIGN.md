@@ -20,7 +20,7 @@
 ### État de la version 0.4 (Acte I, Île de l'Aube)
 - **Monde :** village de Havre-Aube (maisons accessibles, PNJ à dialogues évolutifs, 5 boutiques, forge, garde-robe), Lande des Ronces (ennemis, ronces à couper, coffres), Sanctuaire de Brume (salle scellée, énigme, clé, boss), 10 zones d'énigmes de lumière et 3 chambres secrètes.
 - **Quêtes :** 3 principales (*Une lumière dans la brume*, *La lentille volée*, *Le phare*) et 8 secondaires, avec journal et récompenses.
-- **Combat :** attaque de base, attaque chargée, esquive, résistances et faiblesses, 3 catégories d'ennemis, un boss à deux phases (le Colosse), butin et pièces.
+- **Combat :** attaque de base, attaque tournoyante, esquive, résistances et faiblesses, 5 types d'ennemis aux comportements différents (poursuivant, territorial, à distance, chargeur, garde à bouclier), un boss à deux phases (le Colosse de Brume), butin et pièces.
 - **Équipement :** inventaire par catégories, armes, tenues, accessoires, consommables, amélioration à la forge, monnaie.
 - **Personnalisation :** coiffure, couleurs, tenues et accessoires visibles sur le modèle 3D ; objets à débloquer par les quêtes.
 - **Technique :** modules indépendants (`game/`, `ui/`, `data/`, `world/`), contenu piloté par les données, sauvegarde versionnée sur l'appareil, passation Prism Arcade via `platform.js`. Tests navigateur dans `tests/` et contrôle d'accessibilité `tools/reach.mjs`.
