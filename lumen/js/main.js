@@ -53,7 +53,7 @@ const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 700);
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
-const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.85, 0.55, 0.95);
+const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.62, 0.5, 1.0);
 composer.addPass(bloom);
 composer.addPass(new OutputPass());
 let useBloom = !params.has('nobloom');
@@ -372,8 +372,8 @@ const flareGeo = new THREE.SphereGeometry(1, 12, 8);
 const beamMats = {};
 ['w', 'r', 'g', 'b'].forEach((c) => {
   beamMats[c] = {
-    outer: new THREE.MeshBasicMaterial({ color: new THREE.Color(COLORS[c]).multiplyScalar(1.6), transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false }),
-    core: new THREE.MeshBasicMaterial({ color: new THREE.Color(COLORS[c]).lerp(new THREE.Color('#ffffff'), 0.5).multiplyScalar(4) }),
+    outer: new THREE.MeshBasicMaterial({ color: new THREE.Color(COLORS[c]).multiplyScalar(1.4), transparent: true, opacity: 0.26, blending: THREE.AdditiveBlending, depthWrite: false }),
+    core: new THREE.MeshBasicMaterial({ color: new THREE.Color(COLORS[c]).lerp(new THREE.Color('#ffffff'), c === 'w' ? 0.2 : 0.45).multiplyScalar(c === 'w' ? 2.2 : 3) }),
     flare: new THREE.MeshBasicMaterial({ color: new THREE.Color(COLORS[c]).multiplyScalar(3), transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false }),
   };
 });
@@ -394,7 +394,7 @@ function drawBeams(segs) {
     d.subVectors(b, a); const len = d.length(); if (len < 0.01) return;
     d.normalize();
     const mid = a.clone().add(b).multiplyScalar(0.5);
-    const o = getPooled('outer', beamGeo, io++); o.material = beamMats[s.c].outer; o.position.copy(mid); o.quaternion.setFromUnitVectors(UP, d); o.scale.set(0.15, len, 0.15); o.visible = true; o.userData.base = 0.15;
+    const o = getPooled('outer', beamGeo, io++); o.material = beamMats[s.c].outer; o.position.copy(mid); o.quaternion.setFromUnitVectors(UP, d); o.scale.set(0.13, len, 0.13); o.visible = true; o.userData.base = 0.13;
     const c = getPooled('core', beamGeo, ic++); c.material = beamMats[s.c].core; c.position.copy(mid); c.quaternion.copy(o.quaternion); c.scale.set(0.045, len, 0.045); c.visible = true;
     if (s.end) { const f = getPooled('flare', flareGeo, iflare++); f.material = beamMats[s.c].flare; f.position.copy(b); f.scale.setScalar(s.end === 'hit' ? 0.32 : 0.2); f.visible = true; f.userData.base = s.end === 'hit' ? 0.32 : 0.2; }
   });
@@ -577,7 +577,7 @@ function interact(back) {
 function onGateOpened(id) {
   const g = isl.gates[id];
   setGateView(g, true, false);
-  if (id === 'end') { startFinale(); return; }
+  if (id === 'end') { S.restoreT = 1; updateHud(); startFinale(); return; }
   const kind = SECRET_GATES.includes(id) ? 'treasure' : OPT_GATES.includes(id) ? 'secret' : 'main';
   if (kind === 'main') {
     chord([523, 659, 784]);
@@ -602,7 +602,7 @@ function reward(key, xp, coins) {
   const r = platform.reward(key, xp, coins);
   if (!r) return;
   S.sessionXP += r.xp; S.sessionCoins += r.coins;
-  setTimeout(() => toast('🎁', `+${fmt(r.xp)} XP · +${fmt(r.coins)} pièces`, 'Ajoutés à ta progression Prism Arcade', 'reward'), 500);
+  setTimeout(() => toast('🎁', [r.xp ? `+${fmt(r.xp)} XP` : '', r.coins ? `+${fmt(r.coins)} pièces` : ''].filter(Boolean).join(' · '), 'Ajoutés à ta progression Prism Arcade', 'reward'), 500);
   if (r.levelUp) setTimeout(() => toast('⬆️', `Niveau ${r.levelUp} atteint !`, 'Prism Arcade', 'reward'), 1400);
 }
 
@@ -809,7 +809,9 @@ function toast(icon, title, sub = '', kind = '') {
   const el = document.createElement('div');
   el.className = 'toast ' + kind;
   el.innerHTML = `<span class="ti">${icon}</span><div><b>${esc(title)}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</div>`;
-  $('#toasts').appendChild(el);
+  const box = $('#toasts');
+  box.appendChild(el);
+  while (box.children.length > 4) box.firstChild.remove();
   setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 400); }, kind === 'reward' ? 2600 : 4200);
 }
 function banner(z) {
@@ -823,7 +825,8 @@ function updateHud() {
   $('#h-puz').textContent = `${main} / ${MAIN_GATES.length}`;
   $('#h-shard').textContent = `${countPicked('shard')} / ${countAll('shard')}`;
   const z = zones[S.zone];
-  $('#h-where').textContent = z ? `${DEF.regions[z.region].name} · ${z.title}` : DEF.name;
+  const rn = z ? DEF.regions[z.region].name : '';
+  $('#h-where').textContent = z ? (rn === z.title ? z.title : `${rn} · ${z.title}`) : DEF.name;
 }
 function openPause() {
   S.mode = 'pause'; setTouch(false);

@@ -54,6 +54,15 @@ Limite connue : les scores sont calculés dans le navigateur, sans serveur (forf
 
 Fichiers concernés : `js/cloud.js` (connexion, synchronisation, classements), `js/core.js` (`PA.merge`, `PA.useStore`) et `js/prism-presence.js` (présence dans le tableau de bord Studio Prism, copie de `shared/` du site).
 
+## Grand jeu : Lumen (version 0.2)
+
+`lumen/` contient **Lumen : les Îles Brisées**, une aventure-puzzle en 3D (Three.js r160, fourni dans `lumen/vendor`, sans étape de compilation). On y joue sur `/lumen/` avec le même compte Prism Arcade : XP, pièces et sauvegarde passent par `PA.award` et `gameStats('lumen')`. **Aucune nouvelle règle Firestore n'est nécessaire.**
+
+- **Contenu actuel :** l'Île de l'Aube, avec 10 zones, 3 chambres secrètes, 10 éclats, 3 pages et 1 lueur. Compter environ 45 à 60 min pour la finir à 100 %.
+- **Conception complète :** `lumen/DESIGN.md` (6 îles, environ 5 h pour la quête principale, environ 8 h 30 à 100 %).
+- **Seul fichier lié à la plateforme :** `lumen/js/platform.js`. Le remplacer suffira pour les futures versions PC et mobile.
+- **Énigmes :** générées et vérifiées par `node lumen/tools/build-aube.mjs`. La commande `node lumen/tools/verify.mjs` contrôle que chaque énigme a une solution et que tout est accessible.
+
 ## Structure
 
 ```

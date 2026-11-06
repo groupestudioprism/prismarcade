@@ -123,10 +123,30 @@
         ${dailyHtml()}
       </section>
       <section class="home-row">${giftHtml()}${weeklyTeaser()}</section>
+      ${bigGames()}
       <div class="section-head"><div><h2>Mini-jeux</h2><p>Parties rapides, scores à battre. ${played}/${PA.games.length} découverts.</p></div></div>
-      <div class="games-grid">${PA.games.map(gameCard).join('')}</div>
-      <div class="soon"><div class="soon-ico">🎮</div><div><h3>Les grands jeux arrivent</h3>
-        <p>Prism Arcade accueillera aussi les jeux plus ambitieux du studio, en solo d'abord, puis en multijoueur. Ta progression actuelle sera conservée.</p></div></div>`;
+      <div class="games-grid">${PA.games.map(gameCard).join('')}</div>`;
+  }
+
+  /* Grands jeux : pages à part (dossier propre), même compte et même progression */
+  function bigGames() {
+    const st = PA.state().games.lumen;
+    const ex = (st && st.extra) || {};
+    const solved = Object.keys(ex).filter((k) => k.startsWith('g:aube:')).length;
+    const shards = Object.keys(ex).filter((k) => k.startsWith('s:aube:')).length;
+    const done = !!ex['done:aube'];
+    const prog = st && st.plays ? `Île de l’Aube : ${done ? 'rallumée ✦ · ' : ''}${solved} énigme${solved > 1 ? 's' : ''} · ${shards} / 10 éclats` : '≈ 1 h de jeu aujourd’hui · 5 îles à venir';
+    return `<div class="section-head"><div><h2>Grands jeux</h2><p>Des aventures plus longues, avec le même compte et la même progression.</p></div></div>
+      <a class="big-game" href="lumen/">
+        <img src="lumen/assets/cover.webp" alt="Lumen : une île flottante traversée de faisceaux de lumière" loading="lazy" width="1280" height="720">
+        <div class="big-body">
+          <span class="badge">${done ? 'Île 1 terminée' : 'Nouveau · Île 1 jouable'}</span>
+          <h3>Lumen <span>: les Îles Brisées</span></h3>
+          <p>Aventure et énigmes de lumière en 3D. Oriente lanternes, miroirs et prismes pour rallumer un archipel éteint.</p>
+          <p class="big-meta">${esc(prog)}</p>
+          <span class="btn primary">${st && st.plays ? 'Continuer' : 'Jouer'}</span>
+        </div>
+      </a>`;
   }
 
   function profile() {

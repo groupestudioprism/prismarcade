@@ -310,6 +310,18 @@ main { flex: 1; width: 100%; max-width: 1180px; margin: 0 auto; padding: 28px 16
 .account-panel { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: space-between; margin-bottom: 26px; }
 .account-panel p { margin: 4px 0 0; color: var(--mut); font-size: 13.5px; }
 
+/* ---------- Grands jeux ---------- */
+.big-game { position: relative; display: grid; grid-template-columns: 1.35fr 1fr; border-radius: 24px; overflow: hidden; border: 1px solid var(--line); background: var(--card); margin-bottom: 34px; transition: transform .18s, border-color .18s, box-shadow .18s; }
+.big-game:hover { transform: translateY(-3px); border-color: var(--line-hi); box-shadow: 0 24px 60px -24px rgba(255, 200, 97, .45); }
+.big-game img { width: 100%; height: 100%; object-fit: cover; display: block; min-height: 240px; }
+.big-body { padding: 26px 26px 24px; display: flex; flex-direction: column; gap: 10px; justify-content: center; background: linear-gradient(140deg, rgba(246,165,200,.12), rgba(255,200,97,.08) 50%, rgba(159,233,255,.1)); }
+.big-body h3 { font-size: 28px; font-weight: 800; }
+.big-body h3 span { font-size: 18px; font-weight: 600; color: var(--mut); }
+.big-body p { margin: 0; color: var(--mut); font-size: 14.5px; }
+.big-body .big-meta { font-size: 13px; color: var(--text); opacity: .85; }
+.big-body .btn { align-self: flex-start; margin-top: 6px; }
+.badge { align-self: flex-start; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; padding: 4px 10px; border-radius: 999px; background: linear-gradient(110deg, #f6a5c8, #ffc861); color: #2a1838; }
+
 /* ---------- Classements ---------- */
 .game-picker { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin-bottom: 14px; }
 .pick { display: flex; align-items: center; gap: 8px; padding: 6px 10px 6px 6px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); font-weight: 600; font-size: 13px; text-align: left; min-width: 0; transition: .15s; }
@@ -418,6 +430,9 @@ main { flex: 1; width: 100%; max-width: 1180px; margin: 0 auto; padding: 28px 16
 /* ---------- Mobile ---------- */
 @media (max-width: 860px) {
   .hero, .home-row { grid-template-columns: 1fr; }
+  .big-game { grid-template-columns: 1fr; }
+  .big-game img { min-height: 0; aspect-ratio: 16 / 9; }
+  .big-body { padding: 18px; }
 }
 @media (max-width: 640px) {
   .topbar { gap: 10px; flex-wrap: wrap; }
