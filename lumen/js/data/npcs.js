@@ -315,4 +315,180 @@ export const NPCS = {
       },
     ],
   },
+
+  /* ---------------- Havre-Aube : le passeur vers la Forêt de Verre ---------------- */
+  calixte: {
+    name: 'Calixte', role: 'Passeur',
+    look: { hair: 'court', hairHex: '#9a9aa8', skinHex: '#b98560', outfit: 'tunique', tunicHex: '#3f6a8a', trimHex: '#d7dbe8', beard: '#9a9aa8', scale: 1.04 },
+    talk: [
+      {
+        if: (q) => !q.flag('acte1_fini'),
+        say: ['Ma barque est amarrée là, mais je ne quitte pas le port tant que le phare est éteint. Rallume-le, et je te mènerai où tu voudras.'],
+      },
+      {
+        if: () => true,
+        say: ['Le phare brille ! Pour la première fois depuis longtemps, je vois la route : au sud-est, une île couverte d’arbres de verre. La Forêt de Verre. Je t’y emmène quand tu veux.'],
+        choices: [
+          { t: 'Partir pour la Forêt de Verre', do: [{ travel: { to: 'foret', zone: 'vitrebourg', cell: [12, 7] } }] },
+          { t: 'Pas maintenant' },
+        ],
+      },
+    ],
+  },
+
+  /* ---------------- Forêt de Verre ---------------- */
+  ambre: {
+    name: 'Ambre', role: 'Doyenne de Vitrebourg',
+    look: { hair: 'chignon', hairHex: '#e8e2d0', skinHex: '#c99772', outfit: 'aube', cloakHex: '#7fd0c0', tunicHex: '#3f8a86', trimHex: '#f0c66b', scale: 0.98, staff: true },
+    talk: [
+      {
+        if: (q) => S(q, 'q_verre', 'parler'),
+        say: [
+          'Une barque venue de l’Aube… Alors le phare brille de nouveau. Je m’appelle Ambre, et je garde Vitrebourg depuis qu’Orin nous a quittés.',
+          FIA('Ici, les arbres sont en verre ! Regarde comme ils renvoient mes couleurs !'),
+          'Ils étaient plus beaux avant la Brume. Le Temple de Verre, au sud, filtrait la lumière du soleil à travers ses vitraux. Maintenant, il ne laisse plus passer que du gris.',
+          'Chez nous, on apprend les couleurs avant de savoir lire. Un vitrail ne laisse passer que sa propre couleur. Rouge, vert et bleu mélangés donnent le blanc ; deux d’entre eux donnent le jaune, le magenta ou le cyan.',
+          'À l’est du village, trois salles de vitraux te l’apprendront. Quand tu auras réussi, la route de la Lisière te sera ouverte. Le Temple, lui, demande une vraie lame pour couper les ronces cristallines.',
+        ],
+        do: [{ step: 'q_verre' }, { open: 'b_vitres' }, { open: 'b_lisiere' }],
+      },
+      {
+        if: (q) => S(q, 'q_verre', 'vitraux'),
+        say: ['Les salles de vitraux sont à l’est, au bout de la grand-rue. Un vitrail jaune transforme la lumière blanche en jaune. Le relais à anneaux, lui, mélange ce qu’il reçoit.', FIA('Rouge plus vert, ça fait jaune ! Je le savais déjà. Presque.')],
+      },
+      {
+        if: (q) => q.quest('q_verre') === 'active' && !q.flag('boss_verre'),
+        say: ['Le Temple de Verre est au sud, après la Lisière. Un Gardien de verre protège ce qu’il reste du fragment du Prisme. Prends de bonnes potions : Opaline en vend.', 'Les créatures de verre craignent les coups lourds. Un marteau, ou une lame bien trempée.'],
+      },
+      {
+        if: (q) => S(q, 'q_verre', 'retour'),
+        say: [
+          LYRA('Le Gardien est brisé… et voici ce qu’il gardait.'),
+          'Un fragment vert du Grand Prisme ! Il y a des siècles, il éclairait tout le temple. Depuis qu’il a disparu, nos vitraux n’ont plus de couleur.',
+          'Je ne sais pas quand le Phare de Verre pourra être rallumé. Il manque encore des trois couleurs rares au sommet du belvédère. Mais grâce à toi, Vitrebourg respire de nouveau.',
+          FIA('On revient bientôt ! Il y a un belvédère à visiter, et plein de verre à regarder !'),
+        ],
+        do: [{ take: 'prisme_vert', n: 1 }, { step: 'q_verre' }, { flag: 'verre_fini' }],
+      },
+      {
+        if: () => true,
+        say: ['Vitrebourg te remercie. Le belvédère, tout au bout des salles de vitraux, est ouvert. On dit que le Phare de Verre s’y élèvera, un jour.'],
+      },
+    ],
+  },
+
+  opaline: {
+    name: 'Opaline', role: 'Apothicaire',
+    look: { hair: 'long', hairHex: '#d9eef0', skinHex: '#efd0b4', outfit: 'robe', tunicHex: '#5fc9b8', trimHex: '#d7dbe8', acc: 'lunettes', scale: 0.98 },
+    talk: [
+      {
+        if: (q) => S(q, 's_givre', 'retour'),
+        say: ['Quatre ! Bien froids, bien frais. Laisse-moi infuser… Voilà : trois tisanes de givre pour toi.'],
+        do: [{ take: 'givre_foret', n: 4 }, { step: 's_givre' }],
+      },
+      {
+        if: () => true,
+        say: ['Potions, élixirs et tisanes, tout est frais ici. Qu’est-ce qui te ferait plaisir ?'],
+        choices: [
+          { t: 'Acheter', do: [{ shop: 'opaline' }] },
+          { t: 'Tu as besoin d’aide ?', if: (q) => q.quest('s_givre') === 'none', say: ['Justement ! Il me faut quatre givres de sous-bois, ces fleurs transparentes de la Lisière. Elles font la meilleure tisane du monde.'], do: [{ start: 's_givre' }] },
+          { t: 'Au revoir' },
+        ],
+      },
+    ],
+  },
+
+  galet: {
+    name: 'Galet', role: 'Marchand',
+    look: { hair: 'boucles', hairHex: '#3a2a22', skinHex: '#8d5b3e', outfit: 'exploratrice', cloakHex: '#e8b65a', tunicHex: '#f3e6c8', trimHex: '#f0c66b', scale: 1.0 },
+    talk: [
+      {
+        if: () => true,
+        say: ['Éclats, givre, fibre, bois : j’achète, je vends. Un éclat de verre, ça se revend toujours, surtout à Silex.'],
+        choices: [{ t: 'Acheter et vendre', do: [{ shop: 'galet', sell: true }] }, { t: 'À plus tard' }],
+      },
+    ],
+  },
+
+  silex: {
+    name: 'Silex', role: 'Maître verrier',
+    look: { hair: 'court', hairHex: '#2a2230', skinHex: '#c99772', outfit: 'tablier', tunicHex: '#3f6a8a', apronHex: '#d9d4e3', trimHex: '#7fd0c0', beard: '#2a2230', scale: 1.08 },
+    talk: [
+      {
+        if: (q) => S(q, 's_eclats', 'retour'),
+        say: ['Six éclats, pas un de fêlé ! Avec ça, ma commande est prête. Et pour toi, une teinte émeraude pour ta cape : le vert de nos arbres.'],
+        do: [{ take: 'eclat_verre', n: 6 }, { step: 's_eclats' }],
+      },
+      {
+        if: () => true,
+        say: ['Le verre se souffle, se taille, se trempe. Que veux-tu ?'],
+        choices: [
+          { t: 'Voir les marchandises', do: [{ shop: 'silex' }] },
+          { t: 'Améliorer mon équipement', do: [{ forge: true }] },
+          { t: 'Tu as besoin d’aide ?', if: (q) => q.quest('s_eclats') === 'none', say: ['Oui : une grosse commande pour le belvédère, mais je n’ai plus d’éclats. Les créatures de la Lisière en laissent. Six, ce serait parfait.'], do: [{ start: 's_eclats' }] },
+          { t: 'Au revoir' },
+        ],
+      },
+    ],
+  },
+
+  perle: {
+    name: 'Perle', role: 'Souffleuse de verre',
+    look: { hair: 'chignon', hairHex: '#2f5f7a', skinHex: '#f6e3d3', outfit: 'tablier', tunicHex: '#7fd0c0', apronHex: '#f3e6c8', trimHex: '#f0c66b', scale: 0.96 },
+    talk: [
+      {
+        if: (q) => S(q, 's_chasse_verre', 'retour'),
+        say: ['Dix ! Les cerfs n’oseront plus approcher du village. Tiens : une teinte bordeaux, pour la cape. J’ai soufflé le flacon moi-même.'],
+        do: [{ step: 's_chasse_verre' }],
+      },
+      {
+        if: (q) => q.quest('s_chasse_verre') === 'active',
+        say: (q) => [`Créatures vaincues : ${Math.min(10, q.count('kills'))} sur 10. Les cerfs chargent en ligne droite : esquive sur le côté, puis frappe.`],
+      },
+      {
+        if: (q) => q.quest('s_chasse_verre') === 'none',
+        say: ['Je cueille le sable de la lisière pour mon verre, mais les créatures s’y promènent comme chez elles. Tu pourrais en vaincre dix ? Je t’en serais très reconnaissante.'],
+        do: [{ start: 's_chasse_verre' }],
+      },
+      { if: () => true, say: ['Un jour, je soufflerai un vitrail aussi grand que le temple.'] },
+    ],
+  },
+
+  ficus: {
+    name: 'Ficus', role: 'Jardinier',
+    look: { hair: 'court', hairHex: '#8f6a3a', skinHex: '#d9ab84', outfit: 'tunique', tunicHex: '#5f9a6a', trimHex: '#f0c66b', scale: 1.0 },
+    talk: [
+      { if: () => true, say: ['Les arbres de verre poussent plus vite à la lumière du soleil. Dans les salles de vitraux, essaie de croiser les faisceaux : les vitraux ne laissent passer que leur couleur.', FIA('Il y a même un relais qui fait du jaune. Un relais mélangeur, qu’ils disent.')] },
+    ],
+  },
+
+  tessel: {
+    name: 'Tessel', role: 'Passeur',
+    look: { hair: 'court', hairHex: '#5b3a2b', skinHex: '#c99772', outfit: 'tunique', tunicHex: '#3f6a8a', trimHex: '#d7dbe8', scale: 1.0 },
+    talk: [
+      {
+        if: () => true,
+        say: ['Je fais la traversée entre Vitrebourg et Havre-Aube. Tu veux rentrer ?'],
+        choices: [
+          { t: 'Retourner à Havre-Aube', do: [{ travel: { to: 'aube', zone: 'havre', cell: [27, 7] } }] },
+          { t: 'Pas maintenant' },
+        ],
+      },
+    ],
+  },
+
+  mousse: {
+    name: 'Mousse', role: 'Aubergiste',
+    look: { hair: 'long', hairHex: '#3f6a4a', skinHex: '#f6e3d3', outfit: 'tablier', tunicHex: '#5f9a6a', apronHex: '#f3e6c8', trimHex: '#f0c66b', scale: 1.0 },
+    talk: [
+      {
+        if: () => true,
+        say: ['Bienvenue à la Rosée ! Un lit, une soupe de champignons, et la brume reste dehors.'],
+        choices: [
+          { t: 'Se reposer (soigne et sauvegarde)', do: [{ rest: true }] },
+          { t: 'Au revoir' },
+        ],
+      },
+    ],
+  },
 };

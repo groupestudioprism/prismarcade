@@ -1733,6 +1733,12 @@ export default {
      "x": 16.6,
      "y": 21.6,
      "face": "S"
+    },
+    {
+     "id": "calixte",
+     "x": 27.4,
+     "y": 8.4,
+     "face": "N"
     }
    ],
    "pickups": [

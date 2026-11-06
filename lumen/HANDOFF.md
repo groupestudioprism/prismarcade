@@ -1,4 +1,4 @@
-# LUMEN 0.4 — Document de passation (pour reprendre le travail avec n'importe quelle IA)
+# LUMEN 0.5 — Document de passation (pour reprendre le travail avec n'importe quelle IA)
 
 Rédigé le 06/11/2026 à 13 h 15. Il décrit le contexte, ce qui est fait, ce qui reste à faire et la façon de le faire, avec toutes les directives.
 **À l'IA qui reprend :** lis ce document en entier, puis lis les fichiers cités avant de modifier quoi que ce soit.
@@ -58,8 +58,8 @@ Faire de LUMEN un vrai jeu d'aventure inspiré de **la philosophie** de *Zelda: 
 
 | Dépôt | Branche | État |
 |---|---|---|
-| `groupestudioprism/prismarcade` | `main` | **En ligne.** Lumen **0.2** (énigmes seules) : ne pas casser. |
-| `groupestudioprism/prismarcade` | `lumen-v04` | **Travail en cours** de Lumen 0.4 (dernier commit `527c394`). |
+| `groupestudioprism/prismarcade` | `main` | **En ligne.** Lumen 0.4 (Acte I) publié, puis 0.5 (Forêt de Verre) à chaque étape validée. |
+| `groupestudioprism/prismarcade` | `lumen-v05` | **Travail en cours** (Forêt de Verre : phare de verre et canopée ensuite). |
 | `groupestudioprism/Studio-Prism` | `main` | Site du studio + **source unique des règles Firebase** (`firebase/`). |
 
 **Règle absolue :** ne fusionner `lumen-v04` dans `main` qu'une fois une partie complète testée sans erreur.
@@ -230,6 +230,8 @@ Mise à jour du 06/11/2026 (session de stabilisation) :
 8. Rappeler à l'utilisateur de publier les règles Firestore si ce n'est pas fait.
 
 ### Étape B : contenu suivant (versions 0.5 et plus, voir DESIGN.md)
+**Fait en 0.5 partie 1 :** moteur multi-îles (`ISLAND_META`, `WARPS_BY`, `G.travelTo`), mélange des couleurs (`logic.js`), Forêt de Verre générée par `tools/build-foret.mjs` (+ `tools/areas-foret.mjs`), données dans `data/` (PNJ ambre, opaline, galet, silex, perle, ficus, tessel, mousse, calixte ; ennemis de verre = modèles existants teintés par `tint`), test `tests/foret.py`. **Reste :** Phare de Verre (balise `need` y+m+c), canopée, grappin, puis Désert des Échos.
+
 - **Île 2, Forêt de Verre :**
   - nouveau village ;
   - créatures de cristal (résistantes au tranchant, faibles au contondant) ;

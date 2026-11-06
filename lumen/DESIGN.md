@@ -1,6 +1,6 @@
 # LUMEN : les Îles Brisées — document de conception
 
-*Prism Game · Studio Prism · version 0.4, Acte I (novembre 2026)*
+*Prism Game · Studio Prism · version 0.5, Actes I et II en cours (novembre 2026)*
 
 ---
 
@@ -16,6 +16,12 @@
 | **Ton** | Lumineux, mélancolique puis plein d'espoir. Des zones calmes (énigmes, villages) alternent avec des zones d'exploration et de combat. |
 
 **L'idée en une phrase** : dirige la lumière, à l'aide de lanternes, de miroirs et de prismes, pour rallumer un archipel éteint, île après île, en t'appuyant sur une vraie aventure : villages, quêtes, combats, équipements.
+
+### État de la version 0.5 (partie 1) : la Forêt de Verre
+- **Moteur multi-îles :** une page = une île ; le voyage (barque de Calixte à Havre-Aube, Tessel au retour) range le monde de l'île quittée, charge celui de l'île d'arrivée et recharge la page. Sauvegarde version 5 (`otherWorlds`).
+- **Mélange des couleurs :** jaune = rouge + vert, magenta = rouge + bleu, cyan = vert + bleu. Le vitrail ne laisse passer que sa couleur ; le relais à anneaux (`mix`) réunit ce qu'il reçoit.
+- **Forêt :** Vitrebourg (6 PNJ, 3 boutiques, auberge), 3 salles de vitraux, Lisière du Verre, Temple de Verre (salle scellée, énigme de vitraux, clé, boss *Gardien de Verre* à deux phases), 5 nouveaux ennemis (éclat, lierre-prisme, cerf et sentinelle de verre, Gardien), quête principale *Les vitraux de la Forêt* et 3 secondaires.
+- **À venir (0.5 partie 2) :** Phare de Verre (balise qui exige jaune, magenta et cyan), canopée, grappin de lumière.
 
 ### État de la version 0.4 (Acte I, Île de l'Aube)
 - **Monde :** village de Havre-Aube (maisons accessibles, PNJ à dialogues évolutifs, 5 boutiques, forge, garde-robe), Lande des Ronces (ennemis, ronces à couper, coffres), Sanctuaire de Brume (salle scellée, énigme, clé, boss), 10 zones d'énigmes de lumière et 3 chambres secrètes.

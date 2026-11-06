@@ -48,4 +48,29 @@ export const SHOPS = {
       { id: 'grande_potion', stock: 1, restock: 1 },
     ],
   },
+  /* ---------------- Forêt de Verre ---------------- */
+  opaline: {
+    name: 'Apothicaire d’Opaline', buyRate: 0, items: [
+      { id: 'potion', stock: 6, restock: 6 },
+      { id: 'tisane_foret', stock: 4, restock: 4 },
+      { id: 'elixir', stock: 4, restock: 4 },
+      { id: 'grande_potion', stock: 2, restock: 2 },
+    ],
+  },
+  silex: {
+    name: 'Verrerie de Silex', buyRate: 0, items: [
+      { id: 'tunique_vitrail', stock: 1 },
+      { id: 'epee_courte', stock: 1, if: (q) => !q.has('epee_aube', 1) && !q.has('epee_courte', 1) },
+      { id: 'pierre', stock: 5, restock: 3 },
+    ],
+  },
+  galet: {
+    name: 'Marché du verre', buyRate: 1, items: [
+      { id: 'eclat_verre', stock: 6, restock: 4 },
+      { id: 'givre_foret', stock: 4, restock: 3 },
+      { id: 'fibre', stock: 6, restock: 4 },
+      { id: 'bois', stock: 6, restock: 4 },
+      { id: 'brume', stock: 2, restock: 2 },
+    ],
+  },
 };

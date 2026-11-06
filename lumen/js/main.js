@@ -9,7 +9,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { ISLANDS, UPCOMING } from './levels.js';
+import { ISLANDS, ISLAND_META, UPCOMING } from './levels.js';
 import { buildIsland, evaluate, rotate, walkable, snapshot, restore, COLORS, BLOCK_TERRAIN } from './logic.js';
 import { platform } from './platform.js';
 import { $, esc, fmt, hash, lerp, clamp, damp, angleTo, rand, store, bus, T, W, BEAM_Y } from './engine/util.js';
@@ -18,11 +18,12 @@ import { createInput } from './engine/input.js';
 import { buildWorld, glow, themeOf } from './world/build.js';
 import { Character } from './world/character.js';
 import { ITEMS, UPGRADES, RECIPES } from './data/items.js';
+import { ENEMIES } from './data/enemies.js';
 import { NPCS } from './data/npcs.js';
 import { QUESTS } from './data/quests.js';
 import { SHOPS } from './data/shops.js';
 import { UNLOCK_NAMES } from './data/looks.js';
-import { newState, fromRun, normalize, addItem, takeItem, stats as calcStats, xpFor, lookToModel } from './game/state.js';
+import { newState, newWorld, fromRun, normalize, addItem, takeItem, stats as calcStats, xpFor, lookToModel } from './game/state.js';
 import { saves } from './game/save.js';
 import { createQuests } from './game/quests.js';
 import { createCombat } from './game/combat.js';
@@ -30,8 +31,10 @@ import { createHud } from './ui/hud.js';
 import { createScreens } from './ui/screens.js';
 import { icon } from './ui/icons.js';
 
-const DEF = ISLANDS[0], IID = DEF.id;
 const params = new URLSearchParams(location.search);
+/* Une page = une île : le voyage enregistre l'île d'arrivée puis recharge la page (voir switchIsland). */
+const DEF = ISLANDS.find((i) => i.id === (params.get('ile') || store.get('lumen.island', 'aube'))) || ISLANDS[0], IID = DEF.id;
+const META = ISLAND_META[IID];
 const settings = Object.assign({ quality: 'auto', master: 1, sfx: 1, music: 0.8, muted: platform.muted() }, store.get('lumen.settings', {}));
 audio.set({ master: settings.master, sfx: settings.sfx, music: settings.music, muted: settings.muted });
 const TOUCH0 = matchMedia('(pointer: coarse)').matches || params.has('touch');
@@ -85,6 +88,8 @@ const AMB = {
   puzzle: { sky: null, fog: [75, 220], hemi: 1, sun: 1, tint: null },
   village: { sky: null, fog: [80, 230], hemi: 1.05, sun: 1.05, tint: null },
   lande: { sky: [['#4a3a78', '#8a7ab0', '#d9a0a8'], ['#5a7ad0', '#c0c8f0', '#f0c8b0']], fog: [50, 180], hemi: 0.95, sun: 0.95, tint: '#c9b6e8' },
+  foret: { sky: [['#1f4a5a', '#5aa8a8', '#d9b0c8'], ['#4aa0d0', '#b0e8ec', '#ffe4c0']], fog: [55, 190], hemi: 1.0, sun: 0.95, tint: '#bff3ff' },
+  temple: { sky: [['#0f2438', '#1d3f5a', '#2a5a7a'], ['#163048', '#2a5a7a', '#3f7a9a']], fog: [18, 80], hemi: 0.6, sun: 0.35, tint: '#8fe3ff', fogColor: '#17314a' },
   sanctuaire: { sky: [['#140f2c', '#2a1d55', '#3a2a6a'], ['#1d1640', '#3a2a6a', '#5a3f8a']], fog: [16, 75], hemi: 0.55, sun: 0.35, tint: '#9f88d8', fogColor: '#2a1d55' },
   interieur: { sky: [['#1a120e', '#2a1d18', '#3a2a22'], ['#1a120e', '#2a1d18', '#3a2a22']], fog: [14, 40], hemi: 0.75, sun: 0.25, tint: '#ffd8b0', fogColor: '#241812' },
 };
@@ -102,12 +107,21 @@ const world = buildWorld(scene, isl, DEF, { low: LOW });
 const PAL = { dusk: DEF.sky.dusk.map((c) => new THREE.Color(c)), dawn: DEF.sky.dawn.map((c) => new THREE.Color(c)) };
 
 /* Cristaux de voyage */
-const WARPS = [
-  { id: 'havre', name: 'Fontaine de Havre-Aube', zone: 'havre', cell: [15, 12], arrive: [15, 15], r: 4.6, where: 'Havre-Aube' },
-  { id: 'rivage', name: 'Cristal du Rivage', zone: 'z1', cell: [3, 5], arrive: [4, 5], r: 2.2, where: 'Le Rivage' },
-  { id: 'sanctuaire', name: 'Hall du Sanctuaire', zone: 'sanctuaire', cell: [15, 4], arrive: [15, 6], r: 2.2, where: 'Le Sanctuaire de Brume', needs: (st) => st.flags.boss_colosse, mesh: true },
-  { id: 'phare', name: 'Cristal du Phare', zone: 'phare', cell: [3, 3], arrive: [4, 4], r: 2.2, where: 'Le Phare de l’Aube', needs: () => isl.gates.end && isl.gates.end.open, mesh: true },
-];
+const WARPS_BY = {
+  aube: [
+    { id: 'havre', name: 'Fontaine de Havre-Aube', zone: 'havre', cell: [15, 12], arrive: [15, 15], r: 4.6, where: 'Havre-Aube' },
+    { id: 'rivage', name: 'Cristal du Rivage', zone: 'z1', cell: [3, 5], arrive: [4, 5], r: 2.2, where: 'Le Rivage' },
+    { id: 'sanctuaire', name: 'Hall du Sanctuaire', zone: 'sanctuaire', cell: [15, 4], arrive: [15, 6], r: 2.2, where: 'Le Sanctuaire de Brume', needs: (st) => st.flags.boss_colosse, mesh: true },
+    { id: 'phare', name: 'Cristal du Phare', zone: 'phare', cell: [3, 3], arrive: [4, 4], r: 2.2, where: 'Le Phare de l’Aube', needs: () => isl.gates.end && isl.gates.end.open, mesh: true },
+  ],
+  foret: [
+    { id: 'vitrebourg', name: 'Fontaine de Vitrebourg', zone: 'vitrebourg', cell: [15, 12], arrive: [15, 15], r: 4.6, where: 'Vitrebourg' },
+    { id: 'vitraux', name: 'Cristal des Vitraux', zone: 'f1', cell: [1, 8], arrive: [2, 7], r: 2.2, where: 'Les Salles de Vitraux' },
+    { id: 'belvedere', name: 'Cristal du Belvédère', zone: 'belv', cell: [3, 5], arrive: [4, 5], r: 2.2, where: 'Le Belvédère de Verre', needs: () => isl.gates.fg3 && isl.gates.fg3.open, mesh: true },
+    { id: 'temple', name: 'Hall du Temple', zone: 'temple', cell: [15, 4], arrive: [15, 6], r: 2.2, where: 'Le Temple de Verre', needs: (st) => st.flags.boss_verre, mesh: true },
+  ],
+};
+const WARPS = WARPS_BY[IID] || [];
 const warpMeshes = {};
 WARPS.filter((w) => w.mesh).forEach((w) => {
   const z = zones[zoneIndex[w.zone]];
@@ -403,6 +417,7 @@ G.runEffects = (list) => {
     if (e.open) openGate(e.open, false);
     if (e.equip) G.equip(e.equip, true);
     if (e.teach) { st.player.abilities[e.teach] = true; hud.toast('✦', 'Nouvelle capacité : Onde de lumière', input.touch ? 'Bouton ✦ (35 énergie).' : 'Clic droit ou L (35 énergie).', 'reward'); }
+    if (e.travel) { const tv = e.travel; setTimeout(() => G.travelTo(tv.to, tv.zone, tv.cell), 100); res.travel = true; }
     if (e.unlock) unlock(e.unlock);
     if (e.heal) { const s = calcStats(st); st.player.hp = s.maxHp; st.player.en = s.maxEn; }
     if (e.shop) { res.screen = 'shop'; res.shop = e.shop; res.sell = !!e.sell; }
@@ -419,9 +434,9 @@ function rest() {
   // les boutiques se réapprovisionnent, les créatures reviennent
   Object.entries(SHOPS).forEach(([id, sh]) => { const stock = G.shopStock(id); sh.items.forEach((r) => { if (r.id && r.restock) stock[r.id] = Math.min((stock[r.id] || 0) + r.restock, r.stock); }); });
   combat.resetAll();
-  st.player.respawn = { zone: 'auberge_in', cell: [9, 3] };
+  st.player.respawn = { zone: META.home.zone, cell: META.home.cell };
   audio.sfx('heal');
-  fade(() => { hud.toast('🌙', 'Tu te reposes au Lampion', 'Vie et énergie restaurées. Partie sauvegardée.'); });
+  fade(() => { hud.toast('🌙', 'Tu te reposes ' + META.inn, 'Vie et énergie restaurées. Partie sauvegardée.'); });
   saveTo('auto');
 }
 
@@ -436,6 +451,7 @@ function packPosition() {
   syncGates();
 }
 async function saveTo(s) {
+  if (S.leaving) return null;   // voyage en cours : l'état est déjà écrit
   packPosition();
   const r = await saves.write(s, st, regionName());
   S.lastSave = S.time;
@@ -451,21 +467,48 @@ function flashSave(cloud) { const el = $('#saveflag'); el.innerHTML = `${icon('s
 /* =========================================================
    Démarrage d'une partie
    ========================================================= */
+/* Change d'île : on enregistre l'île voulue puis on recharge la page, qui construit le bon monde. */
+function switchIsland(id, s, then = 'resume') {
+  S.leaving = true;   // empêche la sauvegarde de fermeture d'écraser la position d'arrivée
+  store.set('lumen.island', id);
+  try { sessionStorage.setItem('lumen.boot', JSON.stringify({ slot: s, then })); } catch (e) { /* rien */ }
+  location.replace(location.pathname + (id === 'aube' ? '' : '') );
+}
+G.switchIsland = switchIsland;
+/* Voyage vers une autre île : on range le monde actuel, on charge celui de l'île d'arrivée, on enregistre, puis on recharge. */
+G.travelTo = async (id, zone, cell) => {
+  if (!ISLANDS.some((i) => i.id === id) || S.leaving) return false;
+  packPosition(); clearTimeout(autoT); S.leaving = true;
+  st.otherWorlds = st.otherWorlds || {};
+  st.otherWorlds[IID] = st.world;
+  st.world = st.otherWorlds[id] || newWorld(ISLAND_META[id].warp);
+  delete st.otherWorlds[id];
+  const tz = ISLANDS.find((i) => i.id === id).zones.find((z) => z.id === zone);
+  st.player.island = id; st.player.zone = zone; st.player.x = W(tz.ox + cell[0]); st.player.z = W(tz.oy + cell[1]);
+  st.player.respawn = { zone, cell };
+  await saves.write(slot, st, ISLAND_META[id].title);
+  if (slot !== 'auto') await saves.write('auto', st, ISLAND_META[id].title);
+  switchIsland(id, slot);
+  return true;
+};
 G.startFrom = async (state, s = 'auto', legacy = false) => {
   audio.unlock();
+  const want = state ? ((state.player && state.player.island) || 'aube') : legacy || !state ? 'aube' : IID;
+  if (want !== IID && ISLANDS.some((i) => i.id === want)) { switchIsland(want, s, state ? 'resume' : legacy ? 'legacy' : 'new'); return; }
   screens.close();
   slot = s;
   if (state) st = normalize(state);
   else if (legacy) st = migrateLegacy();
   else { st = newState(); }
   const fresh = !state && !legacy;
-  if (fresh) { quests.start('q_reveil'); st.player.zone = 'auberge_in'; st.player.respawn = { zone: 'auberge_in', cell: [9, 3] }; }
+  st.player.island = IID;
+  if (fresh) { quests.start(META.first || 'q_reveil'); st.player.zone = META.home.zone; st.player.respawn = { zone: META.home.zone, cell: META.home.cell }; }
   G.applyLook(); applyWorld(); combat.resetAll(); combat.clearProjectiles(); hud.clearBars();
   // position
-  const zi = zoneIndex[st.player.zone] !== undefined ? zoneIndex[st.player.zone] : zoneIndex.havre;
+  const zi = zoneIndex[st.player.zone] !== undefined ? zoneIndex[st.player.zone] : zoneIndex[META.town];
   const z = zones[zi];
   if (st.player.x !== null && st.player.x !== undefined && canStand(st.player.x, st.player.z)) { P.x = st.player.x; P.z = st.player.z; P.face = st.player.face || 0; }
-  else { const c = fresh ? [9, 3] : z.spawn; P.x = W(z.ox + c[0]); P.z = W(z.oy + c[1]); P.face = 0; }
+  else { const c = fresh ? META.home.cell : z.spawn; P.x = W(z.ox + c[0]); P.z = W(z.oy + c[1]); P.face = 0; }
   const s0 = calcStats(st); st.player.hp = Math.min(Math.max(1, st.player.hp), s0.maxHp); st.player.en = Math.min(st.player.en, s0.maxEn);
   P.alive = true; P.vx = P.vz = 0; P.swing = null; P.dodging = false;
   S.zone = -1; S.camT.set(P.x, 0.8, P.z); S.yaw = S.yawT = 0.35; S.mode = 'play';
@@ -544,11 +587,11 @@ function die() {
   st.stats.deaths++;
   const lost = Math.min(50, Math.floor(st.player.ecus * 0.1)); st.player.ecus -= lost;
   audio.sfx('roar');
-  const rz = zones[zoneIndex[st.player.respawn.zone]] || zones[zoneIndex.havre];
+  const rz = zones[zoneIndex[st.player.respawn.zone]] || zones[zoneIndex[META.town]];
   setTimeout(() => screens.death(rz.title), 1100);
 }
 G.respawn = () => {
-  const r = st.player.respawn, zi = zoneIndex[r.zone] !== undefined ? zoneIndex[r.zone] : zoneIndex.havre, z = zones[zi];
+  const r = st.player.respawn, zi = zoneIndex[r.zone] !== undefined ? zoneIndex[r.zone] : zoneIndex[META.town], z = zones[zi];
   const s = calcStats(st); st.player.hp = s.maxHp; st.player.en = s.maxEn;
   combat.resetAll(); combat.clearProjectiles(); hud.clearBars(); S.boss = null;
   teleport(W(z.ox + r.cell[0]), W(z.oy + r.cell[1]));
@@ -778,7 +821,7 @@ G.drawMap = (cv) => {
     const t = isl.terrain[y] && isl.terrain[y][x]; if (!t || t === ' ') continue;
     const zi = isl.zoneAt[y][x];
     if (t === '=') { const gt = isl.gates[isl.gateCell[x + ',' + y]]; if (!gt.open) continue; g.fillStyle = '#e8b65a'; }
-    else { if (zi < 0 || !seen(zi) || zones[zi].interior) continue; const th = themeOf(zones[zi]); g.fillStyle = t === '#' || t === 'T' ? 'rgba(255,255,255,.18)' : t === '~' ? '#5fa8e8' : t === 'H' ? 'rgba(240,198,107,.55)' : t === ',' ? 'rgba(232,214,180,.6)' : t === 'r' ? '#3f5a32' : t === 'x' ? '#9fe9ff' : th === 'sanctuaire' ? 'rgba(160,140,220,.5)' : th === 'lande' ? 'rgba(180,200,120,.5)' : zones[zi].secret ? 'rgba(216,180,254,.5)' : 'rgba(150,220,140,.55)'; }
+    else { if (zi < 0 || !seen(zi) || zones[zi].interior) continue; const th = themeOf(zones[zi]); g.fillStyle = t === '#' || t === 'T' ? 'rgba(255,255,255,.18)' : t === '~' ? '#5fa8e8' : t === 'H' ? 'rgba(240,198,107,.55)' : t === ',' ? 'rgba(232,214,180,.6)' : t === 'r' ? '#3f5a32' : t === 'x' ? '#9fe9ff' : th === 'sanctuaire' ? 'rgba(160,140,220,.5)' : th === 'temple' ? 'rgba(120,190,220,.5)' : th === 'foret' ? 'rgba(110,210,180,.55)' : th === 'lande' ? 'rgba(180,200,120,.5)' : zones[zi].secret ? 'rgba(216,180,254,.5)' : 'rgba(150,220,140,.55)'; }
     g.fillRect(ox + x * s, oy + y * s, s + 0.5, s + 0.5);
     if (t === 'c' && st.player.abilities.vision && seen(zi)) { g.fillStyle = '#ffe2a0'; g.fillRect(ox + x * s + s * 0.25, oy + y * s + s * 0.25, s * 0.5, s * 0.5); }
   }
@@ -809,9 +852,9 @@ function completion() {
     [G.counts('shards'), G.countAll('shard'), 8],
     [G.pageList().filter((p) => p.found).length, G.pageList().length, 6],
     [chests.filter((c) => st.world.chests[c]).length, chests.length, 8],
-    [isl.ents.filter((e) => e.t === 'wisp' && st.world.picked[e.id]).length, 1, 3],
+    [isl.ents.filter((e) => e.t === 'wisp' && st.world.picked[e.id]).length, isl.ents.filter((e) => e.t === 'wisp').length, 3],
     [Math.min(2, st.player.fragments), 2, 3],
-    [st.flags.boss_colosse ? 1 : 0, 1, 2],
+    [st.flags[META.boss] ? 1 : 0, 1, 2],
   ];
   return Math.floor(parts.reduce((a, [n, t, w]) => a + (t ? (n / t) * w : w), 0));
 }
@@ -826,20 +869,22 @@ ev.on('quest:done', () => { npcMarkers(); hud.refresh(); });
 ev.on('kill', (k) => {
   quests.check();
   if (k.room && !combat.roomAlive(k.room)) setTimeout(() => { openGate(k.room); hud.toast('✦', 'Le sceau se dissipe', 'La salle est libérée.'); autosave(); }, 500);
-  if (k.boss) setTimeout(bossDefeated, 1200);
+  if (k.boss) setTimeout(() => bossDefeated(k), 1200);
   hud.refresh();
 });
-G.bossStart = (e) => { S.boss = e; music('boss', 1); hud.banner('Le Sanctuaire de Brume', e.def.name); };
-function bossDefeated() {
-  st.flags.boss_colosse = 1; S.boss = null; hud.bossBar(null);
+G.bossStart = (e) => { S.boss = e; music('boss', 1); hud.banner(e.def.place || 'Le Sanctuaire de Brume', e.def.name); };
+function bossDefeated(k) {
+  const def = ENEMIES[(k && k.type) || 'colosse'] || ENEMIES.colosse;
+  const flag = def.bossFlag || 'boss_colosse', verre = flag === 'boss_verre';
+  st.flags[flag] = 1; S.boss = null; hud.bossBar(null);
   audio.chord([392, 523, 659, 784, 1047], 0.15);
-  hud.banner('Victoire', 'Le Colosse de Brume est dissipé');
-  giveItem('lentille', 1);
-  reward('b:' + IID + ':colosse', 250, 80);
+  hud.banner('Victoire', verre ? 'Le Gardien de Verre est brisé' : 'Le Colosse de Brume est dissipé');
+  if (!verre) giveItem('lentille', 1);
+  reward('b:' + IID + ':' + (verre ? 'gardien' : 'colosse'), verre ? 300 : 250, verre ? 100 : 80);
   updateChestVisibility();
-  st.world.warps.sanctuaire = 1;
+  st.world.warps[verre ? 'temple' : 'sanctuaire'] = 1;
   quests.check(); autosave();
-  setTimeout(() => hud.toast('✦', 'Un cristal de voyage s’est réveillé', 'Il te ramène à Havre-Aube quand tu veux.'), 2500);
+  setTimeout(() => hud.toast('✦', 'Un cristal de voyage s’est réveillé', verre ? 'Il te ramène au Temple de Verre quand tu veux. Le fragment vert t’attend dans le coffre de l’arène.' : 'Il te ramène à Havre-Aube quand tu veux.'), 2500);
 }
 
 /* =========================================================
@@ -911,8 +956,8 @@ function onZoneChange(zi, prev) {
     else hud.banner('Chambre secrète', z.title);
   }
   if (first && !z.area) { const g = z.ents.find((e) => e.gate && !e.optional); if (!(g && isl.gates[g.gate] && isl.gates[g.gate].open)) setTimeout(() => hud.toast('💡', z.title, z.hint), 900); }
-  if (z.id === 'z1') st.world.warps.rivage = 1;
-  if (z.id === 'sanctuaire' && first) { st.player.respawn = { zone: 'sanctuaire', cell: z.spawn }; setTimeout(() => hud.toast('⚠', 'Le Sanctuaire de Brume', 'Si tu tombes ici, Fia te ramènera à l’entrée du Sanctuaire.'), 1500); }
+  WARPS.forEach((w) => { if (w.zone === z.id && !w.needs) st.world.warps[w.id] = 1; });
+  if (z.dungeon && first) { st.player.respawn = { zone: z.id, cell: z.spawn }; setTimeout(() => hud.toast('⚠', z.title, 'Si tu tombes ici, Fia te ramènera à l’entrée.'), 1500); }
   const th = themeOf(z);
   music(S.boss ? 'boss' : th === 'puzzle' ? 'puzzle' : th, S.restore);
   quests.check(); npcMarkers(); hud.refresh();
@@ -1011,7 +1056,7 @@ function update(dt) {
   fia.position.set(P.x + Math.cos(fa) * 0.75, 1.75 + Math.sin(t * 2.3) * 0.12, P.z + Math.sin(fa) * 0.75);
   if (P.spinT > 0) fia.position.set(P.x + Math.cos(t * 20) * 1.4, 1.1, P.z + Math.sin(t * 20) * 1.4);
   fiaLight.position.copy(fia.position);
-  fiaLight.intensity = LOW ? 0 : (themeOf(zones[S.zone]) === 'sanctuaire' ? 14 : 6) * (P.chargeT > 0.55 ? 1.6 : 1);
+  fiaLight.intensity = LOW ? 0 : (['sanctuaire', 'temple'].includes(themeOf(zones[S.zone])) ? 14 : 6) * (P.chargeT > 0.55 ? 1.6 : 1);
   const tg = S.target;
   if (tg && tg.kind === 'device' && S.mode === 'play') { selRing.visible = true; selRing.position.set(tg.x, 0.47, tg.z); selRing.scale.setScalar(1 + Math.sin(t * 5) * 0.04); } else selRing.visible = false;
   /* -------- habitants -------- */
@@ -1083,7 +1128,7 @@ function update(dt) {
   if (A.tint) tint.lerp(new THREE.Color(A.tint), 0.25);
   world.M.grass.color.copy(tint); world.M.foliage.color.copy(tint); world.M.tuft.color.copy(tint);
   ambient.mat.opacity = th === 'interieur' ? 0 : 0.35 + r * 0.6;
-  ambient.mat.color.set(th === 'sanctuaire' || th === 'lande' ? '#c9b6ff' : '#ffc4dc').multiplyScalar(1.4);
+  ambient.mat.color.set(th === 'sanctuaire' || th === 'lande' ? '#c9b6ff' : th === 'foret' || th === 'temple' ? '#bff3ff' : '#ffc4dc').multiplyScalar(1.4);
   if (Math.floor(t) !== Math.floor(t - dt) && S.mode !== 'title') music(S.boss && S.boss.state !== 'dead' ? 'boss' : th === 'puzzle' ? 'puzzle' : th, r);
 
   /* -------- monde -------- */
@@ -1124,14 +1169,18 @@ function frame(now) {
    ========================================================= */
 resize();
 applyWorld();
-world.showZones(zoneIndex.havre);
+world.showZones(zoneIndex[META.town]);
 hud.show(false);
 screens.title();
 $('#loader').hidden = true;
+{ // reprise automatique après un voyage entre îles
+  let boot = null; try { boot = JSON.parse(sessionStorage.getItem('lumen.boot') || 'null'); sessionStorage.removeItem('lumen.boot'); } catch (e) { /* rien */ }
+  if (boot) setTimeout(async () => { if (boot.then === 'new') G.startFrom(null, boot.slot); else if (boot.then === 'legacy') G.startFrom(null, boot.slot, true); else { const sv = await saves.read(boot.slot); if (sv) G.startFrom(sv, boot.slot); } }, 50);
+}
 requestAnimationFrame(frame);
 platform.onChange(() => { if (S.mode === 'title' && screens.current === 'title') screens.title(); });
-document.addEventListener('visibilitychange', () => { if (document.hidden && S.mode !== 'title') { if (S.mode === 'play') { screens.menu('options'); S.mode = 'screen'; setTouch(false); } saveTo('auto'); } });
-addEventListener('pagehide', () => { if (S.mode !== 'title') { packPosition(); saves.write('auto', st, regionName(), { cloud: false }); } });
+document.addEventListener('visibilitychange', () => { if (document.hidden && S.mode !== 'title' && !S.leaving) { if (S.mode === 'play') { screens.menu('options'); S.mode = 'screen'; setTouch(false); } saveTo('auto'); } });
+addEventListener('pagehide', () => { if (S.mode !== 'title' && !S.leaving) { packPosition(); saves.write('auto', st, regionName(), { cloud: false }); } });
 document.querySelectorAll('[data-ui]').forEach((b) => b.addEventListener('click', () => { if (S.mode !== 'play') return; const tab = b.dataset.ui; screens.menu(tab); S.mode = 'screen'; setTouch(false); audio.sfx('ui'); }));
 
 /* Outils de test (automatisation) */

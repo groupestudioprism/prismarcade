@@ -142,7 +142,7 @@
         <div class="big-body">
           <span class="badge">${done ? 'Acte I terminé' : 'Nouveau · Acte I jouable'}</span>
           <h3>Lumen <span>: les Îles Brisées</span></h3>
-          <p>Aventure, combats et énigmes de lumière en 3D. Explore l’Île de l’Aube, parle aux habitants, affronte le Colosse et rallume le phare d’un archipel éteint.</p>
+          <p>Aventure, combats et énigmes de lumière en 3D. Explore l’Île de l’Aube puis la Forêt de Verre, parle aux habitants, affronte le Colosse et le Gardien de Verre, et rallume le phare d’un archipel éteint.</p>
           <p class="big-meta">${esc(prog)}</p>
           <span class="btn primary">${st && st.plays ? 'Continuer' : 'Jouer'}</span>
         </div>

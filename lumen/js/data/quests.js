@@ -121,4 +121,47 @@ export const QUESTS = {
     ],
     rewards: { xp: 100, ecus: 0, unlock: ['tenue_prisme', 'teinture_azur'], pa: [80, 30] },
   },
+
+  /* ================= Quêtes principales — Acte II : la Forêt de Verre ================= */
+  q_verre: {
+    kind: 'main', act: 2, title: 'Les vitraux de la Forêt', giver: 'ambre',
+    summary: 'Les vitraux du Temple de Verre ne laissent plus passer que la brume. Ambre, la doyenne de Vitrebourg, t’apprend à lire les couleurs.',
+    steps: [
+      { id: 'parler', type: 'talk', npc: 'ambre', text: 'Parler à Ambre sur la place de Vitrebourg', zone: 'vitrebourg' },
+      { id: 'vitraux', type: 'gates', gates: ['fg1', 'fg2', 'fg3'], text: 'Traverser les trois salles de vitraux (à l’est du village)', zone: 'f1' },
+      { id: 'lisiere', type: 'reach', zone: 'lisiere', text: 'Rejoindre la Lisière du Verre (au sud du village)' },
+      { id: 'temple', type: 'reach', zone: 'temple', text: 'Couper la haie de ronces et entrer dans le Temple de Verre' },
+      { id: 'gardien', type: 'flag', flag: 'boss_verre', text: 'Vaincre le Gardien de Verre', zone: 'temple' },
+      { id: 'retour', type: 'talk', npc: 'ambre', text: 'Rapporter le fragment vert à Ambre', zone: 'vitrebourg' },
+    ],
+    rewards: { xp: 500, ecus: 250, items: { grande_potion: 2 }, pa: [320, 110] },
+  },
+
+  s_givre: {
+    kind: 'side', title: 'Tisane de givre', giver: 'opaline',
+    summary: 'Opaline prépare une tisane qui soigne mieux que n’importe quelle potion, mais il lui faut du givre de sous-bois, qui pousse dans la Lisière.',
+    steps: [
+      { id: 'fleurs', type: 'item', item: 'givre_foret', n: 4, text: 'Cueillir 4 givres de sous-bois (Lisière du Verre)', zone: 'lisiere' },
+      { id: 'retour', type: 'talk', npc: 'opaline', text: 'Les apporter à Opaline (marché)', zone: 'vitrebourg' },
+    ],
+    rewards: { xp: 80, ecus: 50, items: { tisane_foret: 3 }, pa: [60, 20] },
+  },
+  s_eclats: {
+    kind: 'side', title: 'La commande de Silex', giver: 'silex',
+    summary: 'Silex, le maître verrier, manque d’éclats de vitrail pour sa commande. Les créatures de verre de la Lisière en laissent derrière elles.',
+    steps: [
+      { id: 'eclats', type: 'item', item: 'eclat_verre', n: 6, text: 'Rapporter 6 éclats de verre', zone: 'lisiere' },
+      { id: 'retour', type: 'talk', npc: 'silex', text: 'Les donner à Silex (verrerie)', zone: 'vitrebourg' },
+    ],
+    rewards: { xp: 90, ecus: 40, items: { pierre: 3 }, unlock: ['teinte_emeraude'], pa: [70, 25] },
+  },
+  s_chasse_verre: {
+    kind: 'side', title: 'Les cerfs de verre', giver: 'perle',
+    summary: 'Perle souffle le verre avec les éclats ramassés dans la forêt, mais les créatures de verre rôdent trop près du village.',
+    steps: [
+      { id: 'chasse', type: 'kill', n: 10, text: 'Vaincre 10 créatures (Lisière du Verre)', zone: 'lisiere' },
+      { id: 'retour', type: 'talk', npc: 'perle', text: 'Faire ton rapport à Perle', zone: 'vitrebourg' },
+    ],
+    rewards: { xp: 120, ecus: 100, unlock: ['teinte_bordeaux'], pa: [80, 30] },
+  },
 };
