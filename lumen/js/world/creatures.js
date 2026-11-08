@@ -225,7 +225,7 @@ function cerf(tint) {
     head.rotation.x = wind ? 0.9 : s.charging ? 0.75 : s.stun ? 0.5 : Math.sin(t * 1.1) * 0.06;
     body.rotation.z = s.stun ? Math.sin(t * 9) * 0.15 : 0;
     antlers.forEach((a) => { a.children.forEach((c) => { if (c.material && c.material.emissiveIntensity !== undefined) c.material.emissiveIntensity = 0.7 + wind * 1.4 + Math.sin(t * 3) * 0.15; }); });
-    heart.rotation.y += dt * (1 + wind * 6); heartM.color.set('#9fe9ff').multiplyScalar(2.2 + wind * 2.5 + Math.sin(t * 4) * 0.3);
+    heart.rotation.y += dt * (1 + wind * 6); heartM.color.set(tint || '#9fe9ff').multiplyScalar(2.2 + wind * 2.5 + Math.sin(t * 4) * 0.3);
     tail.position.y = 1.1 + Math.sin(t * 6) * 0.04;
     eyeM.forEach((e) => e.material.color.set(wind || s.charging ? '#ff7a9a' : '#ffffff').multiplyScalar(3));
     stars.update(t, s.stun);

@@ -65,9 +65,9 @@ export const ITEMS = {
   fibre: { cat: 'materiau', name: 'Fibre de ronce', icon: 'fiber', rarity: 'commun', price: 16, sell: 6, desc: 'Souple et très solide une fois tressée.' },
   pierre: { cat: 'materiau', name: 'Pierre polie', icon: 'stone', rarity: 'commun', price: 24, sell: 9, desc: 'Une pierre lisse et dense, parfaite pour la forge.' },
   bois: { cat: 'materiau', name: 'Bois clair', icon: 'wood', rarity: 'commun', price: 14, sell: 5, desc: 'Du bois léger des îles hautes.' },
-  fleur_miel: { cat: 'materiau', name: 'Fleur de miel', icon: 'flower', rarity: 'commun', price: 0, sell: 6, desc: 'Une fleur dorée au parfum sucré. Maëlle en met dans son pain.' },
+  fleur_miel: { cat: 'materiau', name: 'Fleur de miel', icon: 'flower', rarity: 'commun', price: 0, sell: 0, desc: 'Une fleur dorée au parfum sucré. Maëlle en met dans son pain.' },
   eclat_verre: { cat: 'materiau', name: 'Éclat de verre', icon: 'shard', rarity: 'commun', price: 34, sell: 14, desc: 'Un éclat de vitrail encore tiède. Les verriers de Vitrebourg en raffolent.' },
-  givre_foret: { cat: 'materiau', name: 'Givre de sous-bois', icon: 'flower', rarity: 'commun', price: 0, sell: 7, desc: 'Une fleur transparente qui pousse au pied des arbres de verre.' },
+  givre_foret: { cat: 'materiau', name: 'Givre de sous-bois', icon: 'flower', rarity: 'commun', price: 14, sell: 7, desc: 'Une fleur transparente qui pousse au pied des arbres de verre.' },
   larme_verre: { cat: 'materiau', name: 'Larme du Gardien', icon: 'tear', rarity: 'epique', price: 0, sell: 220, desc: 'Un cristal vert, limpide. La forge peut en tirer le meilleur d’une arme.' },
   larme_colosse: { cat: 'materiau', name: 'Larme du Colosse', icon: 'tear', rarity: 'epique', price: 0, sell: 200, desc: 'Un cristal violet, encore tiède. La forge peut en tirer le meilleur d’une arme.' },
 

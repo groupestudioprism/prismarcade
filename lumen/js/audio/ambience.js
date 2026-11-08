@@ -68,17 +68,17 @@ function ev(dt) {
   if (!lay || A.low && Math.random() < 0.4) return;
   const r = Math.random, lv = (k) => (lay[k] ? lay[k].lvl : 0), out = () => dest(A.out.amb, { pan: (r() * 2 - 1) * 0.8 });
   if (lv('birds') > 0.01 && r() < dt * 0.35 * lv('birds')) {
-    const o = out(); if (o) { const n = 1 + Math.floor(r() * 4), f0 = 2200 + r() * 2400, up = r() < 0.5 ? 1.5 : 0.7; for (let i = 0; i < n; i++) tone(f0 * (1 + i * 0.04), 0.07 + r() * 0.05, { wave: 'sine', vol: 0.014 * Math.min(1.5, lv('birds') + 0.3), delay: i * 0.11, slide: up, out: o, rev: 0.2, a: 0.008 }); }
+    const o = out(); if (o) { const n = 1 + Math.floor(r() * 4), f0 = 2200 + r() * 2400, up = r() < 0.5 ? 1.5 : 0.7; for (let i = 0; i < n; i++) tone(f0 * (1 + i * 0.04), 0.07 + r() * 0.05, { mus: true, wave: 'sine', vol: 0.014 * Math.min(1.5, lv('birds') + 0.3), delay: i * 0.11, slide: up, out: o, rev: 0.2, a: 0.008 }); }
   }
   if ((lay.water && target('water') > 0.05 || target('hum') > 0.3) && r() < dt * (0.2 + 0.4 * target('water') + 0.25 * target('hum'))) {
-    const o = out(); const f = 500 + r() * 900; if (o) tone(f, 0.12, { wave: 'sine', vol: 0.02, slide: 1.8, out: o, rev: 0.8, a: 0.004 });
+    const o = out(); const f = 500 + r() * 900; if (o) tone(f, 0.12, { mus: true, wave: 'sine', vol: 0.02, slide: 1.8, out: o, rev: 0.8, a: 0.004 });
   }
-  if (target('fire') > 0.05 && r() < dt * (6 + 10 * target('fire'))) { const o = out(); if (o) noise(0.02 + r() * 0.05, { vol: 0.03 * target('fire') + 0.01, cut: 1500 + r() * 3500, q: 1.5, ftype: 'bandpass', out: o }); }
+  if (target('fire') > 0.05 && r() < dt * (6 + 10 * target('fire'))) { const o = out(); if (o) noise(0.02 + r() * 0.05, { mus: true, vol: 0.03 * target('fire') + 0.01, cut: 1500 + r() * 3500, q: 1.5, ftype: 'bandpass', out: o }); }
   if (lv('glassrain') > 0.01 && r() < dt * 7 * lv('glassrain')) {
-    const o = out(); if (o) tone(mtof(88 + Math.floor(r() * 18)), 0.35 + r() * 0.3, { wave: 'sine', vol: 0.008 + r() * 0.01, out: o, rev: 0.9, a: 0.002 });
+    const o = out(); if (o) tone(mtof(88 + Math.floor(r() * 18)), 0.35 + r() * 0.3, { mus: true, wave: 'sine', vol: 0.008 + r() * 0.01, out: o, rev: 0.9, a: 0.002 });
   }
   if (lv('distant') > 0.01 && r() < dt * 0.07 * lv('distant')) {
-    const o = out(); if (o) { const f = [110, 146.8, 164.8, 196][Math.floor(r() * 4)]; tone(f, 3.2, { wave: 'triangle', vol: 0.025, a: 1.2, r: 2, out: o, rev: 1, cut: 700 }); tone(f * 1.5, 3, { wave: 'sine', vol: 0.012, a: 1.5, r: 2, out: o, rev: 1 }); }
+    const o = out(); if (o) { const f = [110, 146.8, 164.8, 196][Math.floor(r() * 4)]; tone(f, 3.2, { mus: true, wave: 'triangle', vol: 0.025, a: 1.2, r: 2, out: o, rev: 1, cut: 700 }); tone(f * 1.5, 3, { mus: true, wave: 'sine', vol: 0.012, a: 1.5, r: 2, out: o, rev: 1 }); }
   }
 }
 let lastT = 0;

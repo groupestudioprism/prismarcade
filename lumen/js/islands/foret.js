@@ -1647,7 +1647,9 @@ export default {
      "id": "ch_can_arene",
      "x": 14,
      "y": 12,
-     "ecus": 120
+     "ecus": 120,
+     "item": "sceptre",
+     "n": 1
     },
     {
      "id": "ch_can_niche",

@@ -49,7 +49,7 @@ export function createScreens(G) {
     scr.onclick = async (ev) => {
       const b = ev.target.closest('[data-a]'); if (!b) return;
       G.audio.sfx('ui');
-      if (b.dataset.a === 'continue') G.startFrom(await G.saves.read(b.dataset.slot), b.dataset.slot);
+      if (b.dataset.a === 'continue') { const sv = await G.saves.read(b.dataset.slot); if (!sv) { $('#t-card').insertAdjacentHTML('beforeend', '<p class="small gold">⚠ Cette sauvegarde est illisible. Essaie un autre emplacement (« Charger une partie ») ou commence une nouvelle partie.</p>'); return; } G.startFrom(sv, b.dataset.slot); }
       else if (b.dataset.a === 'legacy') G.startFrom(null, 'auto', true);
       else if (b.dataset.a === 'new') { if (latest && !confirm('Commencer une nouvelle partie ? Ta sauvegarde automatique sera remplacée (les emplacements 1 à 3 sont conservés).')) return; G.startFrom(null, 'auto'); }
       else if (b.dataset.a === 'slots') slotsScreen('load', list);
@@ -207,6 +207,8 @@ export function createScreens(G) {
         <label>Général <input type="range" min="0" max="1" step="0.05" value="${a.master}" data-vol="master"></label>
         <label>Effets <input type="range" min="0" max="1" step="0.05" value="${a.sfx}" data-vol="sfx"></label>
         <label>Musique <input type="range" min="0" max="1" step="0.05" value="${a.music}" data-vol="music"></label>
+        <label>Ambiance <input type="range" min="0" max="1" step="0.05" value="${a.ambience === undefined ? 0.8 : a.ambience}" data-vol="ambience"></label>
+        <label>Voix <input type="range" min="0" max="1" step="0.05" value="${a.voice === undefined ? 0.9 : a.voice}" data-vol="voice"></label>
         <label class="chk"><input type="checkbox" ${a.muted ? 'checked' : ''} data-a="mute"> Couper le son</label></div>
       <div class="opt-group"><h4>Affichage</h4><div class="seg small-seg">${[['auto', 'Automatique'], ['high', 'Haute'], ['low', 'Économie']].map(([k, l]) => `<button class="${G.quality() === k ? 'on' : ''}" data-q="${k}">${l}</button>`).join('')}</div></div>
       <div class="opt-group"><h4>Commandes</h4><div class="help">${G.helpHtml()}</div></div>
@@ -254,7 +256,7 @@ export function createScreens(G) {
     const choices = (D.topic.choices || []).filter((c) => !c.if || c.if(q));
     if (!choices.length) { endDialog({}); return; }
     dlg.innerHTML = `<div class="d-box"><div class="d-name"><b>${esc(D.npc.name)}</b><small>${esc(D.npc.role)}</small></div><div class="d-choices">${choices.map((c, i) => `<button class="choice" data-c="${i}"><kbd>${i + 1}</kbd>${esc(c.t)}</button>`).join('')}</div></div>`;
-    D.choices = choices; D.choosing = true;
+    D.choices = choices; D.choosing = true; D.chAt = performance.now();
     const first = dlg.querySelector('.choice'); if (first && !G.input.touch) first.focus();
   }
   function choose(i) {
@@ -276,7 +278,9 @@ export function createScreens(G) {
     else if (res.screen === 'wardrobe') wardrobe();
     else G.onScreenClosed();
   }
-  dlg.addEventListener('click', (ev) => { const c = ev.target.closest('[data-c]'); if (c) { choose(+c.dataset.c); return; } if (D && !D.choosing) nextLine(); });
+  /* Entrée/Espace maintenus : la répétition clavier ne doit jamais valider le choix qui vient d'apparaître (et prend le focus) */
+  dlg.addEventListener('keydown', (ev) => { if ((ev.key === 'Enter' || ev.key === ' ') && ev.repeat) { ev.preventDefault(); ev.stopPropagation(); } }, true);
+  dlg.addEventListener('click', (ev) => { const c = ev.target.closest('[data-c]'); if (c) { if (ev.detail === 0 && D && performance.now() - (D.chAt || 0) < 350) return; choose(+c.dataset.c); return; } if (D && !D.choosing) nextLine(); });
 
   /* ================= Boutiques ================= */
   function shop(id, sellMode = false) {
@@ -292,7 +296,7 @@ export function createScreens(G) {
       const out = owned || (left !== null && left !== undefined && left <= 0);
       return { r, it, name, price, owned, left, out, key: r.id || r.unlock };
     });
-    const sellRows = sellMode ? Object.keys(st.inv).filter((id) => ITEMS[id] && ITEMS[id].sell && ['materiau', 'conso'].includes(ITEMS[id].cat)).map((id) => ({ id, it: ITEMS[id], n: st.inv[id], price: ITEMS[id].sell })) : [];
+    const sellRows = sellMode ? Object.keys(st.inv).filter((id) => ITEMS[id] && ITEMS[id].sell && ['materiau', 'conso'].includes(ITEMS[id].cat) && !(G.questLocked && G.questLocked(id))).map((id) => ({ id, it: ITEMS[id], n: st.inv[id], price: ITEMS[id].sell })) : [];
     open(`<div class="panel shop-card"><div class="j-head"><div><p class="kicker">${sellMode ? 'Vendre' : 'Boutique'}</p><h2>${esc(sh.name)}</h2></div><div class="purse">${icon('coin')} <b>${fmt(st.player.ecus)}</b></div><button class="icon-btn" data-a="close">${icon('close')}</button></div>
       ${disc < 1 ? '<p class="small gold">Prix d’ami : −20 %</p>' : ''}
       <ul class="shop-list">${sellMode ? (sellRows.length ? sellRows.map((s) => `<li class="${rarityCls(s.it.rarity)}"><span class="si">${icon(s.it.icon)}</span><div><b>${esc(s.it.name)} <em>×${s.n}</em></b><small>${esc(s.it.desc)}</small></div><button class="btn small" data-sell="${s.id}">+${s.price} ${icon('coin')}</button></li>`).join('') : '<li class="muted">Rien à vendre : Gaspard achète les matériaux et les consommables.</li>')
@@ -310,7 +314,7 @@ export function createScreens(G) {
   /* ================= Forge ================= */
   function forge() {
     cur = 'forge';
-    const st = G.st, disc = st.flags.forge_remise ? 0.8 : 1;
+    const st = G.st, disc = st.flags.forge_remise ? 0.8 : 1, smith = G.def.id === 'foret' ? 'Silex' : 'Bran';
     const owned = Object.keys(st.inv).filter((id) => ITEMS[id] && ['arme', 'armure'].includes(ITEMS[id].cat) && id !== 'veste_voyage' && id !== 'baton');
     const matsHtml = (m) => Object.entries(m).map(([id, n]) => `<span class="${(st.inv[id] || 0) >= n ? 'ok' : 'miss'}">${icon(ITEMS[id].icon)} ${esc(ITEMS[id].name)} ${st.inv[id] || 0}/${n}</span>`).join('');
     const can = (cost) => st.player.ecus >= Math.round(cost.ecus * disc) && Object.entries(cost.mats).every(([id, n]) => (st.inv[id] || 0) >= n);
@@ -319,8 +323,8 @@ export function createScreens(G) {
       return `<li class="${rarityCls(it.rarity)}"><span class="si">${icon(it.icon)}</span><div><b>${esc(it.name)} ${lvl ? '+' + lvl : ''}</b>${next ? `<small>Niveau ${lvl + 1} : ${it.cat === 'arme' ? 'attaque +' + Math.round(next.bonus * 100) + ' %' : 'défense +' + next.bonus}</small><div class="mats">${matsHtml(next.mats)}</div>` : '<small>Amélioration maximale.</small>'}</div>${next ? `<button class="btn small ${can(next) ? 'primary' : ''}" data-up="${id}" ${can(next) ? '' : 'disabled'}>${Math.round(next.ecus * disc)} ${icon('coin')}</button>` : '<span class="tag">Max</span>'}</li>`;
     });
     const craft = Object.entries(RECIPES).map(([id, r]) => { const it = ITEMS[id]; const have = st.inv[id]; return `<li class="${rarityCls(it.rarity)}"><span class="si">${icon(it.icon)}</span><div><b>${esc(it.name)}</b><small>${esc(it.desc)}</small><div class="mats">${matsHtml(r.mats)}</div></div>${have ? '<span class="tag">Possédé</span>' : `<button class="btn small ${can(r) ? 'primary' : ''}" data-craft="${id}" ${can(r) ? '' : 'disabled'}>${Math.round(r.ecus * disc)} ${icon('coin')}</button>`}</li>`; });
-    open(`<div class="panel shop-card"><div class="j-head"><div><p class="kicker">Forge</p><h2>Forge de Bran</h2></div><div class="purse">${icon('coin')} <b>${fmt(st.player.ecus)}</b></div><button class="icon-btn" data-a="close">${icon('close')}</button></div>
-      <h4>Améliorer</h4><ul class="shop-list">${rows.join('') || '<li class="muted">Bran améliore les armes et les armures (pas le bâton ni la veste de voyage).</li>'}</ul>
+    open(`<div class="panel shop-card"><div class="j-head"><div><p class="kicker">Forge</p><h2>${smith === 'Silex' ? 'Verrerie de Silex' : 'Forge de Bran'}</h2></div><div class="purse">${icon('coin')} <b>${fmt(st.player.ecus)}</b></div><button class="icon-btn" data-a="close">${icon('close')}</button></div>
+      <h4>Améliorer</h4><ul class="shop-list">${rows.join('') || `<li class="muted">${smith} améliore les armes et les armures (pas le bâton ni la veste de voyage).</li>`}</ul>
       <h4>Fabriquer</h4><ul class="shop-list">${craft.join('')}</ul></div>`);
     scr.onclick = (ev) => {
       if (ev.target.closest('[data-a="close"]')) { close(); return; }
@@ -366,9 +370,11 @@ export function createScreens(G) {
     open(`<div class="panel page-card sign"><h2>${esc(title)}</h2><p class="page-text">${esc(text)}</p><div class="actions"><button class="btn primary" data-a="close">${esc(btn)}</button></div></div>`);
     scr.onclick = (ev) => { if (ev.target.closest('[data-a="close"]')) close(); };
   }
-  function death(where) {
+  /* « à / au / aux » devant un nom de lieu (Le Temple → au Temple ; Auberge du Lampion → à l’Auberge du Lampion) */
+  const placeTo = (t) => /^Le /.test(t) ? 'au ' + t.slice(3) : /^La /.test(t) ? 'à la ' + t.slice(3) : /^Les /.test(t) ? 'aux ' + t.slice(4) : /^L’/.test(t) ? 'à l’' + t.slice(2) : /^Auberge/.test(t) ? 'à l’' + t : /^Maison/.test(t) ? 'à la ' + t : 'à ' + t;
+  function death(where, lost = 0) {
     cur = 'death';
-    open(`<div class="panel menu-card death"><h2>Lyra s’est évanouie…</h2><p class="muted">Fia l’a ramenée à ${esc(where)}. Un peu d’écus se sont perdus dans la brume.</p><div class="actions"><button class="btn primary" data-a="rise">Se relever</button></div></div>`, 'dark');
+    open(`<div class="panel menu-card death"><h2>Lyra s’est évanouie…</h2><p class="muted">Fia l’a ramenée ${esc(placeTo(where))}. ${lost > 0 ? `${lost} écu${lost > 1 ? 's' : ''} se ${lost > 1 ? 'sont perdus' : 'est perdu'} dans la brume.` : 'Rien n’a été perdu dans la brume.'}</p><div class="actions"><button class="btn primary" data-a="rise">Se relever</button></div></div>`, 'dark');
     scr.onclick = (ev) => { if (ev.target.closest('[data-a="rise"]')) { close(); G.respawn(); } };
   }
   function actEnd(info) {

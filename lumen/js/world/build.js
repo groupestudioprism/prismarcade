@@ -100,8 +100,9 @@ export function buildWorld(scene, isl, def, opts = {}) {
   const rockGeo = new THREE.DodecahedronGeometry(1, 0), trunkGeo = new THREE.CylinderGeometry(0.14, 0.22, 1.3, 6), crownGeo = new THREE.IcosahedronGeometry(0.85, 0);
   const bladeG = (h, w) => new THREE.ConeGeometry(w, h, 3).translate(0, h / 2, 0);
   const tuftGeo = merge([[bladeG(0.5, 0.075), mx(0, 0, 0, 0.12, 0, 0.08)], [bladeG(0.62, 0.08), mx(0.05, 0, 0.02, -0.1, 1.2, -0.12)], [bladeG(0.42, 0.07), mx(-0.05, 0, -0.03, 0.05, 2.4, 0.2)], [bladeG(0.34, 0.06), mx(0.0, 0, 0.06, 0.3, 3.6, 0.0)]]);
-  const flowerGeo = merge([[new THREE.OctahedronGeometry(0.085, 0).translate(0, 0.33, 0), mx(0, 0, 0, 0, 0, 0, 1, 0.6, 1)], [new THREE.OctahedronGeometry(0.06, 0).translate(0, 0.33, 0.035), mx(0, 0, 0, 0.9, 0, 0, 1, 0.5, 1)]]);
-  const stemGeo = new THREE.CylinderGeometry(0.011, 0.016, 0.3, 4).translate(0, 0.15, 0), stemM = mat('#6fae5a');
+  /* fleur : cinq pétales en couronne + cœur, tête tournée vers le haut (plus de « fanion » penché) */
+  const flowerGeo = merge([...[0, 1, 2, 3, 4].map((i) => { const a = (i / 5) * Math.PI * 2; return [new THREE.OctahedronGeometry(0.05, 0), mx(Math.cos(a) * 0.065, 0.31, Math.sin(a) * 0.065, 0, -a, 0, 1.35, 0.45, 0.85)]; }), [new THREE.OctahedronGeometry(0.05, 0), mx(0, 0.325, 0, 0, 0.4, 0, 0.9, 0.7, 0.9)]]);
+  const stemGeo = new THREE.CylinderGeometry(0.014, 0.02, 0.31, 4).translate(0, 0.15, 0), stemM = mat('#6fae5a');
   const pebbleGeo = new THREE.DodecahedronGeometry(0.16, 0);
   const ronceGeo = new THREE.IcosahedronGeometry(0.75, 0), thornGeo = new THREE.ConeGeometry(0.07, 0.4, 4);
 
@@ -128,7 +129,7 @@ export function buildWorld(scene, isl, def, opts = {}) {
         const h = 2 + depthOf[x + ',' + y] * 2.4 + hash(x, y, 5) * 3;
         o.position.set(W(x) + (hash(x, y, 6) - 0.5) * 0.6, -2.4 - h / 2, W(y) + (hash(x, y, 7) - 0.5) * 0.6);
         o.rotation.set(Math.PI, hash(x, y, 8) * 6, 0); o.scale.set(1, h, 1);
-        return C(th.under).offsetHSL(0, 0, (hash(x, y, 9) - 0.5) * 0.1);
+        return C(th.under).offsetHSL(0, 0, (hash(x, y, 9) - 0.5) * 0.1 + 0.07); /* un peu plus clair : le dessous des îles n'est plus noir */
       }, { receive: false });
     }
     // murs (donjon, intérieurs) ou rochers (extérieur)
@@ -358,6 +359,7 @@ export function buildWorld(scene, isl, def, opts = {}) {
   }
 
   /* ---------- Objets de lumière ---------- */
+  const vitrails = [];
   const views = {};
   const pedestalGeo = new THREE.CylinderGeometry(0.72, 0.9, 0.42, 8);
   const dirAngle = (d) => Math.atan2(-DIRS[d][1], DIRS[d][0]);
@@ -406,7 +408,7 @@ export function buildWorld(scene, isl, def, opts = {}) {
       const top = new THREE.Mesh(new THREE.OctahedronGeometry(0.16, 0), M.gold); top.position.y = BEAM_Y + 1.2; top.scale.y = 1.4; g.add(top);
       // tache de lumière colorée projetée au sol : lisible et très « vitrail »
       const pool = new THREE.Mesh(new THREE.CircleGeometry(1.15, 20), new THREE.MeshBasicMaterial({ color: col.clone().multiplyScalar(1.3), map: haloSprite('#fff', 1, 1).material.map, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false })); pool.rotation.x = -Math.PI / 2; pool.position.y = 0.46; g.add(pool);
-      const lamp = new THREE.PointLight(col, 1.2, 4.5); lamp.position.y = BEAM_Y + 0.2; if (!LOW) g.add(lamp);
+      vitrails.push({ g, col }); // la lueur vient d'un petit pool de lumières partagé (nombre de PointLight constant → pas de recompilation de shaders)
       v.float = null; v.glass = gm;
     } else if (e.t === 'prism') {
       pedestal(g, false);
@@ -792,6 +794,16 @@ export function buildWorld(scene, isl, def, opts = {}) {
     for (let i = iflare; i < pool.flare.length; i++) pool.flare[i].visible = false;
   }
 
+  /* Pool fixe de PointLight pour les vitrails : toujours le même nombre de lumières dans la scène, réaffectées aux vitrails les plus proches */
+  const VLIGHTS = LOW ? 0 : 3, vlights = [], vwp = new THREE.Vector3(); let vlAcc = 1;
+  for (let i = 0; i < VLIGHTS; i++) { const l = new THREE.PointLight(0xffffff, 0, 4.5); scene.add(l); vlights.push(l); }
+  function updateVitrailLights(dt) {
+    vlAcc += dt; if (vlAcc < 0.25) return; vlAcc = 0;
+    const cand = [];
+    vitrails.forEach((vt) => { if (!vt.g.parent || !vt.g.parent.visible || !vt.g.visible) return; vt.g.getWorldPosition(vwp); const d = Math.hypot(vwp.x - camPos.x, vwp.z - camPos.z); if (d < 30) cand.push({ vt, d, x: vwp.x, z: vwp.z }); });
+    cand.sort((a, b) => a.d - b.d);
+    vlights.forEach((l, i) => { const c = cand[i]; if (!c) { l.intensity = 0; return; } l.color.copy(c.vt.col); l.position.set(c.x, BEAM_Y + 0.2, c.z); l.intensity = 1.2; });
+  }
   let cullAcc = 1;
   const life = createLife(scene, isl, zones, { low: LOW });
   const showHalo = (sp) => { sp.visible = sp.material.opacity > 0.02; };
@@ -829,7 +841,7 @@ export function buildWorld(scene, isl, def, opts = {}) {
   const grappleHide = () => { grap.visible = false; };
   /* ---------- Animations du décor ---------- */
   function animate(dt, t, ctx) {
-    tickGfx(t); life.update(dt, t);
+    tickGfx(t); life.update(dt, t); updateVitrailLights(dt);
     if (camPos.x < 1e5) { sky.position.copy(camPos); sunSp.position.set(150, 95 + skyK * 10, 240); }
     if (starPts) { starPts.material.uniforms.uK.value = skyOn ? Math.max(0, 1 - skyK * 1.3) * 0.85 : 0; sunSp.material.opacity = skyOn ? 0.22 + skyK * 0.45 : 0; sunSp.material.color.set('#ff9ec7').lerp(new THREE.Color('#ffe2a0'), skyK); sky.visible = skyOn; }
     cullAcc += dt; if (cullAcc > 0.2) { cullAcc = 0; cullers.forEach((c) => { c.g.visible = Math.hypot(c.x - camPos.x, c.z - camPos.z) < (LOW ? 40 : 50) + c.r; }); }

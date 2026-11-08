@@ -75,7 +75,7 @@ export const ENEMIES = {
     desc: 'Un éclat de vitrail jaune, plus nerveux que ses cousins de la Lisière. Il ne tient pas en place.',
   },
   cerf_prisme: {
-    name: 'Cerf de prisme', family: 'verre', model: 'sanglier', tint: '#ff9be6', spark: '#ffd0f4', hp: 84, atk: 21, def: 2, speed: 2.4, charge: 14, behavior: 'charger', aggro: 9, leash: 15, radius: 0.7,
+    name: 'Cerf de prisme', family: 'verre', model: 'sanglier', tint: '#ff4fd0', tintK: 0.92, tintE: 0.9, spark: '#ffd0f4', hp: 84, atk: 21, def: 2, speed: 2.4, charge: 14, behavior: 'charger', aggro: 9, leash: 15, radius: 0.7,
     xp: 24, ecus: [8, 14], drops: [['eclat_verre', 0.7], ['pierre', 0.4]], weak: { contondant: 1.3 }, resist: { lumiere: 0.8 },
     desc: 'Un cerf de verre magenta qui charge plus vite et plus loin. Attends qu’il s’étourdisse contre un pilier.',
   },

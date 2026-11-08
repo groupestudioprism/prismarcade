@@ -93,7 +93,7 @@ export function passerelle() {
     ],
     chests: [
       { id: 'ch_can_p1', x: 2, y: 10, item: 'anneau_canopee', n: 1 },
-      { id: 'ch_can_arene', x: 14, y: 12, ecus: 120 },
+      { id: 'ch_can_arene', x: 14, y: 12, ecus: 120, item: 'sceptre', n: 1 },
       { id: 'ch_can_niche', x: 5, y: 1, item: 'fragment_coeur', n: 1 },
     ],
     pickups: [

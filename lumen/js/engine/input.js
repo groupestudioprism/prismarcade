@@ -26,12 +26,14 @@ export function createInput(canvas, opts = {}) {
     if (ev.target && (ev.target.tagName === 'INPUT' || ev.target.tagName === 'SELECT' || ev.target.tagName === 'TEXTAREA')) return;
     const k = ev.key.toLowerCase();
     if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' ', 'tab'].includes(k)) ev.preventDefault();
+    const dg = /^(?:Digit|Numpad)([0-9])$/.exec(ev.code || '');   // clavier AZERTY : la rangée du haut donne « & é " ' ( » sans Maj → on lit la touche physique
+    if (dg) keys[dg[1]] = true;
     const was = keys[k]; keys[k] = true;
     if (was) return;
     for (const [a, ks] of Object.entries(PRESS)) if (ks.includes(k)) fire(a);
     if (k === 'k') attackHeld = true;
   });
-  addEventListener('keyup', (ev) => { const k = ev.key.toLowerCase(); keys[k] = false; if (k === 'k') attackHeld = false; });
+  addEventListener('keyup', (ev) => { const k = ev.key.toLowerCase(); keys[k] = false; const dg = /^(?:Digit|Numpad)([0-9])$/.exec(ev.code || ''); if (dg) keys[dg[1]] = false; if (k === 'k') attackHeld = false; });
   addEventListener('blur', () => { Object.keys(keys).forEach((k) => (keys[k] = false)); attackHeld = false; if (opts.onBlur) opts.onBlur(); });
 
   /* souris : clic court = attaque ; glisser = caméra ; clic droit = spéciale ; molette = zoom */

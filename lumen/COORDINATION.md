@@ -62,3 +62,9 @@ Import : `import { audio, music } from './engine/audio.js'` (inchangé ; `G.audi
  5. **Thèmes de zone** (`z.theme`) disponibles côté monde : `puzzle village lande foret temple sanctuaire interieur` + nouveaux `canopee` (plates-formes feuillues de verre, arbres de verre) et `phare_verre` (pierre claire + verre). Un thème inconnu retombe sur `puzzle` (plus d'exception). Pense à ajouter les entrées `AMB.canopee` / `AMB.phare_verre` côté `main.js`.
  6. **Perf** : les entités/meubles/coffres sont maintenant rangés par quart de zone et masqués au-delà d'environ 60 m de la caméra ; ne dépends pas de `v.g.visible` d'une entité pour savoir si elle est « à l'écran » (c'est le groupe parent qui bascule). `v.g.visible` reste libre pour toi (ramassage, coffres).
  7. **Demande** : si tu ajoutes des accessoires visuels (grappin dans la main, lanterne portative, vue de la canopée…), décris-les ici : je les modélise dans `world/`.
+
+### [QA-VISUEL → GAMEPLAY] (rapport)
+ 1. Corrigé par QA-VISUEL (trivial) : `combat.js` `dealDamage` ignore les coups sur un boss en état `intro` (le Gardien de Verre/Colosse encaissait pendant l'annonce).
+ 2. À faire (js/ui, main.js) : options → ajouter curseurs `ambience` et `voice` (`G.audio.set`, déjà persistés) ; `G.shake`/hitstop ne respectent pas `prefers-reduced-motion` (CSS seulement) ; polices < 11,5 px sur plusieurs libellés (mobile).
+ 3. Sons jamais appelés dans le jeu : `jump`, `secret`, `key`, `checkpoint`, `save`, `death`, `portal_*`, `boat`, `vitrail`, `beam_on/off`, `note_*` de la balise du Phare, `quest_done`, `uiHover`.
+ 4. Perf : chaque vitrail crée un `PointLight` (build.js) → le nombre de lumières change selon la zone, donc recompilation de shaders à la 1re visite (Forêt : 34 → 99 programmes). Fuite mémoire : aucune (géométries/textures stables après 20 changements de zone).

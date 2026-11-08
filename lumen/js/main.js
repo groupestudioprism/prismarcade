@@ -30,13 +30,14 @@ import { createCombat } from './game/combat.js';
 import { createHud } from './ui/hud.js';
 import { createScreens } from './ui/screens.js';
 import { icon } from './ui/icons.js';
+import { createIntro } from './ui/intro.js';
 
 const params = new URLSearchParams(location.search);
 /* Une page = une île : le voyage enregistre l'île d'arrivée puis recharge la page (voir switchIsland). */
 const DEF = ISLANDS.find((i) => i.id === (params.get('ile') || store.get('lumen.island', 'aube'))) || ISLANDS[0], IID = DEF.id;
 const META = ISLAND_META[IID];
-const settings = Object.assign({ quality: 'auto', master: 1, sfx: 1, music: 0.8, muted: platform.muted() }, store.get('lumen.settings', {}));
-audio.set({ master: settings.master, sfx: settings.sfx, music: settings.music, muted: settings.muted });
+const settings = Object.assign({ quality: 'auto', master: 1, sfx: 1, music: 0.8, ambience: 0.8, voice: 0.9, muted: platform.muted() }, store.get('lumen.settings', {}));
+audio.set({ master: settings.master, sfx: settings.sfx, music: settings.music, ambience: settings.ambience, voice: settings.voice, muted: settings.muted });
 const TOUCH0 = matchMedia('(pointer: coarse)').matches || params.has('touch');
 let LOW = settings.quality === 'low' || params.has('low') || (settings.quality === 'auto' && TOUCH0 && Math.min(screen.width, screen.height) < 500);
 
@@ -277,19 +278,22 @@ function restoreLevel() {
 }
 
 /* ---------- Cristaux ---------- */
+const snd = (n, o) => { try { audio.sfx(n, o); } catch (e) { /* le son ne doit jamais casser le jeu */ } };
+let beamsOn = false;
 const litBefore = {};
 function refreshCrystals(silent) {
   isl.ents.forEach((e) => {
     const v = world.views[e.id];
     if (e.t === 'receiver') { v.lit = e.lit; if (e.lit && !litBefore[e.id] && !silent) { audio.sfx('receiver', { color: e.color }); sparks.burst(new THREE.Vector3(W(e.x), BEAM_Y, W(e.y)), COLORS[e.color], 24, 3, 1.5); } }
     else if (e.t === 'relay') { v.lit = !!e.emit; if (v.lit) { v.mat.emissive.set(COLORS[e.emit]); v.mat.color.set(COLORS[e.emit]); } else { v.mat.emissive.set('#ffffff'); v.mat.color.set('#f3e9ff'); } if (e.lit && !litBefore[e.id] && !silent) audio.sfx('relay', { color: e.emit }); }
-    else if (e.t === 'beacon') { v.rings.forEach((r) => (r.on = (e.got || []).includes(r.c))); v.lit = e.lit; }
+    else if (e.t === 'beacon') { const prevG = litBefore['g:' + e.id] || ''; (e.got || []).forEach((c) => { if (!silent && !prevG.includes(c)) { try { audio.note(c); } catch (er) { /* rien */ } } }); litBefore['g:' + e.id] = (e.got || []).join(''); v.rings.forEach((r) => (r.on = (e.got || []).includes(r.c))); v.lit = e.lit; }
     litBefore[e.id] = e.lit;
   });
 }
 function reEvaluate() {
   const res = evaluate(isl);
   world.drawBeams(res.segs); refreshCrystals(false);
+  { const on = res.segs.length > 0; if (on !== beamsOn) { snd(on ? 'beam_on' : 'beam_off'); beamsOn = on; } }
   res.opened.forEach(onGateOpened);
   syncGates();
 }
@@ -320,9 +324,9 @@ function onGateOpened(id) {
     hud.toast('✦', `${z ? z.title : 'Énigme'} : résolue`, 'Un pont de lumière se forme.');
     reward('g:' + IID + ':' + id, 120, 40); gainXp(25);
   } else if (kind === 'secret') {
-    audio.chord([587, 740, 880, 1175]); hud.toast('✧', 'Un passage secret s’ouvre', 'Un pont mène à une chambre cachée.'); reward('o:' + IID + ':' + id, 60, 20); gainXp(15);
+    audio.chord([587, 740, 880, 1175]); snd('secret'); hud.toast('✧', 'Un passage secret s’ouvre', 'Un pont mène à une chambre cachée.'); reward('o:' + IID + ':' + id, 60, 20); gainXp(15);
   } else {
-    audio.chord([659, 784, 988, 1319]); hud.toast('◆', 'Chambre secrète résolue', 'La barrière de cristal se dissout.'); reward('g:' + IID + ':' + id, 200, 60); gainXp(40);
+    audio.chord([659, 784, 988, 1319]); snd('secret'); hud.toast('◆', 'Chambre secrète résolue', 'La barrière de cristal se dissout.'); reward('g:' + IID + ':' + id, 200, 60); gainXp(40);
   }
   g.cells.forEach(([x, y]) => sparks.burst(new THREE.Vector3(W(x), 0.4, W(y)), '#9fe9ff', 8, 2.5, 2));
   S.restoreT = restoreLevel();
@@ -373,6 +377,7 @@ function giveItem(id, n = 1, quiet) {
   }
   const got = addItem(st, id, n);
   if (!got && !quiet) return;
+  if (!quiet && (it.cat === 'cle' || /^cle_|_cle$|^cle/.test(id))) snd('key');
   if (!quiet) hud.toast(icon(it.icon), `${it.name}${n > 1 ? ' ×' + n : ''}`, it.cat === 'quete' ? 'Objet de quête' : '', 'reward');
   if (it.tip) { audio.sfx('quest'); setTimeout(() => { hud.banner(it.name, 'Nouvel objet'); setTimeout(() => hud.toast('💡', it.name, it.tip), 1400); }, 700); }
   // première arme / armure : équiper automatiquement
@@ -424,18 +429,24 @@ G.buy = (shopId, x) => {
   audio.sfx('buy'); quests.check(); hud.refresh();
   return true;
 };
-G.sell = (id) => { const it = ITEMS[id]; if (!it || !st.inv[id]) return; takeItem(st, id, 1); addEcus(it.sell); audio.sfx('buy'); quests.check(); };
+G.sell = (id) => { const it = ITEMS[id]; if (!it || !st.inv[id]) return; if (G.questLocked(id)) { snd('deny'); hud.toast('✋', 'Objet de quête', 'Une quête en cours en a besoin : garde-le.'); return; } takeItem(st, id, 1); addEcus(it.sell); audio.sfx('buy'); quests.check(); };
 function payCost(cost, disc) {
   const e = Math.round(cost.ecus * disc);
   if (st.player.ecus < e || !Object.entries(cost.mats).every(([id, n]) => (st.inv[id] || 0) >= n)) { audio.sfx('deny'); return false; }
   st.player.ecus -= e; Object.entries(cost.mats).forEach(([id, n]) => takeItem(st, id, n)); return true;
 }
-G.upgrade = (id, disc) => { const it = ITEMS[id], lvl = st.gear[id] || 0, next = UPGRADES[it.cat][lvl]; if (!next || !payCost(next, disc)) return; st.gear[id] = lvl + 1; audio.sfx('break'); setTimeout(() => audio.sfx('level'), 250); hud.toast(icon(it.icon), `${it.name} +${lvl + 1}`, 'Bran a fait du beau travail.', 'reward'); autosave(); };
+G.upgrade = (id, disc) => { const it = ITEMS[id], lvl = st.gear[id] || 0, next = UPGRADES[it.cat][lvl]; if (!next || !payCost(next, disc)) return; st.gear[id] = lvl + 1; audio.sfx('break'); setTimeout(() => audio.sfx('level'), 250); hud.toast(icon(it.icon), `${it.name} +${lvl + 1}`, `${IID === 'foret' ? 'Silex' : 'Bran'} a fait du beau travail.`, 'reward'); autosave(); };
 G.craft = (id, disc) => { if (st.inv[id] || !payCost(RECIPES[id], disc)) return; addItem(st, id, 1); audio.sfx('level'); hud.toast(icon(ITEMS[id].icon), ITEMS[id].name, 'Fabriqué à la forge.', 'reward'); autosave(); };
 
 /* ---------- Effets des dialogues ---------- */
+/* Un objet réclamé par une quête en cours ne se vend pas (sinon la remise échoue sans bruit). */
+G.questLocked = (id) => quests.active().some((q) => ((quests.def(q) || {}).steps || []).some((s) => s.type === 'item' && s.item === id));
 G.runEffects = (list) => {
   const res = {};
+  // un « take » qui ne peut pas être honoré annule tout l'échange : la quête ne doit jamais avancer sans l'objet
+  const need = {}; list.forEach((e) => { if (e.take) need[e.take] = (need[e.take] || 0) + (e.n || 1); });
+  const missing = Object.keys(need).find((id) => (st.inv[id] || 0) < need[id]);
+  if (missing) { snd('deny'); hud.toast('✋', 'Il te manque quelque chose', `${ITEMS[missing] ? ITEMS[missing].name : missing} ×${need[missing] - (st.inv[missing] || 0)} à rapporter.`); return { blocked: true }; }
   list.forEach((e) => {
     if (e.start) quests.start(e.start);
     if (e.step) quests.advance(e.step);
@@ -491,7 +502,8 @@ G.saveTo = saveTo;
 let autoT = null;
 function autosave() { clearTimeout(autoT); autoT = setTimeout(() => { if (S.mode !== 'title') saveTo('auto'); }, 800); }
 G.autosave = autosave;
-function flashSave(cloud) { const el = $('#saveflag'); el.innerHTML = `${icon('save')}<span>${cloud ? 'Sauvegardé en ligne' : 'Sauvegardé'}</span>`; el.classList.remove('on'); void el.offsetWidth; el.classList.add('on'); }
+let lastSaveSnd = 0;
+function flashSave(cloud) { if (performance.now() - lastSaveSnd > 30000) { lastSaveSnd = performance.now(); snd('save', { vol: 0.5 }); } const el = $('#saveflag'); el.innerHTML = `${icon('save')}<span>${cloud ? 'Sauvegardé en ligne' : 'Sauvegardé'}</span>`; el.classList.remove('on'); void el.offsetWidth; el.classList.add('on'); }
 
 /* =========================================================
    Démarrage d'une partie
@@ -507,7 +519,7 @@ G.switchIsland = switchIsland;
 /* Voyage vers une autre île : on range le monde actuel, on charge celui de l'île d'arrivée, on enregistre, puis on recharge. */
 G.travelTo = async (id, zone, cell) => {
   if (!ISLANDS.some((i) => i.id === id) || S.leaving) return false;
-  packPosition(); clearTimeout(autoT); S.leaving = true;
+  packPosition(); clearTimeout(autoT); S.leaving = true; snd('boat');
   st.otherWorlds = st.otherWorlds || {};
   st.otherWorlds[IID] = st.world;
   st.world = st.otherWorlds[id] || newWorld(ISLAND_META[id].warp);
@@ -520,8 +532,9 @@ G.travelTo = async (id, zone, cell) => {
   switchIsland(id, slot);
   return true;
 };
-G.startFrom = async (state, s = 'auto', legacy = false) => {
+G.startFrom = async (state, s = 'auto', legacy = false, noIntro = false) => {
   audio.unlock();
+  if (opening.gate(state, s, legacy, noIntro)) return;   // intro : fondu / cinématique d'ouverture, puis rappel avec noIntro
   const want = state ? ((state.player && state.player.island) || 'aube') : legacy || !state ? 'aube' : IID;
   if (want !== IID && ISLANDS.some((i) => i.id === want)) { switchIsland(want, s, state ? 'resume' : legacy ? 'legacy' : 'new'); return; }
   screens.close();
@@ -543,9 +556,12 @@ G.startFrom = async (state, s = 'auto', legacy = false) => {
   S.zone = -1; S.camT.set(P.x, 0.8, P.z); S.yaw = S.yawT = 0.35; S.mode = 'play';
   platform.startSession();
   hud.show(true); setTouch(true); input.enable(true); input.clear();
+  // arrivée sur une autre île (voyage) : sa quête principale démarre toute seule (sinon Ambre n'ouvre jamais les ponts)
+  if (META.first && !st.quests[META.first]) quests.start(META.first);
   quests.check(); npcMarkers(); hud.refresh();
-  if (fresh) setTimeout(() => intro(), 700);
+  if (fresh) opening.wake(() => intro(), true);
   else if (legacy) setTimeout(() => hud.toast('✦', 'Bienvenue dans la nouvelle aventure', 'Tes énigmes et tes objets sont conservés. Séléné t’attend à Havre-Aube.'), 800);
+  if (!fresh) opening.wake(null, false);
   saveTo('auto');
 };
 function migrateLegacy() {
@@ -580,8 +596,9 @@ function canStand(x, z, r = 0.34) {
 G.canStand = canStand;
 G.zoneIndexAt = (x, z) => { const cx = Math.round(x / T), cy = Math.round(z / T); return isl.zoneAt[cy] ? isl.zoneAt[cy][cx] : -1; };
 G.solidAt = (x, z) => { const cx = Math.round(x / T), cy = Math.round(z / T); const t = isl.terrain[cy] && isl.terrain[cy][cx]; if (t === undefined || t === ' ') return true; if (t === '#' || t === 'T' || t === 'H' || t === 'c') return true; if (t === 'x') return !(isl.gates[isl.gateCell[cx + ',' + cy]] || {}).open; return false; };
-G.hitstop = (t) => { S.hitstop = Math.max(S.hitstop, t); };
-G.shake = (a) => { S.shake = Math.max(S.shake, a); };
+const REDUCED = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+G.hitstop = (t) => { if (!REDUCED) S.hitstop = Math.max(S.hitstop, t); };
+G.shake = (a) => { if (!REDUCED) S.shake = Math.max(S.shake, a); };
 G.hintOnce = (k, text) => { if (S.hints[k] && S.time - S.hints[k] < 20) return; S.hints[k] = S.time; hud.toast('💡', text); };
 G.onCut = (x, y) => {
   isl.terrain[y][x] = ','; st.world.cut[x + ',' + y] = 1; world.removeCell('r', x, y);
@@ -615,9 +632,9 @@ function die() {
   P.alive = false; S.mode = 'dead'; setTouch(false); input.enable(false);
   st.stats.deaths++;
   const lost = Math.min(50, Math.floor(st.player.ecus * 0.1)); st.player.ecus -= lost;
-  audio.sfx('roar');
+  snd('death');
   const rz = zones[zoneIndex[st.player.respawn.zone]] || zones[zoneIndex[META.town]];
-  setTimeout(() => screens.death(rz.title), 1100);
+  setTimeout(() => screens.death(rz.title, lost), 1100);
 }
 G.respawn = () => {
   const r = st.player.respawn, zi = zoneIndex[r.zone] !== undefined ? zoneIndex[r.zone] : zoneIndex[META.town], z = zones[zi];
@@ -648,7 +665,7 @@ function findTarget() {
   // objets de lumière
   isl.ents.forEach((e) => { if (e.rot && Math.abs(e.zone - zi) <= 0 && e.zone === zi) push(d(W(e.x), W(e.y)), 2.5, { kind: 'device', e, x: W(e.x), z: W(e.y), label: `Tourner ${{ lantern: 'la lanterne', mirror: 'le miroir', relay: 'le relais' }[e.t]}` }); });
   // poteaux du grappin
-  isl.ents.forEach((e) => { if (e.t === 'post' && e.zone === zi) push(d(W(e.x), W(e.y)), 2.7, { kind: 'post', e, x: W(e.x), z: W(e.y), label: postLabel(e) }); });
+  isl.ents.forEach((e) => { if (e.t === 'post' && e.zone === zi) push(d(W(e.x), W(e.y)) - (st.inv.grappin && pickLink(e) ? 1.0 : 0), 2.7, { kind: 'post', e, x: W(e.x), z: W(e.y), label: postLabel(e) }); });   // le poteau qu'on peut utiliser passe avant un miroir voisin
   // habitants
   npcs.forEach((n) => { if (n.zi === zi) push(d(n.x, n.z), n.counter ? 4.4 : 2.7, { kind: 'npc', n, x: n.x, z: n.z, label: `Parler à ${n.d.name}` }); });
   // coffres
@@ -672,7 +689,7 @@ function findTarget() {
     if (g.open || !(g.key || g.id === 'lens')) return;
     g.cells.forEach(([x, y]) => { if (isl.zoneAt[y][x] !== zi && isl.zoneAt[y][x] !== -1) return; const wx = W(x), wz = W(y); push(d(wx, wz), 2.6, { kind: 'lock', g, x: wx, z: wz, label: g.id === 'lens' ? (st.inv.lentille ? 'Poser la Lentille d’Aube' : 'Un sceau de brume') : st.inv[g.key] ? 'Déverrouiller la porte' : 'Porte verrouillée' }); });
   });
-  const PRIO = { npc: -1.2, chest: -0.6, post: -0.2, device: -0.3, lock: -0.3, warp: 1.6, door: 0.2, sign: 0.4, lamp: 0, bed: 0.5, desk: 0, well: 0.6 };
+  const PRIO = { npc: -1.2, chest: -0.6, post: -0.2, device: -0.3, lock: -0.3, warp: 1.6, door: 0.2, sign: 0.4, lamp: -1.5, bed: 0.5, desk: 0, well: 0.6 };
   cands.sort((a, b) => (a.dist + (PRIO[a.kind] || 0)) - (b.dist + (PRIO[b.kind] || 0)));
   return cands[0] || null;
 }
@@ -738,7 +755,7 @@ function interact(back) {
     case 'device': {
       const e = t.e, n = back && (e.t === 'lantern' || e.t === 'relay') ? 3 : 1;
       for (let i = 0; i < n; i++) rotate(e);
-      audio.sfx(e.t === 'mirror' ? 'mirror' : e.t === 'relay' ? (e.mix ? 'mixer' : 'relay') : 'lantern', { x: W(e.x), z: W(e.y) });
+      audio.sfx(e.t === 'vitrail' ? 'vitrail' : e.t === 'mirror' ? 'mirror' : e.t === 'relay' ? (e.mix ? 'mixer' : 'relay') : 'lantern', { x: W(e.x), z: W(e.y) });
       sparks.burst(new THREE.Vector3(W(e.x), BEAM_Y, W(e.y)), '#ffd98a', 10, 2, 1);
       reEvaluate(); autosave();
       break;
@@ -772,7 +789,7 @@ function interact(back) {
     case 'warp': {
       st.world.warps[t.w.id] = 1;
       const list = WARPS.filter((w) => st.world.warps[w.id] && (!w.needs || w.needs(st))).map((w) => ({ id: w.id, name: w.name, where: w.where, here: w.id === t.w.id }));
-      if (list.length < 2) { hud.toast('✦', 'Cristal de voyage réveillé', 'Réveille d’autres cristaux pour voyager de l’un à l’autre.'); audio.sfx('lamp'); break; }
+      if (list.length < 2) { hud.toast('✦', 'Cristal de voyage réveillé', 'Réveille d’autres cristaux pour voyager de l’un à l’autre.'); snd('portal_open'); break; }
       screens.warps(list); break;
     }
     case 'lock': {
@@ -802,8 +819,8 @@ G.dialogEnd = () => { if (S.talkTo) S.talkTo.talking = false; S.talkTo = null; n
 G.onScreenClosed = () => { if (S.mode === 'title') return; if (S.mode === 'dead') return; S.mode = 'play'; setTouch(true); input.enable(true); input.clear(); hud.refresh(); };
 G.warpTo = (id) => {
   const w = WARPS.find((x) => x.id === id), z = zones[zoneIndex[w.zone]];
-  audio.sfx('warp');
-  fade(() => { teleport(W(z.ox + w.arrive[0]), W(z.oy + w.arrive[1])); st.player.respawn = { zone: w.zone, cell: w.arrive }; });
+  audio.sfx('warp'); snd('portal_travel');
+  fade(() => { teleport(W(z.ox + w.arrive[0]), W(z.oy + w.arrive[1])); st.player.respawn = { zone: w.zone, cell: w.arrive }; snd('checkpoint'); });
   autosave();
 };
 G.wardrobeCam = (on) => { S.wardrobe = on; S.mode = on ? 'screen' : S.mode; };
@@ -966,7 +983,7 @@ G.completion = completion;
    ========================================================= */
 ev.on('quest:start', ({ q }) => { audio.sfx('quest'); hud.toast(q.kind === 'main' ? '◆' : '!', q.kind === 'main' ? 'Nouvelle quête principale' : 'Nouvelle quête', q.title, 'reward'); npcMarkers(); hud.refresh(); });
 ev.on('quest:step', ({ q, step }) => { hud.toast('✓', q.title, step.text); npcMarkers(); hud.refresh(); });
-ev.on('quest:done', () => { npcMarkers(); hud.refresh(); });
+ev.on('quest:done', () => { snd('quest_done'); npcMarkers(); hud.refresh(); });
 ev.on('kill', (k) => {
   quests.check();
   if (k.room && !combat.roomAlive(k.room)) setTimeout(() => { openGate(k.room); hud.toast('✦', 'Le sceau se dissipe', 'La salle est libérée.'); autosave(); }, 500);
@@ -1058,7 +1075,7 @@ function onZoneChange(zi, prev) {
   }
   if (first && (!z.area || z.hint)) { const g = z.ents.find((e) => e.gate && !e.optional); if (!(g && isl.gates[g.gate] && isl.gates[g.gate].open)) setTimeout(() => hud.toast('💡', z.title, z.hint), 900); }
   WARPS.forEach((w) => { if (w.zone === z.id && !w.needs) st.world.warps[w.id] = 1; });
-  if ((z.dungeon || z.respawn) && first) { st.player.respawn = { zone: z.id, cell: z.spawn }; setTimeout(() => hud.toast('⚠', z.title, 'Si tu tombes ici, Fia te ramènera à l’entrée.'), 1500); }
+  if ((z.dungeon || z.respawn) && first) { st.player.respawn = { zone: z.id, cell: z.spawn }; snd('checkpoint'); setTimeout(() => hud.toast('⚠', z.title, 'Si tu tombes ici, Fia te ramènera à l’entrée.'), 1500); }
   const th = themeOf(z);
   music(S.boss ? 'boss' : z.music || th, S.restore);
   quests.check(); npcMarkers(); hud.refresh();
@@ -1234,7 +1251,7 @@ function update(dt) {
   world.M.grass.color.copy(tint); world.M.foliage.color.copy(tint); world.M.tuft.color.copy(tint);
   ambient.mat.opacity = th === 'interieur' ? 0 : 0.35 + r * 0.6;
   ambient.mat.color.set(th === 'sanctuaire' || th === 'lande' ? '#c9b6ff' : th === 'foret' || th === 'canopee' || th === 'phare_verre' || th === 'temple' ? '#bff3ff' : '#ffc4dc').multiplyScalar(1.4);
-  if (Math.floor(t) !== Math.floor(t - dt)) music(S.mode === 'title' ? 'title' : S.victoryUntil > performance.now() ? 'victoire' : S.boss && S.boss.state !== 'dead' ? (S.boss.phase === 2 ? 'boss2' : 'boss') : (zones[S.zone] && zones[S.zone].music) || th, S.mode === 'title' ? 0.6 : r);
+  if (!opening.musicLock && Math.floor(t) !== Math.floor(t - dt)) music(S.mode === 'title' ? 'title' : S.victoryUntil > performance.now() ? 'victoire' : S.boss && S.boss.state !== 'dead' ? (S.boss.phase === 2 ? 'boss2' : 'boss') : (zones[S.zone] && zones[S.zone].music) || th, S.mode === 'title' ? 0.6 : r);
 
   /* -------- monde -------- */
   world.animate(dt, t);
@@ -1250,6 +1267,7 @@ function update(dt) {
   sparks.update(dt);
   if (S.mode !== 'title') hud.update();
   hud.frame(dt);
+  opening.frame();   // intro : décor 3D du titre / cinématique (reprend la caméra, le ciel et les lumières)
 }
 
 function frame(now) {
@@ -1277,15 +1295,18 @@ applyWorld();
 world.showZones(zoneIndex[META.town]);
 hud.show(false);
 screens.title();
+const opening = createIntro(G, { scene, camera, renderer, sky, skyU, hemi, sun, world, S, LOW, REDUCED, params });
 $('#loader').hidden = true;
 { // reprise automatique après un voyage entre îles
   let boot = null; try { boot = JSON.parse(sessionStorage.getItem('lumen.boot') || 'null'); sessionStorage.removeItem('lumen.boot'); } catch (e) { /* rien */ }
-  if (boot) setTimeout(async () => { if (boot.then === 'new') G.startFrom(null, boot.slot); else if (boot.then === 'legacy') G.startFrom(null, boot.slot, true); else { const sv = await saves.read(boot.slot); if (sv) G.startFrom(sv, boot.slot); } }, 50);
+  if (boot) setTimeout(async () => { if (boot.then === 'new') G.startFrom(null, boot.slot, false, true); else if (boot.then === 'legacy') G.startFrom(null, boot.slot, true, true); else { const sv = await saves.read(boot.slot); if (sv) G.startFrom(sv, boot.slot, false, true); } }, 50);
+  opening.boot(!!boot);
 }
 requestAnimationFrame(frame);
 platform.onChange(() => { if (S.mode === 'title' && screens.current === 'title') screens.title(); });
 document.addEventListener('visibilitychange', () => { if (document.hidden && S.mode !== 'title' && !S.leaving) { if (S.mode === 'play') { screens.menu('options'); S.mode = 'screen'; setTouch(false); } saveTo('auto'); } });
 addEventListener('pagehide', () => { if (S.mode !== 'title' && !S.leaving) { packPosition(); saves.write('auto', st, regionName(), { cloud: false }); } });
+{ let hov = null, hovT = 0; document.addEventListener('pointerover', (ev) => { if (ev.pointerType !== 'mouse') return; const b = ev.target.closest && ev.target.closest('button, .choice, .btn, [data-a], [data-q]'); if (!b || b === hov || b.disabled) return; hov = b; const n = performance.now(); if (n - hovT < 70) return; hovT = n; snd('uiHover', { vol: 0.6 }); }); }
 document.querySelectorAll('[data-ui]').forEach((b) => b.addEventListener('click', () => { if (S.mode !== 'play') return; const tab = b.dataset.ui; screens.menu(tab); S.mode = 'screen'; setTouch(false); audio.sfx('ui'); }));
 
 /* Outils de test (automatisation) */

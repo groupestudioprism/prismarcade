@@ -130,7 +130,7 @@ class Inst {
     for (const k of [0, 1, -1, 2, -2, 3, -3]) { const pc = (this.sn(deg + k) - this.th.root + 120) % 12; if (ch.pcs.some((p) => p % 12 === pc)) return deg + k; }
     return deg;
   }
-  n(f, dur, o) { tone(f, dur, Object.assign({ out: this.fade, revBus: this.rev }, o)); }
+  n(f, dur, o) { tone(f, dur, Object.assign({ out: this.fade, revBus: this.rev, mus: true }, o)); }
   /* un pas du séquenceur */
   play(t, s, bar) {
     const th = this.th, ch = this.chord(bar), eff = this.eff, sd = this.stepDur, low = A.low, ph = bar % this.cycleBars, cyc = Math.floor(bar / this.cycleBars);
@@ -176,10 +176,10 @@ class Inst {
     const Pc = th.perc;
     if (Pc) {
       const hit = (pat, min, fn) => { if (!pat || eff < (min || 0)) return; const c = pat[s % pat.length]; if (c === 'x' || (c === 'o' && eff > 0.45)) fn(c === 'o' ? 0.5 : 1); };
-      hit(Pc.kick, Pc.kmin, (v) => { this.n(150, 0.2, { wave: 'sine', vol: 0.2 * v, slide: 0.3, t0: t, a: 0.002, r: 0.04, prio: true }); noise(0.02, { out: this.fade, vol: 0.05 * v, cut: 2500, t0: t, prio: true }); });
-      hit(Pc.snare, Pc.smin, (v) => { noise(0.16, { out: this.fade, revBus: this.rev, rev: 0.15, vol: 0.09 * v, cut: 1900, q: 0.7, t0: t }); this.n(190, 0.09, { wave: 'triangle', vol: 0.05 * v, slide: 0.6, t0: t }); });
-      hit(Pc.shaker || Pc.hat, Pc.hmin, (v) => { if (!low || s % 2 === 0) noise(0.06, { out: this.fade, vol: 0.03 * v, cut: 6500, q: 0.6, ftype: 'highpass', a: 0.012, t0: t }); });
-      hit(Pc.tom, Pc.tmin, (v) => { this.n(100, 0.45, { wave: 'sine', vol: 0.2 * v, slide: 0.45, t0: t, a: 0.004, rev: 0.3 }); noise(0.2, { out: this.fade, vol: 0.05 * v, cut: 300, ftype: 'lowpass', t0: t }); });
+      hit(Pc.kick, Pc.kmin, (v) => { this.n(150, 0.2, { wave: 'sine', vol: 0.2 * v, slide: 0.3, t0: t, a: 0.002, r: 0.04, prio: true }); noise(0.02, { mus: true, out: this.fade, vol: 0.05 * v, cut: 2500, t0: t, prio: true }); });
+      hit(Pc.snare, Pc.smin, (v) => { noise(0.16, { mus: true, out: this.fade, revBus: this.rev, rev: 0.15, vol: 0.09 * v, cut: 1900, q: 0.7, t0: t }); this.n(190, 0.09, { wave: 'triangle', vol: 0.05 * v, slide: 0.6, t0: t }); });
+      hit(Pc.shaker || Pc.hat, Pc.hmin, (v) => { if (!low || s % 2 === 0) noise(0.06, { mus: true, out: this.fade, vol: 0.03 * v, cut: 6500, q: 0.6, ftype: 'highpass', a: 0.012, t0: t }); });
+      hit(Pc.tom, Pc.tmin, (v) => { this.n(100, 0.45, { wave: 'sine', vol: 0.2 * v, slide: 0.45, t0: t, a: 0.004, rev: 0.3 }); noise(0.2, { mus: true, out: this.fade, vol: 0.05 * v, cut: 300, ftype: 'lowpass', t0: t }); });
       hit(Pc.wood, Pc.wmin, (v) => { this.n(820 + (s % 3) * 60, 0.05, { wave: 'sine', vol: 0.045 * v, t0: t, a: 0.002, r: 0.03 }); });
       hit(Pc.gong, Pc.gmin, () => { this.glassOrNote('glass', mtof(th.root - 12), 3.5, 0.07, t, 1, 1500); });
     }

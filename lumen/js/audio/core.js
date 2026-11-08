@@ -9,6 +9,8 @@ const KEY = 'lumen.audio';
 try { const s = JSON.parse(localStorage.getItem(KEY) || 'null'); if (s) for (const k in vol) if (k in s) vol[k] = s[k]; } catch (e) { /* stockage indisponible */ }
 try { A.low = !!(window.matchMedia && matchMedia('(pointer:coarse)').matches) || /[?&](touch|lowaudio)\b/.test(location.search); } catch (e) { /* ignore */ }
 export const MAXV = () => (A.low ? 26 : 48); /* polyphonie globale max */
+/* La musique n'a droit qu'à ~70 % de la polyphonie : le reste est réservé aux bruitages (sinon, en plein boss, les coups ne sonnent plus). */
+export const capFor = (o) => (o && o.mus ? Math.floor(MAXV() * 0.7) : MAXV());
 
 export const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
 export const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
@@ -75,7 +77,7 @@ export const L = { on: false, x: 0, z: 0, yaw: 0 };
 /* Oscillateur à enveloppe. o : {wave, vol, a, d (durée), r, slide, to, cut, q, detune, bus, rev, prio, t0, pan} */
 export function tone(f, dur, o = {}) {
   const ctx = A.ctx; if (!ctx) return;
-  if (A.active >= MAXV() && !o.prio) return;
+  if (A.active >= capFor(o) && !o.prio) return;
   const t = (o.t0 == null ? ctx.currentTime : o.t0) + (o.delay || 0), v = o.vol == null ? 0.08 : o.vol, a = o.a == null ? 0.012 : o.a, r = o.r == null ? Math.min(0.25, dur * 0.5) : o.r;
   const osc = ctx.createOscillator(), g = ctx.createGain(); osc.type = o.wave || 'sine';
   osc.frequency.setValueAtTime(f, t);
@@ -99,7 +101,7 @@ export function tone(f, dur, o = {}) {
 /* Rafale de bruit filtrée. o : {vol, cut, q, ftype, cutTo, a, pink, bus, rev, delay, prio, pan} */
 export function noise(dur, o = {}) {
   const ctx = A.ctx; if (!ctx) return;
-  if (A.active >= MAXV() && !o.prio) return;
+  if (A.active >= capFor(o) && !o.prio) return;
   const t = (o.t0 == null ? ctx.currentTime : o.t0) + (o.delay || 0), v = o.vol == null ? 0.1 : o.vol, a = o.a == null ? 0.004 : o.a;
   const s = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
   s.buffer = o.pink ? A.pink : A.noise; s.loop = true;
