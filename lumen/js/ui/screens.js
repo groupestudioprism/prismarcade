@@ -27,8 +27,8 @@ export function createScreens(G) {
   let cur = null;          // écran ouvert
   let menuTab = 'inventaire', invCat = 'arme', invSel = null, jSel = null, jTab = 'main';
 
-  function open(html, cls = '') { scr.className = 'overlay ' + cls; scr.innerHTML = html; scr.hidden = false; }
-  function close() { scr.hidden = true; scr.innerHTML = ''; cur = null; G.onScreenClosed(); }
+  function open(html, cls = '') { if (scr.hidden && !/title/.test(cls) && cur !== 'title') G.audio.sfx('uiOpen'); scr.className = 'overlay ' + cls; scr.innerHTML = html; scr.hidden = false; }
+  function close() { if (!scr.hidden && cur === 'menu') G.audio.sfx('uiClose'); scr.hidden = true; scr.innerHTML = ''; cur = null; G.onScreenClosed(); }
 
   /* ================= Écran titre ================= */
   async function title() {
@@ -79,8 +79,8 @@ export function createScreens(G) {
     open(`<div class="panel game-menu"><nav class="m-tabs">${Object.entries(TABS).map(([k, [ic, l]]) => `<button class="${k === tab ? 'on' : ''}" data-tab="${k}">${icon(ic)}<span>${l}</span></button>`).join('')}<button class="m-close" data-a="close" aria-label="Fermer">${icon('close')}</button></nav><div id="m-body" class="m-body"></div></div>`, 'menu-bg');
     ({ inventaire: inventory, personnage: character, journal, carte: mapTab, options })[tab]();
     scr.onclick = (ev) => {
-      const t = ev.target.closest('[data-tab]'); if (t) { G.audio.sfx('ui'); menu(t.dataset.tab); return; }
-      if (ev.target.closest('[data-a="close"]')) { G.audio.sfx('uiBack'); close(); }
+      const t = ev.target.closest('[data-tab]'); if (t) { G.audio.sfx('uiTab'); menu(t.dataset.tab); return; }
+      if (ev.target.closest('[data-a="close"]')) { close(); }
     };
   }
   /* ---------- Inventaire ---------- */
@@ -244,7 +244,7 @@ export function createScreens(G) {
       dlg.innerHTML = `<div class="d-box ${l.cls}"><div class="d-name"><b>${esc(l.who)}</b>${l.role ? `<small>${esc(l.role)}</small>` : ''}</div><p id="d-text"></p><span class="d-next">${G.input.touch ? 'Touche pour continuer' : 'E / clic'} ▸</span></div>`;
       D.full = l.t; D.typing = true; let i = 0;
       const el = $('#d-text');
-      const tm = D.timer = setInterval(() => { if (!D) { clearInterval(tm); return; } i += 2; el.textContent = D.full.slice(0, i); if (i % 6 === 0) G.audio.sfx('talk'); if (i >= D.full.length) { D.typing = false; clearInterval(D.timer); } }, 22);
+      const tm = D.timer = setInterval(() => { if (!D) { clearInterval(tm); return; } i += 2; el.textContent = D.full.slice(0, i); if (i % 6 === 0) G.audio.sfx('talk', { voice: D.npc && (D.npc.id || D.npc.name) }); if (i >= D.full.length) { D.typing = false; clearInterval(D.timer); } }, 22);
       return;
     }
     // fin des répliques : effets, puis choix
@@ -373,7 +373,7 @@ export function createScreens(G) {
   }
   function actEnd(info) {
     cur = 'end';
-    open(`<div class="panel end-card"><p class="kicker">Acte ${G.def.num || 1} terminé</p><h1>${G.def.num === 2 ? 'Le Temple de Verre est libéré' : 'Le phare de l’Aube brille'}</h1><p class="lead">${esc(G.def.ending)}</p>
+    open(`<div class="panel end-card"><p class="kicker">Acte ${G.def.num || 1} terminé</p><h1>${esc(G.def.endTitle || (G.def.num === 2 ? 'Le Temple de Verre est libéré' : 'Le phare de l’Aube brille'))}</h1><p class="lead">${esc(G.def.ending)}</p>
       <div class="stats"><div><b>${fmtTime(G.st.playTime)}</b><small>temps de jeu</small></div><div><b>${G.completion()} %</b><small>île complétée</small></div><div><b>${G.st.player.lvl}</b><small>niveau</small></div><div><b>${G.st.stats.kills}</b><small>créatures vaincues</small></div><div><b>${G.quests.done('side').length}</b><small>quêtes secondaires</small></div></div>
       ${info && info.xp ? `<p class="gain">🎁 +${fmt(info.xp)} XP · +${fmt(info.coins)} pièces sur Prism Arcade</p>` : ''}
       <div class="next"><h3>La suite du voyage</h3>${G.upcoming.map((u) => `<div class="up"><span>Île ${u.num}</span><b>${esc(u.name)}</b><small>${esc(u.what)} · bientôt</small></div>`).join('')}</div>

@@ -5,9 +5,11 @@
    (tools/generate.mjs : analyse). Le village, la lisière et le temple viennent de tools/areas-foret.mjs.
    ========================================================= */
 import { writeFileSync } from 'node:fs';
-import { analyse, reach } from './generate.mjs';
+import { analyse, analyseStages, generate, reach } from './generate.mjs';
 import { flood, rect, grid, toRows } from './areas.mjs';
 import { areasForet } from './areas-foret.mjs';
+import { branches, passerelle, phare } from './areas-canopee.mjs';
+import { checkIsland } from './reachlib.mjs';
 
 const OX = 36, GRID = 15;
 const at = (c) => ({ ox: OX + c * GRID, oy: 0 });
@@ -83,15 +85,60 @@ place(A.auberge, 150, 0);
   rect(g, 0, 0, 11, 11, '.');
   for (let i = 0; i < 11; i++) { g[0][i] = '#'; g[10][i] = '#'; g[i][10] = '#'; if (i !== 5) g[i][0] = '#'; }
   g[5][0] = '.';
+  g[10][5] = '.';                     // sortie sud : le pont de la Canopée (ouvert quand on a le grappin)
   [[2, 2], [8, 2], [2, 8], [8, 8]].forEach(([x, y]) => (g[y][x] = 'T'));
   zone({
-    id: 'belv', region: 'belvedere', title: 'Le Belvédère de Verre', theme: 'foret', area: true, ox: OX + 3 * GRID, oy: 0, map: toRows(g),
+    id: 'belv', region: 'belvedere', title: 'Le Belvédère de Verre', theme: 'canopee', music: 'canopee', area: true, ox: OX + 3 * GRID, oy: 0, map: toRows(g),
     spawn: [2, 5], entry: [0, 5], entryGate: 'fg3',
-    props: [{ t: 'sign', x: 5, y: 3, w: 1, h: 1, text: 'Ici s’élèvera le Phare de Verre. Ambre dit qu’il lui manque encore trois couleurs…' }],
+    props: [{ t: 'sign', x: 5, y: 3, w: 1, h: 1, text: 'Le Phare de Verre se dresse au bout de la Canopée, tout là-haut. Il lui faut le jaune, le magenta et le cyan, ensemble. Au sud, un pont de lumière attend celui qui saura grimper.' }],
     chests: [{ id: 'ch_belv', x: 5, y: 7, item: 'grande_potion', n: 2 }],
     pickups: [{ t: 'item', id: 'belv_eclat', item: 'eclat_verre', x: 7, y: 5 }],
     warp: { id: 'belvedere', x: 3, y: 5, name: 'Cristal du Belvédère' },
   });
+}
+
+/* ---------------- La Canopée et le Phare de Verre (partie 2) ---------------- */
+const CAN = { can1: [78, 16], can2: [102, 17], can3: [120, 14], can4: [144, 17], phare_f: [162, 11] };
+const canRoom = (chasm, openings, extraRows = {}) => {   // 15×11 : un vide vertical au milieu
+  const rows = [];
+  for (let y = 0; y < 11; y++) {
+    let r = '';
+    for (let x = 0; x < 15; x++) {
+      if (y === 0 || y === 10 || x === 0 || x === 14) r += '#';
+      else r += x >= chasm[0] && x <= chasm[1] ? ' ' : '.';
+    }
+    rows.push(r.split(''));
+  }
+  openings.forEach(([x, y]) => (rows[y][x] = '.'));
+  return rows.map((r) => r.join(''));
+};
+{
+  const c1 = branches(); Object.assign(c1, { ox: CAN.can1[0], oy: CAN.can1[1] }); zone(c1);
+  // Les Feuilles de lumière : un vide de 3 cases, un poteau de chaque côté ; le trajet de la lumière passe des deux côtés
+  const m2 = canRoom([6, 8], [[0, 5], [14, 5]]);
+  const g2 = generate({
+    entry: [0, 5], map: m2, kind: 'mirrors', turns: 4, lanternRot: true, decoys: 2, gate: 'fc1', exits: [[14, 5]], span: { axis: 'x', at: 7 },
+    ents: [{ t: 'post', x: 5, y: 5 }, { t: 'post', x: 9, y: 5 }],
+    reserve: [[1, 5], [2, 5], [3, 5], [4, 5], [10, 5], [11, 5], [12, 5], [13, 5], [5, 4], [5, 6], [9, 4], [9, 6]],
+  }, { seed: 2100 });
+  zone(Object.assign({ ox: CAN.can2[0], oy: CAN.can2[1] }, { id: 'can2', region: 'canopee', title: 'Les Feuilles de lumière', theme: 'canopee', music: 'canopee', num: 4, entry: [0, 5], entryGate: 'fc0', exits: [[14, 5]],
+    hint: 'Le vide sépare deux rives. Les poteaux se relient d’un bord à l’autre : tourne ce qu’il faut des deux côtés.', map: g2.map, ents: g2.ents, seed: g2.seed }));
+  report.push(`${'Les Feuilles de lumière'.padEnd(22)} graine ${String(g2.seed).padStart(5)} · ${g2.stats.devices} objets orientables · ${g2.stats.combos} combinaisons · ${g2.stats.solutions} solution(s)`);
+
+  const c3 = passerelle(); Object.assign(c3, { ox: CAN.can3[0], oy: CAN.can3[1] }); zone(c3);
+
+  // Le Nid de lumière : deux paires de poteaux, un prisme, trois cristaux (rouge, vert, bleu) de part et d'autre du vide
+  const m4 = canRoom([6, 7], [[0, 5], [14, 5]]);
+  const g4 = generate({
+    entry: [0, 5], map: m4, kind: 'prism', pre: 1, branches: { r: 1, g: 1, b: 1 }, lanternRot: true, decoys: 2, gate: 'fc2', exits: [[14, 5]], span: { axis: 'x', at: 6.5 }, maxLen: 6,
+    ents: [{ t: 'post', x: 5, y: 3 }, { t: 'post', x: 8, y: 3 }, { t: 'post', x: 5, y: 8 }, { t: 'post', x: 8, y: 8 }],
+    reserve: [[1, 5], [2, 5], [3, 5], [4, 5], [5, 5], [9, 5], [10, 5], [11, 5], [12, 5], [13, 5], [4, 3], [4, 8], [9, 3], [9, 8], [5, 2], [5, 4], [5, 7], [5, 9], [8, 2], [8, 4], [8, 7], [8, 9]],
+  }, { seed: 3100 });
+  zone(Object.assign({ ox: CAN.can4[0], oy: CAN.can4[1] }, { id: 'can4', region: 'canopee', title: 'Le Nid de lumière', theme: 'canopee', music: 'canopee', num: 5, entry: [0, 5], entryGate: 'cn_combat', exits: [[14, 5]],
+    hint: 'Un prisme, trois cristaux, et un vide au milieu. Les deux paires de poteaux sont à toi.', map: g4.map, ents: g4.ents, seed: g4.seed }));
+  report.push(`${'Le Nid de lumière'.padEnd(22)} graine ${String(g4.seed).padStart(5)} · ${g4.stats.devices} objets orientables · ${g4.stats.combos} combinaisons · ${g4.stats.solutions} solution(s)`);
+
+  const ph = phare(); Object.assign(ph, { ox: CAN.phare_f[0], oy: CAN.phare_f[1], region: 'phare' }); zone(ph);
 }
 function bridge(gate, a, [ax, ay], b, [bx, by]) {
   const A_ = [byId[a].ox + ax, byId[a].oy + ay], B = [byId[b].ox + bx, byId[b].oy + by];
@@ -108,6 +155,10 @@ const bridges = [
   bridge('fg3', 'f3', [10, 5], 'belv', [0, 5]),
   bridge('b_lisiere', 'vitrebourg', [15, 23], 'lisiere', [15, 0]),
   bridge('b_temple', 'lisiere', [17, 27], 'temple', [15, 0]),
+  bridge('b_canopee', 'belv', [5, 10], 'can1', [8, 0]),
+  bridge('fc0', 'can1', [20, 6], 'can2', [0, 5]),
+  bridge('fc1', 'can2', [14, 5], 'can3', [0, 8]),
+  bridge('fc2', 'can4', [14, 5], 'phare_f', [0, 11]),
 ];
 
 /* ---------------- Vérifications ---------------- */
@@ -123,7 +174,7 @@ const farCell = (z) => {
   });
   return best;
 };
-for (const id of ['f1', 'f2', 'f3']) {
+for (const id of ['f1', 'f2', 'f3', 'can2', 'can4']) {
   const z = byId[id];
   const p = farCell(z); z.ents.push({ t: 'shard', x: p[0], y: p[1] });
   const gates = [...new Set(z.ents.filter((e) => e.gate).map((e) => e.gate))];
@@ -131,7 +182,15 @@ for (const id of ['f1', 'f2', 'f3']) {
   if (an.escape) throw new Error(`${z.title} : un faisceau peut quitter la salle`);
   if (!an.sols.length) throw new Error(`${z.title} : aucune solution`);
   if (an.initialSolved) throw new Error(`${z.title} : déjà résolue au départ`);
-  report.push(`${z.title.padEnd(22)} dessinée à la main · ${an.rots.length} objets orientables · ${an.total} combinaisons · ${an.sols.length} solution(s)`);
+  report.push(`${z.title.padEnd(22)} ${id.startsWith('can') ? 'avec grappin          ' : 'dessinée à la main'} · ${an.rots.length} objets orientables · ${an.total} combinaisons · ${an.sols.length} solution(s)`);
+}
+{ // Phare de Verre : énigme à plusieurs étapes, vérifiée étape par étape (force brute)
+  const z = byId.phare_f;
+  const p = farCell(z); z.ents.push({ t: 'shard', x: p[0], y: p[1] });
+  const t0 = Date.now();
+  const an = analyseStages({ map: z.map, ents: z.ents.filter((e) => e.t !== 'shard'), doors: z.doors, entry: z.entry }, z.stages, z.final);
+  if (!an.ok) throw new Error('Phare de Verre : énigme invalide ' + JSON.stringify(an));
+  report.push(`${z.title.padEnd(22)} ${an.stages.length} étapes vérifiées · ${an.rots} objets orientables · ${an.total} combinaisons · ` + an.stages.map((s) => `${s.gate}: ${s.sols}/${s.combos}`).join(' · ') + ` · ${((Date.now() - t0) / 1000).toFixed(1)} s`);
 }
 { // la salle du temple (énigme de couleur)
   const z = byId.temple;
@@ -167,17 +226,28 @@ const island = {
     belvedere: { name: 'Le Belvédère de Verre', zones: ['belv'], area: true },
     lisiere: { name: 'La Lisière du Verre', zones: ['lisiere'], area: true },
     temple: { name: 'Le Temple de Verre', zones: ['temple'], area: true },
+    canopee: { name: 'La Canopée', zones: ['can1', 'can2', 'can3', 'can4'] },
+    phare: { name: 'Le Phare de Verre', zones: ['phare_f'] },
   },
-  pages: {},
+  pages: {
+    orin5: { title: 'Journal d’Orin — V', text: 'Dans la forêt, j’ai compris pourquoi le vert ne suffit pas. Le jaune, le magenta et le cyan n’existent qu’à deux : ce sont des lumières qui se tiennent par la main. Le Phare de Verre est bâti sur cette idée. Il ne s’allume que si trois lumières différentes acceptent de brûler ensemble. J’aurais dû m’en souvenir, plus tard, quand j’ai voulu tout éclairer d’un seul feu.' },
+  },
+  stageGates: ['fc0', 'ph_d1', 'ph_d2'],
+  endTitle: 'Le Phare de Verre brille',
   wisp: { name: 'Lueur de verre', text: 'Une Lueur transparente flotte entre les troncs.' },
   ending: 'Le Phare de Verre brille. Un fragment vert du Grand Prisme flotte au-dessus de la flamme.',
   zones: Z.map((z) => {
     const o = { id: z.id, region: z.region, title: z.title, num: z.num || 0, secret: !!z.secret, ox: z.ox, oy: z.oy, spawn: z.area ? z.spawn : z.entry, entryGate: z.entryGate, barrier: z.barrier, hint: z.hint, seed: z.seed, map: z.map, ents: z.ents || [] };
-    ['area', 'theme', 'interior', 'dungeon', 'props', 'npcs', 'chests', 'pickups', 'spawns', 'doors', 'warp', 'exit', 'combatRooms'].forEach((k) => { if (z[k] !== undefined) o[k] = z[k]; });
+    ['area', 'theme', 'music', 'interior', 'dungeon', 'props', 'npcs', 'chests', 'pickups', 'spawns', 'doors', 'warp', 'exit', 'combatRooms', 'stages', 'final', 'respawn'].forEach((k) => { if (z[k] !== undefined) o[k] = z[k]; });
     return o;
   }),
   bridges,
 };
+{ // accessibilité de toute l'île (toutes portes ouvertes, grappin compris)
+  const r = checkIsland(island, 'vitrebourg');
+  if (r.problems.length) throw new Error('Accessibilité :\n  ' + r.problems.join('\n  '));
+  report.push(`Accessibilité          ${r.cells} cases · ${r.posts} poteaux de grappin · ${r.notes.length} élément(s) derrière des ronces ou des roches`);
+}
 const out = `/* Fichier généré par tools/build-foret.mjs — ne pas modifier à la main (modifier le script puis relancer). */\nexport default ${JSON.stringify(island, null, 1)};\n`;
 writeFileSync(new URL('../js/islands/foret.js', import.meta.url), out);
 console.log(report.join('\n'));

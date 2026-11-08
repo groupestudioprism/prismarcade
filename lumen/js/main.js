@@ -10,7 +10,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ISLANDS, ISLAND_META, UPCOMING } from './levels.js';
-import { buildIsland, evaluate, rotate, walkable, snapshot, restore, COLORS, BLOCK_TERRAIN } from './logic.js';
+import { buildIsland, evaluate, rotate, walkable, snapshot, restore, COLORS, BLOCK_TERRAIN, DIRS, postLinks } from './logic.js';
 import { platform } from './platform.js';
 import { $, esc, fmt, hash, lerp, clamp, damp, angleTo, rand, store, bus, T, W, BEAM_Y } from './engine/util.js';
 import { audio, music } from './engine/audio.js';
@@ -59,7 +59,7 @@ composer.addPass(new RenderPass(scene, camera));
 const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.62, 0.5, 1.0);
 composer.addPass(bloom);
 composer.addPass(new OutputPass());
-let useBloom = !params.has('nobloom') && settings.quality !== 'low';
+let useBloom = !params.has('nobloom') && !LOW;
 function resize() {
   const w = innerWidth, h = innerHeight;
   renderer.setSize(w, h, false); composer.setPixelRatio(pixelRatio); composer.setSize(w, h);
@@ -79,7 +79,7 @@ scene.fog = new THREE.Fog(0xffffff, 75, 220);
 const hemi = new THREE.HemisphereLight(0xffffff, 0x3a2f4a, 1.0); scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xffe2bd, 2.0);
 sun.castShadow = true; sun.shadow.mapSize.set(LOW ? 1024 : 2048, LOW ? 1024 : 2048);
-Object.assign(sun.shadow.camera, { left: -30, right: 30, top: 30, bottom: -30, near: 1, far: 120 });
+Object.assign(sun.shadow.camera, { left: -(LOW ? 18 : 24), right: LOW ? 18 : 24, top: LOW ? 18 : 24, bottom: -(LOW ? 18 : 24), near: 1, far: 120 });
 sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.03;
 scene.add(sun, sun.target);
 
@@ -91,6 +91,8 @@ const AMB = {
   foret: { sky: [['#1f4a5a', '#5aa8a8', '#d9b0c8'], ['#4aa0d0', '#b0e8ec', '#ffe4c0']], fog: [55, 190], hemi: 1.0, sun: 0.95, tint: '#bff3ff' },
   temple: { sky: [['#0f2438', '#1d3f5a', '#2a5a7a'], ['#163048', '#2a5a7a', '#3f7a9a']], fog: [18, 80], hemi: 0.6, sun: 0.35, tint: '#8fe3ff', fogColor: '#17314a' },
   sanctuaire: { sky: [['#140f2c', '#2a1d55', '#3a2a6a'], ['#1d1640', '#3a2a6a', '#5a3f8a']], fog: [16, 75], hemi: 0.55, sun: 0.35, tint: '#9f88d8', fogColor: '#2a1d55' },
+  canopee: { sky: [['#14423f', '#4fa890', '#c8d8b0'], ['#5ab8c8', '#bff0e0', '#fff0c8']], fog: [45, 160], hemi: 1.0, sun: 0.85, tint: '#c8ffe8' },
+  phare_verre: { sky: [['#1a3a5a', '#5a8ac0', '#d0b8e0'], ['#6ab0e8', '#c8e8ff', '#fff4d8']], fog: [60, 210], hemi: 1.05, sun: 1.0, tint: '#d8f4ff' },
   interieur: { sky: [['#1a120e', '#2a1d18', '#3a2a22'], ['#1a120e', '#2a1d18', '#3a2a22']], fog: [14, 40], hemi: 0.75, sun: 0.25, tint: '#ffd8b0', fogColor: '#241812' },
 };
 
@@ -106,6 +108,21 @@ const OPT_GATES = isl.ents.filter((e) => e.optional && e.gate).map((e) => e.gate
 const world = buildWorld(scene, isl, DEF, { low: LOW });
 const PAL = { dusk: DEF.sky.dusk.map((c) => new THREE.Color(c)), dawn: DEF.sky.dawn.map((c) => new THREE.Color(c)) };
 
+/* Objets dont le décor est fourni par world/ : on ne dessine un secours que si rien n'a été construit
+   (poteaux du grappin ; balise à couleurs personnalisées « need », ex. Phare de Verre : jaune, magenta, cyan). */
+isl.ents.filter((e) => e.t === 'post').forEach((e) => {
+  const v = world.views[e.id]; if (!v || v.g.children.length) return;
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.42, 0.3, 8), world.M.stone); base.position.y = 0.15; v.g.add(base);
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, 2.1, 6), world.M.glass); shaft.position.y = 1.3; v.g.add(shaft);
+  const hook = new THREE.Mesh(new THREE.TorusGeometry(0.26, 0.05, 6, 16), world.M.gold); hook.position.y = 2.25; hook.rotation.x = Math.PI / 2; v.g.add(hook);
+  const gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.15, 0), glow('#bff3ff', 3)); gem.position.y = 2.25; v.g.add(gem); v.float = gem; v.spinObj = gem;
+  v.g.traverse((o) => { if (o.isMesh && o.material.type !== 'MeshBasicMaterial') o.castShadow = true; });
+});
+isl.ents.filter((e) => e.t === 'beacon' && e.need).forEach((e) => {
+  const v = world.views[e.id];
+  if (v && v.rings && !v.rings.every((r, i) => r.c === e.need[i])) v.rings.forEach((r, i) => { const c = e.need[i] || r.c; r.c = c; r.mat.color.set(COLORS[c]); r.mat.emissive.set(COLORS[c]); });
+});
+
 /* Cristaux de voyage */
 const WARPS_BY = {
   aube: [
@@ -119,6 +136,8 @@ const WARPS_BY = {
     { id: 'vitraux', name: 'Cristal des Vitraux', zone: 'f1', cell: [1, 8], arrive: [2, 7], r: 2.2, where: 'Les Salles de Vitraux' },
     { id: 'belvedere', name: 'Cristal du Belvédère', zone: 'belv', cell: [3, 5], arrive: [4, 5], r: 2.2, where: 'Le Belvédère de Verre', needs: () => isl.gates.fg3 && isl.gates.fg3.open, mesh: true },
     { id: 'temple', name: 'Hall du Temple', zone: 'temple', cell: [15, 4], arrive: [15, 6], r: 2.2, where: 'Le Temple de Verre', needs: (st) => st.flags.boss_verre, mesh: true },
+    { id: 'canopee', name: 'Cristal de la Canopée', zone: 'can1', cell: [3, 3], arrive: [4, 4], r: 2.2, where: 'La Canopée', mesh: true },
+    { id: 'phare', name: 'Cristal du Phare de Verre', zone: 'phare_f', cell: [3, 10], arrive: [4, 10], r: 2.2, where: 'Le Phare de Verre', needs: () => isl.gates.fc2 && isl.gates.fc2.open, mesh: true },
   ],
 };
 const WARPS = WARPS_BY[IID] || [];
@@ -138,7 +157,7 @@ WARPS.filter((w) => w.mesh).forEach((w) => {
 const ev = bus();
 let st = newState();
 let slot = 'auto';
-const P = { x: 0, z: 0, vx: 0, vz: 0, face: 0, alive: true, dodging: false, dodgeT: 0, dodgeCD: 0, iframes: 0, swing: null, swingCD: 0, combo: 0, comboT: 0, chargeT: 0, spinT: 0, hurtT: 0, kbx: 0, kbz: 0, regenT: 0, buffRegen: 0 };
+const P = { x: 0, y: 0, z: 0, vx: 0, vz: 0, face: 0, alive: true, dodging: false, dodgeT: 0, dodgeCD: 0, iframes: 0, swing: null, swingCD: 0, combo: 0, comboT: 0, chargeT: 0, spinT: 0, hurtT: 0, kbx: 0, kbz: 0, regenT: 0, buffRegen: 0 };
 const S = { mode: 'title', zone: -1, zoneT: 0, time: 0, yaw: 0.35, yawT: 0.35, pitch: 0.92, dist: TOUCH0 ? 15 : 17, camT: new THREE.Vector3(), shake: 0, hitstop: 0, restore: 0, restoreT: 0, wardrobe: false, finale: null, talkTo: null, boss: null, hints: {}, lastSave: 0, ambT: null };
 const G = {
   scene, camera, isl, zones, def: DEF, P, audio, emit: ev.emit, on: ev.on, upcoming: UPCOMING,
@@ -162,7 +181,9 @@ G.counts = (what) => {
   if (what === 'pages') return isl.ents.filter((e) => e.t === 'page' && ['orin1', 'orin2', 'orin3'].includes(e.page) && st.world.picked[e.id]).length;
   if (what === 'shards') return isl.ents.filter((e) => e.t === 'shard' && st.world.picked[e.id]).length;
   if (what === 'lampions') return Object.keys(st.world.lamps).length;
-  if (what === 'kills') { const r = st.quests.s_chasse; return r ? st.stats.kills - (r.base.kills || 0) : 0; }
+  if (what === 'kills') { const id = quests.active().find((q) => { const s0 = quests.step(q); return s0 && s0.type === 'kill'; }); const r = id && st.quests[id]; return r ? st.stats.kills - (r.base.kills || 0) : 0; }
+  if (what === 'eclats') return st.inv.eclat_verre || 0;
+  if (what === 'graines') return st.inv.graine_canopee || 0;
   return 0;
 };
 G.countAll = (t) => isl.ents.filter((e) => e.t === t).length;
@@ -251,8 +272,8 @@ function updateChestVisibility() {
 }
 function setLamp(pr, on) { const u = pr.g.userData; if (!u.lampMat) return; u.lampMat.emissiveIntensity = on ? 2.4 : 0; u.lit = on; }
 function restoreLevel() {
-  const done = MAIN_GATES.filter((g) => isl.gates[g] && isl.gates[g].open && g !== 'end').length;
-  return isl.gates.end && isl.gates.end.open ? 1 : 0.15 + (done / Math.max(1, MAIN_GATES.length)) * 0.7;
+  const done = MAIN_GATES.filter((g) => isl.gates[g] && isl.gates[g].open && g !== 'end').length + (META.restoreBoss && st.flags[META.boss] ? 1 : 0);
+  return isl.gates.end && isl.gates.end.open ? 1 : 0.15 + (done / Math.max(1, MAIN_GATES.length + (META.restoreBoss ? 1 : 0))) * 0.7;
 }
 
 /* ---------- Cristaux ---------- */
@@ -260,8 +281,8 @@ const litBefore = {};
 function refreshCrystals(silent) {
   isl.ents.forEach((e) => {
     const v = world.views[e.id];
-    if (e.t === 'receiver') { v.lit = e.lit; if (e.lit && !litBefore[e.id] && !silent) { audio.chime(880, 0.4); sparks.burst(new THREE.Vector3(W(e.x), BEAM_Y, W(e.y)), COLORS[e.color], 24, 3, 1.5); } }
-    else if (e.t === 'relay') { v.lit = !!e.emit; if (v.lit) { v.mat.emissive.set(COLORS[e.emit]); v.mat.color.set(COLORS[e.emit]); } else { v.mat.emissive.set('#ffffff'); v.mat.color.set('#f3e9ff'); } if (e.lit && !litBefore[e.id] && !silent) audio.chime(740, 0.3); }
+    if (e.t === 'receiver') { v.lit = e.lit; if (e.lit && !litBefore[e.id] && !silent) { audio.sfx('receiver', { color: e.color }); sparks.burst(new THREE.Vector3(W(e.x), BEAM_Y, W(e.y)), COLORS[e.color], 24, 3, 1.5); } }
+    else if (e.t === 'relay') { v.lit = !!e.emit; if (v.lit) { v.mat.emissive.set(COLORS[e.emit]); v.mat.color.set(COLORS[e.emit]); } else { v.mat.emissive.set('#ffffff'); v.mat.color.set('#f3e9ff'); } if (e.lit && !litBefore[e.id] && !silent) audio.sfx('relay', { color: e.emit }); }
     else if (e.t === 'beacon') { v.rings.forEach((r) => (r.on = (e.got || []).includes(r.c))); v.lit = e.lit; }
     litBefore[e.id] = e.lit;
   });
@@ -285,9 +306,16 @@ function onGateOpened(id) {
   st.world.gates[id] = 1;
   if (id === 'end') { S.restoreT = 1; startFinale(); quests.check(); return; }
   if (id === 'sd_light') { audio.chord([523, 659, 784]); hud.toast('✦', 'La barrière de cristal se dissout', 'Le Sanctuaire révèle un passage.'); reward('g:sanct:light', 80, 25); quests.check(); return; }
+  if ((DEF.stageGates || []).includes(id)) {   // portes d'étape (Branches basses, Phare de Verre)
+    audio.chord([523, 659, 784], 0.1); audio.sfx('barrier');
+    hud.toast('✦', id === 'fc0' ? 'Le pont des Feuilles se forme' : 'Une porte de verre s’ouvre', id === 'fc0' ? 'La lumière a trouvé son cristal.' : 'Une salle de plus. Les objets de la suivante sont à portée.');
+    reward('g:' + IID + ':' + id, 80, 25); gainXp(20);
+    g.cells.forEach(([x, y]) => sparks.burst(new THREE.Vector3(W(x), 0.6, W(y)), '#9fe9ff', 14, 2.5, 2));
+    S.restoreT = restoreLevel(); quests.check(); autosave(); return;
+  }
   const kind = SECRET_GATES.includes(id) ? 'treasure' : OPT_GATES.includes(id) ? 'secret' : 'main';
   if (kind === 'main') {
-    audio.chord([523, 659, 784]);
+    audio.chord([523, 659, 784]); audio.sfx('puzzle_solved');
     const z = zones.find((zz) => zz.ents.some((e) => e.gate === id && !e.optional));
     hud.toast('✦', `${z ? z.title : 'Énigme'} : résolue`, 'Un pont de lumière se forme.');
     reward('g:' + IID + ':' + id, 120, 40); gainXp(25);
@@ -346,6 +374,7 @@ function giveItem(id, n = 1, quiet) {
   const got = addItem(st, id, n);
   if (!got && !quiet) return;
   if (!quiet) hud.toast(icon(it.icon), `${it.name}${n > 1 ? ' ×' + n : ''}`, it.cat === 'quete' ? 'Objet de quête' : '', 'reward');
+  if (it.tip) { audio.sfx('quest'); setTimeout(() => { hud.banner(it.name, 'Nouvel objet'); setTimeout(() => hud.toast('💡', it.name, it.tip), 1400); }, 700); }
   // première arme / armure : équiper automatiquement
   if (it.cat === 'arme' && !st.equip.weapon) G.equip(id, true);
   if (it.cat === 'armure' && !st.equip.armor) G.equip(id, true);
@@ -413,7 +442,7 @@ G.runEffects = (list) => {
     if (e.give) giveItem(e.give, e.n || 1);
     if (e.take) takeItem(st, e.take, e.n || 1);
     if (e.ecus) addEcus(e.ecus);
-    if (e.flag) { st.flags[e.flag] = 1; if (e.flag === 'acte1_fini') setTimeout(() => screens.actEnd(S.finaleRewards), 400); }
+    if (e.flag) { st.flags[e.flag] = 1; if (/^acte\d+_fini$/.test(e.flag)) setTimeout(() => screens.actEnd(S.finaleRewards), 400); }
     if (e.open) openGate(e.open, false);
     if (e.equip) G.equip(e.equip, true);
     if (e.teach) { st.player.abilities[e.teach] = true; hud.toast('✦', 'Nouvelle capacité : Onde de lumière', input.touch ? 'Bouton ✦ (35 énergie).' : 'Clic droit ou L (35 énergie).', 'reward'); }
@@ -446,7 +475,7 @@ function rest() {
 const regionName = () => { const z = zones[S.zone]; return z ? (DEF.regions[z.region] || {}).name || z.title : ''; };
 function packPosition() {
   const z = zones[S.zone];
-  if (z) Object.assign(st.player, { zone: z.id, x: P.x, z: P.z, face: P.face });
+  if (z) Object.assign(st.player, { zone: z.id, x: S.grap ? S.grap.to.x : P.x, z: S.grap ? S.grap.to.z : P.z, face: P.face });
   st.completion = completion();
   syncGates();
 }
@@ -597,6 +626,13 @@ G.respawn = () => {
   teleport(W(z.ox + r.cell[0]), W(z.oy + r.cell[1]));
   P.alive = true; S.mode = 'play'; setTouch(true); input.enable(true);
 };
+/* Sol sous les pieds de Lyra (bruit des pas) */
+function groundAt() {
+  const z = zones[S.zone], t = isl.terrain[Math.round(P.z / T)] && isl.terrain[Math.round(P.z / T)][Math.round(P.x / T)];
+  if (t === '=') return 'bois';
+  const th = themeOf(z);
+  return z && z.interior ? 'bois' : th === 'temple' || th === 'sanctuaire' ? 'pierre' : th === 'foret' || th === 'canopee' || th === 'phare_verre' ? 'verre' : th === 'lande' ? 'terre' : 'herbe';
+}
 function teleport(x, z) { P.x = x; P.z = z; P.vx = P.vz = 0; S.camT.set(x, 0.8, z); S.zone = -1; }
 function fade(cb) { const f = $('#fade'); f.classList.add('on'); setTimeout(() => { cb && cb(); f.classList.remove('on'); }, 450); }
 
@@ -611,6 +647,8 @@ function findTarget() {
   const zi = S.zone, z = zones[zi];
   // objets de lumière
   isl.ents.forEach((e) => { if (e.rot && Math.abs(e.zone - zi) <= 0 && e.zone === zi) push(d(W(e.x), W(e.y)), 2.5, { kind: 'device', e, x: W(e.x), z: W(e.y), label: `Tourner ${{ lantern: 'la lanterne', mirror: 'le miroir', relay: 'le relais' }[e.t]}` }); });
+  // poteaux du grappin
+  isl.ents.forEach((e) => { if (e.t === 'post' && e.zone === zi) push(d(W(e.x), W(e.y)), 2.7, { kind: 'post', e, x: W(e.x), z: W(e.y), label: postLabel(e) }); });
   // habitants
   npcs.forEach((n) => { if (n.zi === zi) push(d(n.x, n.z), n.counter ? 4.4 : 2.7, { kind: 'npc', n, x: n.x, z: n.z, label: `Parler à ${n.d.name}` }); });
   // coffres
@@ -622,7 +660,7 @@ function findTarget() {
     if (p.t === 'house' && p.door) { const [x, zz] = cellCenter(pr.z, p.door); push(d(x, zz), 2.0, { kind: 'door', pr, x, z: zz, label: p.interior ? (p.lock && !st.inv[p.lock] && !st.flags['ouvert_' + p.id] ? `${p.name} (fermée à clé)` : `Entrer · ${p.name}`) : p.name }); }
     const [cx, cz] = [pr.g.position.x, pr.g.position.z];
     if (p.t === 'sign') push(d(cx, cz), 2.3, { kind: 'sign', pr, x: cx, z: cz, label: 'Lire le panneau' });
-    if (p.t === 'lamp' && !pr.g.userData.lit && quests.state('s_lampions') === 'active') push(d(cx, cz), 2.4, { kind: 'lamp', pr, x: cx, z: cz, label: 'Rallumer le lampion avec Fia' });
+    if (p.t === 'lamp' && !pr.g.userData.lit && (quests.state('s_lampions') === 'active' || quests.state('s_lampions_f') === 'active')) push(d(cx, cz), 2.4, { kind: 'lamp', pr, x: cx, z: cz, label: 'Rallumer le lampion avec Fia' });
     if (p.t === 'bed') push(d(cx, cz), 3.0, { kind: 'bed', pr, x: cx, z: cz, label: 'Se reposer' });
     if (p.t === 'desk') push(d(cx, cz), 3.0, { kind: 'desk', pr, x: cx, z: cz, label: 'Étudier les cartes d’Orin' });
     if (p.t === 'well' && !st.flags.puits) push(d(cx, cz), 2.4, { kind: 'well', pr, x: cx, z: cz, label: 'Regarder au fond du puits' });
@@ -634,20 +672,82 @@ function findTarget() {
     if (g.open || !(g.key || g.id === 'lens')) return;
     g.cells.forEach(([x, y]) => { if (isl.zoneAt[y][x] !== zi && isl.zoneAt[y][x] !== -1) return; const wx = W(x), wz = W(y); push(d(wx, wz), 2.6, { kind: 'lock', g, x: wx, z: wz, label: g.id === 'lens' ? (st.inv.lentille ? 'Poser la Lentille d’Aube' : 'Un sceau de brume') : st.inv[g.key] ? 'Déverrouiller la porte' : 'Porte verrouillée' }); });
   });
-  const PRIO = { npc: -1.2, chest: -0.6, device: -0.3, lock: -0.3, warp: 1.6, door: 0.2, sign: 0.4, lamp: 0, bed: 0.5, desk: 0, well: 0.6 };
+  const PRIO = { npc: -1.2, chest: -0.6, post: -0.2, device: -0.3, lock: -0.3, warp: 1.6, door: 0.2, sign: 0.4, lamp: 0, bed: 0.5, desk: 0, well: 0.6 };
   cands.sort((a, b) => (a.dist + (PRIO[a.kind] || 0)) - (b.dist + (PRIO[b.kind] || 0)));
   return cands[0] || null;
 }
+/* ---------- Grappin de lumière ---------- */
+const DIR_WORDS = { N: 'le nord', E: 'l’est', S: 'le sud', W: 'l’ouest' };
+/* Liaison choisie pour un poteau : celle vers laquelle Lyra est tournée (la seule s'il n'y en a qu'une) */
+function pickLink(post) {
+  const links = postLinks(isl, post);
+  if (!links.length) return null;
+  if (links.length === 1) return links[0];
+  const fx = Math.sin(P.face), fz = Math.cos(P.face);
+  let best = null, bd = 0.3;
+  links.forEach((l) => { const [dx, dy] = DIRS[l.dir]; const dot = fx * dx + fz * dy; if (dot > bd) { bd = dot; best = l; } });
+  return best;
+}
+function postLabel(post) {
+  if (!st.inv.grappin) return 'Poteau de verre';
+  const l = pickLink(post);
+  return l ? `Lancer le grappin vers ${DIR_WORDS[l.dir]}` : 'Poteau de verre · tourne-toi vers l’autre rive';
+}
+const rope = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 1, 6), new THREE.MeshBasicMaterial({ color: new THREE.Color('#bff3ff').multiplyScalar(2.6), transparent: true, opacity: 0.95 }));
+rope.visible = false; scene.add(rope);
+const ropeTip = new THREE.Mesh(new THREE.OctahedronGeometry(0.2, 0), glow('#e8fbff', 4)); ropeTip.visible = false; scene.add(ropeTip);
+function startGrapple(l) {
+  const to = { x: W(l.land[0]), z: W(l.land[1]) }, hook = { x: W(l.to.x), z: W(l.to.y) };
+  const dist = Math.hypot(to.x - P.x, to.z - P.z);
+  S.grap = { t: 0, dur: Math.max(0.7, 0.35 + dist / 22), from: { x: P.x, z: P.z }, to, hook };
+  S.mode = 'grapple'; setTouch(false); input.clear(); hud.prompt('');
+  P.face = Math.atan2(to.x - P.x, to.z - P.z); P.vx = P.vz = 0; P.swing = null; P.dodging = false; P.chargeT = 0;
+  P.iframes = Math.max(P.iframes, S.grap.dur + 0.1);
+  audio.sfx('grapple_throw');
+}
+function endGrapple() {
+  const g = S.grap; if (!g) return;
+  P.x = g.to.x; P.z = g.to.z; P.y = 0; P.vx = P.vz = 0;
+  S.grap = null; rope.visible = ropeTip.visible = false; if (world.grappleHide) world.grappleHide();
+  S.mode = 'play'; setTouch(true); input.clear();
+  audio.sfx('land'); sparks.burst(new THREE.Vector3(P.x, 0.4, P.z), '#9fe9ff', 14, 2.2, 1.5);
+  st.flags.a_grappe = 1;
+  autosave();
+}
+function updateGrapple(dt) {
+  const g = S.grap; g.t += dt;
+  const k = Math.min(1, g.t / g.dur), cast = Math.min(1, k / 0.22), pull = Math.max(0, (k - 0.22) / 0.78), e = pull * pull * (3 - 2 * pull);
+  if (!g.hit && cast >= 1) { g.hit = true; audio.sfx('grapple_hit'); sparks.burst(new THREE.Vector3(g.hook.x, 2.2, g.hook.z), '#e8fbff', 16, 2.5, 1); }
+  P.x = lerp(g.from.x, g.to.x, e); P.z = lerp(g.from.z, g.to.z, e); P.y = Math.sin(Math.PI * e) * 1.15;
+  // câble : de la main de Lyra à la tête du poteau d'arrivée (visuel de world/ si disponible, sinon secours)
+  const a = tmpV.set(P.x, P.y + 1.3, P.z);
+  if (world.grappleLine) {
+    world.grappleLine(a.clone(), new THREE.Vector3(g.hook.x, 2.95, g.hook.z), cast, pull);
+    if (!g.pulled && pull > 0.02) { g.pulled = true; audio.sfx('grapple_pull'); }
+  } else {
+    const b = new THREE.Vector3(lerp(P.x, g.hook.x, cast), lerp(P.y + 1.3, 2.25, cast), lerp(P.z, g.hook.z, cast));
+    const len = a.distanceTo(b); rope.visible = len > 0.05; rope.position.copy(a).lerp(b, 0.5); rope.scale.set(1, Math.max(0.01, len), 1); rope.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize());
+    ropeTip.visible = true; ropeTip.position.copy(b); ropeTip.rotation.y += dt * 8;
+  }
+  if (k >= 1) endGrapple();
+}
+
 function interact(back) {
   const t = S.target; if (!t) return;
   switch (t.kind) {
     case 'device': {
       const e = t.e, n = back && (e.t === 'lantern' || e.t === 'relay') ? 3 : 1;
       for (let i = 0; i < n; i++) rotate(e);
-      audio.chime(e.t === 'mirror' ? 520 : 440, 0.18, 'triangle');
+      audio.sfx(e.t === 'mirror' ? 'mirror' : e.t === 'relay' ? (e.mix ? 'mixer' : 'relay') : 'lantern', { x: W(e.x), z: W(e.y) });
       sparks.burst(new THREE.Vector3(W(e.x), BEAM_Y, W(e.y)), '#ffd98a', 10, 2, 1);
       reEvaluate(); autosave();
       break;
+    }
+    case 'post': {
+      if (!st.inv.grappin) { screens.message('Poteau de verre', 'Un poteau de verre taillé, assez solide pour retenir un câble de lumière. De l’autre côté du vide, un deuxième poteau lui répond. Il faudrait un grappin pour les relier.'); break; }
+      const l = pickLink(t.e);
+      if (!l) { audio.sfx('deny'); hud.toast('✋', 'Aucun poteau en face', 'Tourne-toi vers le poteau de l’autre rive, puis réessaie.'); break; }
+      startGrapple(l); break;
     }
     case 'npc': talkTo(t.n); break;
     case 'chest': openChest(t.cv); break;
@@ -702,7 +802,7 @@ G.dialogEnd = () => { if (S.talkTo) S.talkTo.talking = false; S.talkTo = null; n
 G.onScreenClosed = () => { if (S.mode === 'title') return; if (S.mode === 'dead') return; S.mode = 'play'; setTouch(true); input.enable(true); input.clear(); hud.refresh(); };
 G.warpTo = (id) => {
   const w = WARPS.find((x) => x.id === id), z = zones[zoneIndex[w.zone]];
-  audio.sfx('magic');
+  audio.sfx('warp');
   fade(() => { teleport(W(z.ox + w.arrive[0]), W(z.oy + w.arrive[1])); st.player.respawn = { zone: w.zone, cell: w.arrive }; });
   autosave();
 };
@@ -821,12 +921,12 @@ G.drawMap = (cv) => {
     const t = isl.terrain[y] && isl.terrain[y][x]; if (!t || t === ' ') continue;
     const zi = isl.zoneAt[y][x];
     if (t === '=') { const gt = isl.gates[isl.gateCell[x + ',' + y]]; if (!gt.open) continue; g.fillStyle = '#e8b65a'; }
-    else { if (zi < 0 || !seen(zi) || zones[zi].interior) continue; const th = themeOf(zones[zi]); g.fillStyle = t === '#' || t === 'T' ? 'rgba(255,255,255,.18)' : t === '~' ? '#5fa8e8' : t === 'H' ? 'rgba(240,198,107,.55)' : t === ',' ? 'rgba(232,214,180,.6)' : t === 'r' ? '#3f5a32' : t === 'x' ? '#9fe9ff' : th === 'sanctuaire' ? 'rgba(160,140,220,.5)' : th === 'temple' ? 'rgba(120,190,220,.5)' : th === 'foret' ? 'rgba(110,210,180,.55)' : th === 'lande' ? 'rgba(180,200,120,.5)' : zones[zi].secret ? 'rgba(216,180,254,.5)' : 'rgba(150,220,140,.55)'; }
+    else { if (zi < 0 || !seen(zi) || zones[zi].interior) continue; const th = themeOf(zones[zi]); g.fillStyle = t === '#' || t === 'T' ? 'rgba(255,255,255,.18)' : t === '~' ? '#5fa8e8' : t === 'H' ? 'rgba(240,198,107,.55)' : t === ',' ? 'rgba(232,214,180,.6)' : t === 'r' ? '#3f5a32' : t === 'x' ? '#9fe9ff' : th === 'sanctuaire' ? 'rgba(160,140,220,.5)' : th === 'temple' ? 'rgba(120,190,220,.5)' : th === 'foret' || th === 'canopee' || th === 'phare_verre' ? 'rgba(110,210,180,.55)' : th === 'lande' ? 'rgba(180,200,120,.5)' : zones[zi].secret ? 'rgba(216,180,254,.5)' : 'rgba(150,220,140,.55)'; }
     g.fillRect(ox + x * s, oy + y * s, s + 0.5, s + 0.5);
     if (t === 'c' && st.player.abilities.vision && seen(zi)) { g.fillStyle = '#ffe2a0'; g.fillRect(ox + x * s + s * 0.25, oy + y * s + s * 0.25, s * 0.5, s * 0.5); }
   }
   g.font = '600 13px Inter, sans-serif'; g.textAlign = 'center';
-  outdoor.forEach((z, i) => { const zi = zoneIndex[z.id]; if (!seen(zi) || (!z.area && z.id !== 'z1' && z.id !== 'z4' && z.id !== 'z7' && z.id !== 'phare')) return; const name = z.area ? z.title : DEF.regions[z.region].name; g.fillStyle = 'rgba(0,0,0,.55)'; g.fillText(name, ox + (z.ox + z.map[0].length / 2) * s + 1, oy + (z.oy + 1.4) * s + 1); g.fillStyle = '#fff'; g.fillText(name, ox + (z.ox + z.map[0].length / 2) * s, oy + (z.oy + 1.4) * s); });
+  outdoor.forEach((z, i) => { const zi = zoneIndex[z.id]; if (!seen(zi) || (!z.area && z.id !== 'z1' && z.id !== 'z4' && z.id !== 'z7' && z.id !== 'phare' && z.id !== 'can2' && z.id !== 'phare_f' && z.id !== 'f2')) return; const name = z.area ? z.title : DEF.regions[z.region].name; g.fillStyle = 'rgba(0,0,0,.55)'; g.fillText(name, ox + (z.ox + z.map[0].length / 2) * s + 1, oy + (z.oy + 1.4) * s + 1); g.fillStyle = '#fff'; g.fillText(name, ox + (z.ox + z.map[0].length / 2) * s, oy + (z.oy + 1.4) * s); });
   // coffres (vision), cristaux de voyage, objectif
   if (st.player.abilities.vision) Object.values(world.chestViews).forEach((c) => { if (c.open || !c.g.visible || !seen(c.zi) || zones[c.zi].interior) return; g.fillStyle = '#ffe2a0'; g.font = '700 14px Inter'; g.fillText('✧', ox + (c.x + 0.5) * s, oy + (c.y + 0.9) * s); });
   WARPS.forEach((w) => { if (!st.world.warps[w.id]) return; const z = zones[zoneIndex[w.zone]]; g.fillStyle = '#9fe9ff'; g.font = '700 16px Inter'; g.fillText('✦', ox + (z.ox + w.cell[0] + 0.5) * s, oy + (z.oy + w.cell[1] + 0.9) * s); });
@@ -842,7 +942,8 @@ G.drawMap = (cv) => {
    Complétion
    ========================================================= */
 function completion() {
-  const mainQ = ['q_reveil', 'q_lentille', 'q_phare'], sideQ = Object.keys(QUESTS).filter((k) => QUESTS[k].kind === 'side');
+  const mine = (k) => (QUESTS[k].island || 'aube') === IID;
+  const mainQ = Object.keys(QUESTS).filter((k) => QUESTS[k].kind === 'main' && mine(k)), sideQ = Object.keys(QUESTS).filter((k) => QUESTS[k].kind === 'side' && mine(k));
   const chests = Object.keys(world.chestViews);
   const parts = [
     [mainQ.filter((q) => quests.state(q) === 'done').length, mainQ.length, 25],
@@ -877,7 +978,7 @@ function bossDefeated(k) {
   const def = ENEMIES[(k && k.type) || 'colosse'] || ENEMIES.colosse;
   const flag = def.bossFlag || 'boss_colosse', verre = flag === 'boss_verre';
   st.flags[flag] = 1; S.boss = null; hud.bossBar(null);
-  audio.chord([392, 523, 659, 784, 1047], 0.15);
+  audio.chord([392, 523, 659, 784, 1047], 0.15); S.victoryUntil = performance.now() + 20000; music('victoire', 1);
   hud.banner('Victoire', verre ? 'Le Gardien de Verre est brisé' : 'Le Colosse de Brume est dissipé');
   if (!verre) giveItem('lentille', 1);
   reward('b:' + IID + ':' + (verre ? 'gardien' : 'colosse'), verre ? 300 : 250, verre ? 100 : 80);
@@ -955,11 +1056,11 @@ function onZoneChange(zi, prev) {
     else if (!z.secret) hud.banner(rn, z.title);
     else hud.banner('Chambre secrète', z.title);
   }
-  if (first && !z.area) { const g = z.ents.find((e) => e.gate && !e.optional); if (!(g && isl.gates[g.gate] && isl.gates[g.gate].open)) setTimeout(() => hud.toast('💡', z.title, z.hint), 900); }
+  if (first && (!z.area || z.hint)) { const g = z.ents.find((e) => e.gate && !e.optional); if (!(g && isl.gates[g.gate] && isl.gates[g.gate].open)) setTimeout(() => hud.toast('💡', z.title, z.hint), 900); }
   WARPS.forEach((w) => { if (w.zone === z.id && !w.needs) st.world.warps[w.id] = 1; });
-  if (z.dungeon && first) { st.player.respawn = { zone: z.id, cell: z.spawn }; setTimeout(() => hud.toast('⚠', z.title, 'Si tu tombes ici, Fia te ramènera à l’entrée.'), 1500); }
+  if ((z.dungeon || z.respawn) && first) { st.player.respawn = { zone: z.id, cell: z.spawn }; setTimeout(() => hud.toast('⚠', z.title, 'Si tu tombes ici, Fia te ramènera à l’entrée.'), 1500); }
   const th = themeOf(z);
-  music(S.boss ? 'boss' : th === 'puzzle' ? 'puzzle' : th, S.restore);
+  music(S.boss ? 'boss' : z.music || th, S.restore);
   quests.check(); npcMarkers(); hud.refresh();
   autosave();
 }
@@ -1018,6 +1119,7 @@ function update(dt) {
     if (canStand(nx, P.z)) P.x = nx; else { P.vx = 0; P.kbx = 0; }
     if (canStand(P.x, nz)) P.z = nz; else { P.vz = 0; P.kbz = 0; }
     const sp = Math.hypot(P.vx, P.vz);
+    if (sp > 0.6 && !P.dodging) { P.stepT = (P.stepT || 0) - dt; if (P.stepT <= 0) { audio.step(groundAt()); P.stepT = sp > 6.5 ? 0.26 : 0.38; } } else P.stepT = 0;
     if (sp > 0.3 && !P.swing && !P.dodging) P.face += angleTo(P.face, Math.atan2(P.vx, P.vz)) * damp(12, dt);
     // énergie
     p.en = Math.min(s.maxEn, p.en + s.regen * dt * (P.swing ? 0.3 : 1));
@@ -1038,17 +1140,18 @@ function update(dt) {
     // salles de combat : barrière fermée tant que des créatures vivent
   }
   /* -------- combats -------- */
-  if (S.mode === 'play' || S.mode === 'dialog' || S.mode === 'cutscene') combat.update(S.mode === 'play' ? dt : 0);
+  if (S.mode === 'grapple') updateGrapple(dt);
+  if (S.mode === 'play' || S.mode === 'dialog' || S.mode === 'cutscene' || S.mode === 'grapple') combat.update(S.mode === 'play' || S.mode === 'grapple' ? dt : 0);
   /* -------- personnage -------- */
   const moving = Math.hypot(P.vx, P.vz) / 5.8;
-  hero.root.position.set(P.x, 0, P.z);
+  hero.root.position.set(P.x, P.y, P.z);
   hero.root.rotation.y = P.face;
   const flick = P.iframes > 0 && !P.dodging && Math.sin(t * 40) > 0;
   hero.root.visible = !flick || S.mode !== 'play';
   hero.animate(dt, {
     move: S.mode === 'play' ? Math.min(1, moving) : 0,
     swing: P.swing ? { t: P.swing.t / P.swing.dur, kind: P.swing.kind, combo: P.swing.combo } : null,
-    dodge: P.dodging ? Math.min(1, P.dodgeT / 0.36) : 0, hurt: P.hurtT > 0 ? P.hurtT / 0.4 : 0,
+    dodge: S.mode === 'grapple' ? 0.55 : P.dodging ? Math.min(1, P.dodgeT / 0.36) : 0, hurt: P.hurtT > 0 ? P.hurtT / 0.4 : 0,
     spin: P.spinT > 0 ? 1 - P.spinT / 0.45 : 0, talk: false,
   });
   chargeRing.position.set(P.x, 0.08, P.z); chargeRing.material.opacity = P.chargeT > 0.2 ? Math.min(0.9, (P.chargeT - 0.2) * 2) : 0; chargeRing.scale.setScalar(P.chargeT > 0.55 ? 1.3 + Math.sin(t * 20) * 0.08 : 1);
@@ -1092,7 +1195,7 @@ function update(dt) {
     camera.position.set(S.camT.x + Math.sin(yaw) * Math.cos(pitch) * dist, S.camT.y + Math.sin(pitch) * dist, S.camT.z + Math.cos(yaw) * Math.cos(pitch) * dist);
     camera.lookAt(S.camT.x, S.camT.y + 2 * e, S.camT.z);
     S.restoreT = 1;
-    if (F.t > 6.5) { S.finale = null; S.mode = 'play'; setTouch(true); hud.banner('Le phare de l’Aube brille', 'Retourne voir Séléné'); quests.check(); npcMarkers(); }
+    if (F.t > 6.5) { S.finale = null; S.mode = 'play'; setTouch(true); hud.banner(META.finale.title, META.finale.sub); quests.check(); npcMarkers(); }
   } else if (S.wardrobe) {
     tmpV.set(P.x, 1.0, P.z); S.camT.lerp(tmpV, damp(6, dt));
     const yaw = P.face + 0.35, d = 5.2, pitch = 0.22;
@@ -1107,11 +1210,13 @@ function update(dt) {
     camera.lookAt(S.camT);
   }
   if (S.shake > 0) { camera.position.x += (Math.random() - 0.5) * S.shake; camera.position.y += (Math.random() - 0.5) * S.shake; S.shake = Math.max(0, S.shake - dt * 1.6); }
+  audio.listener(P.x, P.z, S.yaw + Math.PI);
   sky.position.copy(camera.position);
   sun.position.set(S.camT.x + 22, 34, S.camT.z + 14); sun.target.position.copy(S.camT);
 
   /* -------- ambiance -------- */
   S.restore = lerp(S.restore, S.restoreT, damp(0.8, dt));
+  if (world.setSky) world.setSky(S.restore);
   const r = S.restore, th = S.mode === 'title' ? 'village' : themeOf(zones[S.zone]), A = AMB[th] || AMB.puzzle;
   const dusk = A.sky ? A.sky[0].map((c) => cA.set(c).clone()) : PAL.dusk, dawn = A.sky ? A.sky[1].map((c) => cB.set(c).clone()) : PAL.dawn;
   const k = damp(1.5, dt);
@@ -1128,8 +1233,8 @@ function update(dt) {
   if (A.tint) tint.lerp(new THREE.Color(A.tint), 0.25);
   world.M.grass.color.copy(tint); world.M.foliage.color.copy(tint); world.M.tuft.color.copy(tint);
   ambient.mat.opacity = th === 'interieur' ? 0 : 0.35 + r * 0.6;
-  ambient.mat.color.set(th === 'sanctuaire' || th === 'lande' ? '#c9b6ff' : th === 'foret' || th === 'temple' ? '#bff3ff' : '#ffc4dc').multiplyScalar(1.4);
-  if (Math.floor(t) !== Math.floor(t - dt) && S.mode !== 'title') music(S.boss && S.boss.state !== 'dead' ? 'boss' : th === 'puzzle' ? 'puzzle' : th, r);
+  ambient.mat.color.set(th === 'sanctuaire' || th === 'lande' ? '#c9b6ff' : th === 'foret' || th === 'canopee' || th === 'phare_verre' || th === 'temple' ? '#bff3ff' : '#ffc4dc').multiplyScalar(1.4);
+  if (Math.floor(t) !== Math.floor(t - dt)) music(S.mode === 'title' ? 'title' : S.victoryUntil > performance.now() ? 'victoire' : S.boss && S.boss.state !== 'dead' ? (S.boss.phase === 2 ? 'boss2' : 'boss') : (zones[S.zone] && zones[S.zone].music) || th, S.mode === 'title' ? 0.6 : r);
 
   /* -------- monde -------- */
   world.animate(dt, t);
@@ -1185,7 +1290,7 @@ document.querySelectorAll('[data-ui]').forEach((b) => b.addEventListener('click'
 
 /* Outils de test (automatisation) */
 window.__lumen = {
-  isl, S, P, G, get st() { return st; }, combat, quests, npcs, world,
+  isl, S, P, G, get st() { return st; }, combat, quests, npcs, world, renderer, scene, camera,
   set(id, v) { const e = isl.ents.find((x) => x.id === id); if (!e) return; if (e.t === 'mirror') e.state = v; else if (e.t === 'lantern') e.dir = v; else if (e.t === 'relay') e.out = v; reEvaluate(); },
   tp(x, y) { P.x = W(x); P.z = W(y); },
   tpZone(id, c) { const z = zones[zoneIndex[id]]; const cc = c || z.spawn; teleport(W(z.ox + cc[0]), W(z.oy + cc[1])); },

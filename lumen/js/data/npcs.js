@@ -365,14 +365,38 @@ export const NPCS = {
         say: [
           LYRA('Le Gardien est brisé… et voici ce qu’il gardait.'),
           'Un fragment vert du Grand Prisme ! Il y a des siècles, il éclairait tout le temple. Depuis qu’il a disparu, nos vitraux n’ont plus de couleur.',
-          'Je ne sais pas quand le Phare de Verre pourra être rallumé. Il manque encore des trois couleurs rares au sommet du belvédère. Mais grâce à toi, Vitrebourg respire de nouveau.',
-          FIA('On revient bientôt ! Il y a un belvédère à visiter, et plein de verre à regarder !'),
+          'Il reste le Phare de Verre. Il se dresse au bout de la Canopée, tout là-haut, et il ne s’allume que si on lui donne le jaune, le magenta et le cyan en même temps. Trois lumières qui acceptent de brûler ensemble.',
+          'Pour monter, il faut un grappin de lumière. Orin en avait dessiné les plans, et Silex, le maître verrier, les garde dans son atelier. Dis-lui que c’est moi qui t’envoie.',
+          FIA('Un grappin ! On va voler d’arbre en arbre ! Enfin… de poteau en poteau.'),
         ],
         do: [{ take: 'prisme_vert', n: 1 }, { step: 'q_verre' }, { flag: 'verre_fini' }],
       },
       {
+        if: (q) => S(q, 'q_phare_verre', 'retour'),
+        say: [
+          LYRA('Le Phare de Verre brille, Ambre. Les trois couleurs tiennent ensemble.'),
+          'Je l’ai vu depuis la place : une colonne de lumière blanche, puis tout le verre de la forêt qui reprend ses couleurs, branche après branche. Cent ans que je n’avais pas vu ça.',
+          'Orin disait que la lumière partagée valait mieux qu’une lumière seule. Je crois que je comprends enfin ce qu’il voulait dire.',
+          FIA('Et là-haut, dans la colonne, il y a une route de lumière qui file vers le sud-est. Quelque chose de doré, tout au bout.'),
+          'Le Désert des Échos… Le chemin n’est pas encore sûr, Lyra, et la lumière d’un phare ne remplace pas une bonne nuit. Repose-toi à la Rosée. Vitrebourg te doit bien ça.',
+        ],
+        do: [{ step: 'q_phare_verre' }, { flag: 'acte2_fini' }],
+      },
+      {
+        if: (q) => S(q, 'q_phare_verre', 'silex') || S(q, 'q_phare_verre', 'eclats') || S(q, 'q_phare_verre', 'forge'),
+        say: ['Silex t’attend à la verrerie. Il lui faut cinq éclats de verre pour forger le grappin : les créatures de la Lisière en laissent, et Galet en vend si tu es pressée.'],
+      },
+      {
+        if: (q) => q.quest('q_phare_verre') === 'active',
+        say: ['Le pont du Belvédère descend vers la Canopée, au sud. Là-haut, les poteaux de verre se répondent deux par deux. Tourne-toi vers celui d’en face, et laisse le câble faire le reste.', 'Le Phare est tout au bout. Il aime la patience : ses trois couleurs viennent de trois salles, et les portes ne s’ouvrent qu’une à une.'],
+      },
+      {
+        if: (q) => q.quest('q_phare_verre') === 'done',
+        say: ['Regarde-moi ça : les arbres reprennent leurs couleurs. Le Phare de Verre veille de nouveau sur la forêt, et c’est toi qui l’as rallumé.', 'La route vers le sud-est n’est pas encore ouverte, mais Vitrebourg t’attendra toujours. Les graines de la Canopée, la livraison de Galet… il reste de quoi t’occuper, si tu veux.'],
+      },
+      {
         if: () => true,
-        say: ['Vitrebourg te remercie. Le belvédère, tout au bout des salles de vitraux, est ouvert. On dit que le Phare de Verre s’y élèvera, un jour.'],
+        say: ['Vitrebourg te remercie. Le belvédère, tout au bout des salles de vitraux, est ouvert : de là, un pont descend vers la Canopée.'],
       },
     ],
   },
@@ -403,9 +427,22 @@ export const NPCS = {
     look: { hair: 'boucles', hairHex: '#3a2a22', skinHex: '#8d5b3e', outfit: 'exploratrice', cloakHex: '#e8b65a', tunicHex: '#f3e6c8', trimHex: '#f0c66b', scale: 1.0 },
     talk: [
       {
+        if: (q) => S(q, 's_colis', 'retour'),
+        say: ['Perle l’a reçu ? Et Ficus aussi ? Ha ! Vitrebourg tourne mieux depuis que tu as des jambes. Tiens : de quoi te remettre en forme, et quelques écus pour la peine.'],
+        do: [{ step: 's_colis' }],
+      },
+      {
+        if: (q) => q.quest('s_colis') === 'active',
+        say: ['Le colis est pour Perle, la souffleuse de verre, près de sa maison. Elle te dira quoi faire du reste. Ne le secoue pas : ça tinte.'],
+      },
+      {
         if: () => true,
         say: ['Éclats, givre, fibre, bois : j’achète, je vends. Un éclat de verre, ça se revend toujours, surtout à Silex.'],
-        choices: [{ t: 'Acheter et vendre', do: [{ shop: 'galet', sell: true }] }, { t: 'À plus tard' }],
+        choices: [
+          { t: 'Acheter et vendre', do: [{ shop: 'galet', sell: true }] },
+          { t: 'Tu as besoin d’aide ?', if: (q) => q.quest('s_colis') === 'none', say: ['Tu tombes bien ! J’ai un colis qui devait partir hier, et je ne peux pas quitter l’étal : les clients passent en coup de vent. Va le porter à Perle, veux-tu ?'], do: [{ start: 's_colis' }, { give: 'colis_galet' }] },
+          { t: 'À plus tard' },
+        ],
       },
     ],
   },
@@ -414,6 +451,28 @@ export const NPCS = {
     name: 'Silex', role: 'Maître verrier',
     look: { hair: 'court', hairHex: '#2a2230', skinHex: '#c99772', outfit: 'tablier', tunicHex: '#3f6a8a', apronHex: '#d9d4e3', trimHex: '#7fd0c0', beard: '#2a2230', scale: 1.08 },
     talk: [
+      {
+        if: (q) => S(q, 'q_phare_verre', 'silex'),
+        say: [
+          'Ambre t’envoie ? Alors tu veux monter au Phare. Les plans d’Orin sont là, sous la presse à vitrail : un grappin de lumière. Un câble de lumière solidifié autour d’un éclat de verre, et des poteaux taillés pour l’accueillir.',
+          FIA('Des poteaux ? Comme ceux qui dépassent des arbres, là-haut, au bord des vides ?'),
+          'Exactement. Deux poteaux se font face de chaque côté d’un vide. Tu te places à côté de l’un, tournée vers l’autre, et le câble te tire jusqu’à l’autre rive. Simple. Il me faut cinq éclats de verre pour le forger : les créatures de la Lisière en laissent, et Galet en vend.',
+        ],
+        do: [{ step: 'q_phare_verre' }],
+      },
+      {
+        if: (q) => S(q, 'q_phare_verre', 'eclats'),
+        say: (q) => [`Il me faut cinq éclats de verre pour le grappin. Tu en as ${Math.min(5, q.count('eclats'))} sur 5. Les créatures de la Lisière en laissent, et Galet en vend si tu es pressée.`],
+      },
+      {
+        if: (q) => S(q, 'q_phare_verre', 'forge'),
+        say: [
+          'Cinq éclats, bien clairs. Laisse-moi chauffer le verre… Voilà.',
+          'Un grappin de lumière, tel que le dessinait Orin. Mode d’emploi : un poteau de verre, un vide, un autre poteau. Tiens-toi à côté du premier, tournée vers le second, et agis. Le poteau d’en face te ramènera aussi.',
+          'Le pont au sud du Belvédère est ouvert. Bonne ascension, et ne regarde pas en bas.',
+        ],
+        do: [{ take: 'eclat_verre', n: 5 }, { give: 'grappin' }, { open: 'b_canopee' }, { step: 'q_phare_verre' }],
+      },
       {
         if: (q) => S(q, 's_eclats', 'retour'),
         say: ['Six éclats, pas un de fêlé ! Avec ça, ma commande est prête. Et pour toi, une teinte émeraude pour ta cape : le vert de nos arbres.'],
@@ -437,6 +496,11 @@ export const NPCS = {
     look: { hair: 'chignon', hairHex: '#2f5f7a', skinHex: '#f6e3d3', outfit: 'tablier', tunicHex: '#7fd0c0', apronHex: '#f3e6c8', trimHex: '#f0c66b', scale: 0.96 },
     talk: [
       {
+        if: (q) => S(q, 's_colis', 'perle'),
+        say: ['Le colis de Galet ! Enfin. C’est ma pince à verre, celle que j’ai oubliée sur son étal. Attends, j’ai aussi un sachet de sable fin pour Ficus : il en a besoin pour ses pots. Tu veux bien ?'],
+        do: [{ take: 'colis_galet' }, { give: 'sachet_sable' }, { step: 's_colis' }],
+      },
+      {
         if: (q) => S(q, 's_chasse_verre', 'retour'),
         say: ['Dix ! Les cerfs n’oseront plus approcher du village. Tiens : une teinte bordeaux, pour la cape. J’ai soufflé le flacon moi-même.'],
         do: [{ step: 's_chasse_verre' }],
@@ -450,6 +514,7 @@ export const NPCS = {
         say: ['Je cueille le sable de la lisière pour mon verre, mais les créatures s’y promènent comme chez elles. Tu pourrais en vaincre dix ? Je t’en serais très reconnaissante.'],
         do: [{ start: 's_chasse_verre' }],
       },
+      { if: (q) => q.quest('q_phare_verre') === 'done', say: ['Le Phare brille ! J’ai soufflé un verre ce matin, et il est sorti vert. Vert ! Pas gris. Je crois que je vais pleurer dans mon four.'] },
       { if: () => true, say: ['Un jour, je soufflerai un vitrail aussi grand que le temple.'] },
     ],
   },
@@ -458,7 +523,29 @@ export const NPCS = {
     name: 'Ficus', role: 'Jardinier',
     look: { hair: 'court', hairHex: '#8f6a3a', skinHex: '#d9ab84', outfit: 'tunique', tunicHex: '#5f9a6a', trimHex: '#f0c66b', scale: 1.0 },
     talk: [
-      { if: () => true, say: ['Les arbres de verre poussent plus vite à la lumière du soleil. Dans les salles de vitraux, essaie de croiser les faisceaux : les vitraux ne laissent passer que leur couleur.', FIA('Il y a même un relais qui fait du jaune. Un relais mélangeur, qu’ils disent.')] },
+      {
+        if: (q) => S(q, 's_colis', 'ficus'),
+        say: ['Du sable fin, tamisé trois fois ! Perle pense à tout. Dis à Galet que je lui dois un pot de lierre-prisme.'],
+        do: [{ take: 'sachet_sable' }, { step: 's_colis' }],
+      },
+      {
+        if: (q) => S(q, 's_graines', 'retour'),
+        say: ['Trois graines de canopée, encore tièdes ! Je les plante ce soir, à la lumière du phare. Dans un an, tu auras un arbre de verre qui porte ton nom. Prends cette teinte turquoise : c’est la couleur de leurs feuilles.'],
+        do: [{ take: 'graine_canopee', n: 3 }, { step: 's_graines' }],
+      },
+      {
+        if: (q) => q.quest('s_graines') === 'active',
+        say: (q) => [`Graines de canopée : ${Math.min(3, q.count('graines'))} sur 3. Il y en a une sur la deuxième branche des Branches basses, du côté du coffre. Les autres sont sur la Passerelle, là où personne n’ose se promener.`],
+      },
+      {
+        if: () => true,
+        say: ['Les arbres de verre poussent plus vite à la lumière du soleil. Dans les salles de vitraux, essaie de croiser les faisceaux : les vitraux ne laissent passer que leur couleur.', FIA('Il y a même un relais qui fait du jaune. Un relais mélangeur, qu’ils disent.')],
+        choices: [
+          { t: 'Tu as besoin d’aide ?', if: (q) => q.quest('s_graines') === 'none' && q.has('grappin'), say: ['Les arbres de verre naissent d’une graine de canopée. Tu as un grappin ? Alors monte : il y en a quelques-unes sur les plates-formes, là-haut. Trois me suffiraient pour mon jardin.'], do: [{ start: 's_graines' }] },
+          { t: 'Tu as besoin d’aide ?', if: (q) => q.quest('s_graines') === 'none' && !q.has('grappin') && q.quest('q_verre') === 'done', say: ['Des graines de canopée, j’en rêve. Mais il faut un grappin pour aller les chercher, et seul Silex sait en forger un. Demande-lui, si Ambre ne t’a pas déjà envoyée.'] },
+          { t: 'Au revoir' },
+        ],
+      },
     ],
   },
 
@@ -482,10 +569,20 @@ export const NPCS = {
     look: { hair: 'long', hairHex: '#3f6a4a', skinHex: '#f6e3d3', outfit: 'tablier', tunicHex: '#5f9a6a', apronHex: '#f3e6c8', trimHex: '#f0c66b', scale: 1.0 },
     talk: [
       {
+        if: (q) => S(q, 's_lampions_f', 'retour'),
+        say: ['Je les ai vus depuis la fenêtre : un, deux, sept ! La place brille comme avant. Tiens, c’est ma teinte préférée : l’ambre des lampions. Elle ira bien à ta cape.'],
+        do: [{ step: 's_lampions_f' }],
+      },
+      {
+        if: (q) => q.quest('s_lampions_f') === 'active',
+        say: (q) => [`Lampions rallumés : ${Math.min(7, q.count('lampions'))} sur 7. Ils sont autour de la place de Vitrebourg. Fia n’a qu’à les effleurer.`],
+      },
+      {
         if: () => true,
         say: ['Bienvenue à la Rosée ! Un lit, une soupe de champignons, et la brume reste dehors.'],
         choices: [
           { t: 'Se reposer (soigne et sauvegarde)', do: [{ rest: true }] },
+          { t: 'Tu as besoin d’aide ?', if: (q) => q.quest('s_lampions_f') === 'none' && q.quest('q_verre') === 'done', say: ['Depuis la Brume, les sept lampions de la place sont éteints. Avant, on dansait jusqu’au matin. Si Fia pouvait les rallumer, ce serait un cadeau pour tout Vitrebourg.'], do: [{ start: 's_lampions_f' }] },
           { t: 'Au revoir' },
         ],
       },

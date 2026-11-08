@@ -36,6 +36,7 @@ export const ITEMS = {
     desc: 'Taillée dans un vitrail du temple. Elle tranche net et renvoie la lumière.' },
 
   /* ---------------- Tenues et armures (emplacement : armure) ---------------- */
+  manteau_verre: { cat: 'armure', name: 'Manteau de verre filé', icon: 'cloak', rarity: 'epique', def: 9, speed: 0.04, price: 0, sell: 180, desc: 'Un manteau tissé de fils de verre, offert par Vitrebourg. Il renvoie la lumière et amortit les coups.' },
   veste_voyage: { cat: 'armure', name: 'Veste de voyage', icon: 'tunic', rarity: 'commun', def: 1, price: 0, sell: 0, desc: 'Confortable et chaude. Elle protège surtout du vent.' },
   veste_cuir: { cat: 'armure', name: 'Veste de cuir', icon: 'armor', rarity: 'commun', def: 3, price: 160, sell: 50, desc: 'Du cuir épais, cousu double. Les épines y restent plantées au lieu de te piquer.' },
   cape_exploration: { cat: 'armure', name: 'Cape d’exploration', icon: 'cloak', rarity: 'rare', def: 2, speed: 0.06, price: 240, sell: 70, desc: 'Légère et pleine de poches. On marche plus vite quand rien ne gêne.' },
@@ -49,6 +50,8 @@ export const ITEMS = {
   amulette_lume: { cat: 'accessoire', name: 'Amulette de Lume', icon: 'amulet', rarity: 'rare', en: 25, regen: 0.5, price: 0, sell: 90, desc: '+25 énergie maximum. L’énergie revient plus vite.' },
   bottes_legeres: { cat: 'accessoire', name: 'Bottes légères', icon: 'boots', rarity: 'rare', speed: 0.1, price: 320, sell: 100, desc: 'On a l’impression de flotter. Vitesse +10 %.' },
   talisman_brume: { cat: 'accessoire', name: 'Talisman de brume', icon: 'talisman', rarity: 'epique', resBrume: 0.25, price: 420, sell: 140, desc: 'Les créatures de la Brume te font 25 % de dégâts en moins.' },
+
+  anneau_canopee: { cat: 'accessoire', name: 'Anneau de canopée', icon: 'ring', rarity: 'rare', en: 15, speed: 0.06, price: 0, sell: 110, desc: '+15 énergie maximum et vitesse +6 %. Taillé dans une branche de verre, il ne pèse rien.' },
 
   /* ---------------- Consommables ---------------- */
   potion: { cat: 'conso', name: 'Potion de soin', icon: 'potion-red', rarity: 'commun', heal: 40, price: 30, sell: 10, desc: 'Rend 40 points de vie.' },
@@ -76,6 +79,11 @@ export const ITEMS = {
   marteau_bran: { cat: 'quete', name: 'Vieux marteau de Bran', icon: 'hammer-small', rarity: 'commun', desc: 'Le marteau de forge que Bran a perdu dans la lande. Le manche porte ses initiales.' },
   prisme_vert: { cat: 'quete', name: 'Fragment vert du Prisme', icon: 'shard', rarity: 'legendaire', desc: 'Un éclat du Grand Prisme, vert comme une feuille à contre-jour. Il chante doucement.' },
   cle_temple: { cat: 'quete', name: 'Clé du Temple de Verre', icon: 'key', rarity: 'rare', desc: 'Une clé de verre taillé. Elle laisse passer la lumière sans la retenir.' },
+  grappin: { cat: 'quete', name: 'Grappin de lumière', icon: 'hook', rarity: 'epique', desc: 'Un câble de lumière solidifié par un éclat de vitrail, d’après les plans d’Orin. Il s’accroche aux poteaux de verre, de l’autre côté d’un vide.',
+    tip: 'Tiens-toi à côté d’un poteau de verre, tourné vers le poteau d’en face, puis appuie sur Interagir : le câble te tire de l’autre côté. Le poteau d’arrivée te ramène, lui aussi.' },
+  graine_canopee: { cat: 'quete', stack: true, name: 'Graine de canopée', icon: 'seed', rarity: 'commun', desc: 'Une graine translucide, tiède, qui germe dans la lumière. Ficus en rêve.' },
+  colis_galet: { cat: 'quete', name: 'Colis de Galet', icon: 'bag', rarity: 'commun', desc: 'Un paquet ficelé avec soin. Galet a écrit « Pour Perle, urgent » dessus, deux fois.' },
+  sachet_sable: { cat: 'quete', name: 'Sachet de sable fin', icon: 'bag', rarity: 'commun', desc: 'Du sable de la Lisière, tamisé trois fois. Perle l’envoie à Ficus pour ses pots de verre.' },
   fragment_coeur: { cat: 'quete', name: 'Fragment de cœur', icon: 'heart', rarity: 'rare', instant: true, desc: '+15 points de vie maximum, pour toujours.' },
 };
 
@@ -97,4 +105,4 @@ export const RECIPES = {
 };
 
 export const item = (id) => ITEMS[id] || null;
-export const isStackable = (id) => ['conso', 'materiau'].includes((ITEMS[id] || {}).cat) || id === 'fragment_coeur';
+export const isStackable = (id) => ['conso', 'materiau'].includes((ITEMS[id] || {}).cat) || id === 'fragment_coeur' || !!(ITEMS[id] || {}).stack;

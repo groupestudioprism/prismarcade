@@ -246,18 +246,67 @@ Les temps sont des moyennes pour un joueur qui découvre le jeu, déplacements c
 
 ## 11. Direction artistique
 
-- **Formes** : low-poly en aplats (ombrage plat), sans textures. Îles posées sur des stalactites de roche, au-dessus d'une mer de nuages.
-- **Couleurs** : chaque île a deux palettes, « éteinte » (désaturée, crépusculaire) et « rallumée ». Le monde passe progressivement de l'une à l'autre à chaque énigme résolue : ciel, brouillard, herbe, feuillage, soleil.
-- **Lumière** : un soleil avec ombres douces, un éclairage de ciel, et un halo (bloom) **réservé** à ce qui émet de la lumière.
-- **Faisceaux** : un cœur blanc lumineux dans un halo coloré, avec une étincelle à chaque impact.
-- **Personnage** : silhouette encapuchonnée, aux couleurs de la tenue choisie, suivie de Fia.
-- **Interface** : panneaux en verre fumé, typographie Sora et Inter (celle de Prism Arcade), icônes simples. Lisible sur téléphone.
+*(mise à jour 0.5 — agent Graphisme ; code : `js/world/*`, `css/lumen.css`)*
+
+### Principes
+- **Formes** : low-poly en aplats (ombrage plat), **sans texture photo** ; seules textures : un vitrail en niveaux de gris et des dégradés doux générés en canvas (`world/gfx.js`). Îles posées sur des stalactites, au-dessus d'une mer de nuages. Silhouettes arrondies et lisibles, détails portés par la couleur et la lumière, pas par le nombre de polygones.
+- **Couleurs** : pastel, rose et or ; chaque île a deux palettes « éteinte » et « rallumée » (le monde passe de l'une à l'autre à chaque énigme résolue). Herbe en grandes plaques de teinte douce (plus de damier), chemins sable, pierre lavande. Forêt : turquoise, menthe et verre coloré.
+- **Lumière** : soleil avec ombres douces, éclairage de ciel, **bloom réservé à ce qui émet** (halos sprite additifs sur lampions, cristaux, balise, foyers). Tout ce qui est « allumé » a un halo ; tout ce qui est éteint n'en a pas. Étoiles et halo de soleil pilotés par `world.setSky(k)` (0 crépuscule → 1 aube).
+- **Faisceaux** : cœur blanc, halo coloré additif, étincelle à l'impact. Mélange lisible : jaune = rouge + vert, magenta = rouge + bleu, cyan = vert + bleu. Les vitraux ont un cadre doré, des plombs sombres (texture de vitrail) et **projettent une tache de lumière colorée au sol**.
+
+### Personnages et PNJ (`world/character.js`)
+- Proportions chibi : grosse tête (×1,1), yeux ovales avec reflet, sourcils, bouche, nez, joues rosées. Les habitants ont une corpulence et une taille de tête dérivées de leur apparence (variété sans toucher aux données).
+- Cape (arc dans le dos) et jupes **déformées à chaque image** (vent, course) ; queue de capuche, tresse, foulard et plume qui flottent.
+- Animations procédurales : respiration, regard qui flâne, **clignement**, marche avec genoux, **course** (inclinaison, bras fléchis), attaques (fente), esquive (roulé), coup reçu, **mort** (`dead` 0..1), gestes de conversation (bras alternés, bouche qui parle, hochements), salut, incantation. Transitions amorties (pas de coupure marche ↔ arrêt).
+- Perf : les parties rigides d'un os sont fusionnées par matériau (`bakeStatic`), ~15 maillages par personnage.
+
+### Créatures (`world/creatures.js`)
+Chaque coup est **annoncé** (`wind`) par un geste lisible : brumelin qui gonfle et rougit des yeux, ronceux aux lianes dressées et épines incandescentes, lance-épines à la bouche qui s'embrase, sanglier qui baisse la tête et gratte le sol, gardien à l'arme levée, colosse aux poings qui s'allument (onde de choc au sol). Les créatures étourdies (`stun`) ont des étoiles qui tournent. Variantes de la Forêt **translucides** : éclat (cristal flottant), lierre-prisme (pétales de verre), **cerf de verre** aux bois jaune/magenta/cyan, sentinelle de cristal, Gardien de Verre à la couronne de vitraux.
+
+### Décors (`world/build.js`)
+- **Végétation** : herbe en touffes à 4 lames qui ondulent au vent (shader), fleurs à tige, buissons sur le bord des îles, tertres au pied des arbres, arbres de taille variable. **Arbres de verre** (Forêt) : feuillage translucide aux couleurs de vitrail, cœur lumineux qui pulse, racines de verre, rayons de lumière filtrée.
+- **Eau** : éclats de lumière qui glissent (shader), poissons qui sautent.
+- **Bâtiments** : bardeaux, faîtage, cheminées qui fument, fenêtres encadrées avec volets et jardinières fleuries, porte à linteau avec marche et lanterne.
+- **Meubles** : lit à baldaquin simple et tapis, tables rondes avec nappe, chandelle et tabourets, cheminée avec bûches et flammes animées, étagères à livres et bocaux, bureau, étals aux fanions, puits, fontaine à vasque (gouttes animées), lampadaires avec halo.
+- **Donjons** : liseré lumineux au pied des murs, pilastres, dalles runiques (Sanctuaire violet, Temple cyan).
+- **Ambiance vivante** (`world/life.js`) : papillons, lucioles, oiseaux, pétales, poussières de verre, fumée, braises — un seul appel de dessin pour toutes les particules, seule la zone courante est animée.
+- **Prêts pour la suite** : balise à N anneaux colorés (`need`) y compris jaune/magenta/cyan (verre), poteau de grappin (`post`), `world.grappleLine()`, thèmes `canopee` et `phare_verre`.
+
+### Performance
+Les maillages statiques sont fusionnés (maisons, meubles, personnages, nuages), les détails sont masqués par quart de zone au-delà de ~60 m, les halos invisibles ne sont pas dessinés. Mesure typique (Havre-Aube, swiftshader) : ~600 appels de dessin, ombres comprises, comme avant les ajouts. Le mode Économie réduit particules, lucioles, rayons et ombres.
+
+### Interface (`css/lumen.css`)
+Panneaux en verre fumé teinté (dégradé violet profond, liseré clair en haut), accents rose et or, boîte de dialogue avec filet dégradé, vignette douce (désactivée en « mouvement réduit »), titre qui scintille, bannières en dégradé. Lisible sur téléphone.
 - **Caméra** : vue de trois quarts au-dessus du personnage, rotation libre, zoom limité. Plan large lorsqu'un phare s'allume.
 
 ## 12. Son et musique
-- **Ambiance** : une nappe synthétisée par île, qui s'enrichit d'une voix à chaque énigme résolue. Quand l'île est rallumée, la nappe devient un thème complet.
-- **Effets** : carillons accordés sur la gamme de l'île (rotation, cristal, pont), souffle du vent, pas sur l'herbe, sur le bois et sur la pierre.
-- **Version 1.0** : musique composée (6 thèmes et un thème final) à la place des nappes synthétisées.
+Tout est **synthétisé en direct** (Web Audio, aucun fichier, aucune musique protégée). Code : `js/engine/audio.js` (façade) et `js/audio/` (`core.js` contexte/bus/limiteur, `music.js`, `sfx.js`, `ambience.js`). L'API est décrite dans `COORDINATION.md`.
+
+- **Chaîne audio** : catégories *musique / effets / ambiance / voix* → master → compresseur-limiteur. Volumes réglables (`audio.set`), mute, persistance (`localStorage lumen.audio`). Le contexte naît au premier geste (autoplay) ; avant, tout appel est ignoré sans erreur. Enveloppes sans clic, polyphonie plafonnée (48 voix, 26 sur mobile/tactile), cloches et scintillements supprimés en mode économe. Un nom de son ou de thème inconnu ne lève aucune exception.
+- **Musique générative** : chaque thème = tonalité, gamme, grille d'accords et couches (nappe, basse, arpège, mélodie, percussions douces, cloches). Les mélodies dérivent d'un motif graine propre au thème (question/réponse, résolution sur la tonique, silences respirés) qui **mute lentement** à chaque cycle d'accords. Fondu enchaîné de 2,8 s entre zones (1,2 s vers/depuis combat et boss).
+  | Thème | Lieu | Couleur |
+  |---|---|---|
+  | `title` | écran-titre | Ré lydien, 66 bpm, cloches et nappe ouverte |
+  | `village` | Havre-Aube | Sol majeur, 92 bpm, pizzicato, flûte, shaker, léger swing |
+  | `puzzle` | salles d'énigmes | La dorien, 72 bpm, marimba en polyrythmie (pas de 3), très aéré |
+  | `lande` | Lande | Ré éolien, 60 bpm, bourdon, flûte seule, tom lointain |
+  | `sanctuaire` | Sanctuaire de Brume | Ré phrygien, 52 bpm, nappe sombre, cœur sourd, cloches longues |
+  | `foret` | Forêt de Verre | Mi lydien, 84 bpm, arpèges de verre inharmoniques |
+  | `vitrebourg` | Vitrebourg | Fa majeur, 104 bpm, vif, marimba de verre, percussions |
+  | `lisiere` | Lisière | Do mixolydien, 70 bpm, brumeux, tambour sur cadre |
+  | `temple` | Temple | Do# phrygien, 58 bpm, résonance, gong, arpèges très réverbérés |
+  | `canopee` | canopée (Forêt de Verre, en hauteur) | La lydien, 96 bpm, aérien, flûte et verre |
+  | `phare` | Phare de Verre | Ré majeur, 80 bpm, majestueux, cloches |
+  | `interieur` | auberge, maisons | Do majeur à 3 temps, luth |
+  | `combat` | combat | La mineur, 140 bpm, basse en croches, caisse claire |
+  | `boss` / `boss2` | Colosse, phases 1 et 2 | Ré phrygien, 118 → 150 bpm, taiko, ostinato en doubles croches |
+  | `victoire` | fin de combat/acte | Do majeur, 100 bpm, cuivres doux |
+- **Intensité adaptative** : `music(thème, niveau)` reçoit le niveau de restauration du monde (plus de couches quand l'île se rallume). Les effets de combat augmentent une « tension » (0..1, retombe en ~8 s) qui ajoute percussions, basses et mélodie à n'importe quel thème, sans appel supplémentaire.
+- **Bruitages** (~115 noms) : pas par sol (herbe, pierre, bois, eau, verre, terre), saut/atterrissage, armes (lame, lourde, distance, magie), coups et parades, mort, coffres/portes/clés/barrières, interface, **blips de voix** propres à chaque PNJ (hauteur, timbre et filtre dérivés de son identifiant ; la musique baisse un peu pendant qu'il parle), grappin, voyage (portail, barque, cristal), quêtes, niveau, achat/vente.
+- **Notes des couleurs** : r = Do, g = Mi, b = Sol (cloches). Les mélanges jouent leurs composantes : jaune = Do+Mi, magenta = Do+Sol, cyan = Mi+Sol, blanc = l'accord complet. Le son du mélangeur et des récepteurs est donc *lisible à l'oreille*.
+- **Ambiances** : vent, eau, brume, résonance du temple, feu, insectes en continu ; oiseaux, gouttes, craquements, pluie de verre et cloches lointaines en événements aléatoires, panoramiqués. Elles suivent le thème automatiquement ; oiseaux et insectes se multiplient quand le monde se rallume. `audio.ambience({fire: .8})` ajoute une couche locale.
+- **Spatialisation simple** : `audio.listener(x, z, yaw)` + `sfx(nom, {x, z})` donne panoramique et atténuation par la distance.
+- **Limites actuelles** : pas de réverbération par pièce (un seul espace partagé), pas de sons de météo dynamique, la voix des PNJ est un « blip » (pas de syllabes).
 
 ## 13. Accessibilité
 - Les couleurs sont toujours doublées d'un symbole : rouge ▲, vert ●, bleu ■, sur les cristaux et dans les faisceaux (option « symboles »).
@@ -336,3 +385,6 @@ Le vérificateur essaie toutes les combinaisons d'orientations de chaque zone et
 - 60 images par seconde sur PC.
 - Les textes sont relus.
 - La sauvegarde fonctionne entre deux appareils.
+
+## Acte II partie 2 (implémenté)
+Canopée (can1..can4) : vides franchis par paires de poteaux de grappin (portée 9 cases, objet `grappin` obtenu chez Silex avec 5 éclats). Phare de Verre : balise y+m+c, trois salles, deux portes d'étape, solution unique vérifiée par force brute ; fin d'acte II générique. Quêtes : q_phare_verre, s_lampions_f, s_colis, s_graines.

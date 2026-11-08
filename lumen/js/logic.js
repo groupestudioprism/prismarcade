@@ -34,7 +34,7 @@ export function filterColor(beam, glass) {
 /* Terrain : '.' herbe · ',' chemin · '#' roche / mur · 'T' arbre · 'H' bâtiment ou décor · '~' eau
    'r' ronces (coupées par une lame) · 'c' roche fissurée (brisée au marteau) · 'x' porte · '=' pont */
 export const BLOCK_TERRAIN = new Set(['#', 'T', 'H', '~', 'r', 'c']);
-const BLOCKING_ENTS = new Set(['lantern', 'mirror', 'prism', 'receiver', 'beacon', 'relay', 'vitrail']);
+const BLOCKING_ENTS = new Set(['lantern', 'mirror', 'prism', 'receiver', 'beacon', 'relay', 'vitrail', 'post']);
 const PICKUPS = new Set(['shard', 'page', 'wisp', 'start']);
 
 /* Assemble les zones d'une île en une seule grille. */
@@ -202,10 +202,13 @@ export function traceAll(isl) {
   return res;
 }
 
+/* Couleurs qu'une balise doit recevoir en même temps (phare de l'Aube : r, g, b · Phare de Verre : y, m, c) */
+export const beaconNeed = (e) => e.need || ['r', 'g', 'b'];
+
 export function isLit(e, hits) {
   const h = hits[e.id];
   if (!h) return false;
-  if (e.t === 'beacon') return h.has('r') && h.has('g') && h.has('b');
+  if (e.t === 'beacon') return beaconNeed(e).every((c) => h.has(c));
   if (e.t === 'relay') return h.size > 0;
   return h.has(e.color || 'w');
 }
@@ -237,4 +240,57 @@ export function escapes(isl, segs) {
     const r = isl.zoneRects[zi];
     return sg.x1 < r.x0 - 0.01 || sg.x1 > r.x1 + 0.01 || sg.y1 < r.y0 - 0.01 || sg.y1 > r.y1 + 0.01;
   });
+}
+
+
+/* =========================================================
+   Grappin de lumière (Forêt de Verre, Canopée)
+   Un poteau (« post ») se relie en ligne droite à un autre poteau, de l'autre côté d'un vide
+   (case vide, eau ou pont encore éteint). Lyra se tient à côté du poteau, tournée vers l'autre,
+   et atterrit juste derrière le poteau d'arrivée.
+   ========================================================= */
+export const POST_RANGE = 9;
+const WALLS_FOR_ROPE = new Set(['#', 'T', 'H', 'c', 'r']);
+export function postLinks(isl, post) {
+  const out = [];
+  for (const d of ORDER) {
+    const [dx, dy] = DIRS[d];
+    let gap = 0;
+    for (let k = 1; k <= POST_RANGE; k++) {
+      const x = post.x + dx * k, y = post.y + dy * k;
+      if (x < 0 || y < 0 || x >= isl.w || y >= isl.h) break;
+      const t = isl.terrain[y][x];
+      if (WALLS_FOR_ROPE.has(t)) break;
+      if (t === 'x' && !(isl.gates[isl.gateCell[x + ',' + y]] || {}).open) break;
+      const e = isl.entAt[x + ',' + y];
+      if (e && e.t === 'post') {
+        const land = [x + dx, y + dy];
+        if (gap > 0 && walkable(isl, land[0], land[1])) out.push({ dir: d, to: e, land, gap, from: post });
+        break;
+      }
+      if (e && BLOCKING_ENTS.has(e.t)) break;
+      if (t === ' ' || t === '~' || (t === '=' && !(isl.gates[isl.gateCell[x + ',' + y]] || {}).open)) gap++;
+    }
+  }
+  return out;
+}
+
+/* Cases accessibles à pied depuis « starts », grappin compris (utilisé par les outils de vérification).
+   Les ronces et roches fissurées sont considérées comme franchissables si opts.cut est vrai. */
+export function reachCells(isl, starts, opts = {}) {
+  const ok = (x, y) => walkable(isl, x, y) || (opts.cut && ['r', 'c'].includes((isl.terrain[y] || [])[x]));
+  const seen = new Set(), q = [];
+  starts.forEach(([x, y]) => { seen.add(x + ',' + y); q.push([x, y]); });
+  const posts = isl.ents.filter((e) => e.t === 'post');
+  const linksOf = new Map(posts.map((p) => [p, opts.posts === false ? [] : postLinks(isl, p)]));
+  while (q.length) {
+    const [x, y] = q.shift();
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const nx = x + dx, ny = y + dy, k = nx + ',' + ny;
+      if (!seen.has(k) && ok(nx, ny)) { seen.add(k); q.push([nx, ny]); }
+      const p = isl.entAt[k];
+      if (p && p.t === 'post') for (const l of linksOf.get(p) || []) { const lk = l.land.join(','); if (!seen.has(lk)) { seen.add(lk); q.push(l.land); } }
+    }
+  }
+  return seen;
 }

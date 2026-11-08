@@ -176,7 +176,7 @@ export function createCombat(G) {
       if (t === 'r') { if (w && w.cuts) G.onCut(x, y); else if (!o.quiet) { G.hintOnce('ronces', 'Ces ronces sont trop épaisses pour un bâton. Il faudrait une vraie lame.'); } }
       if (t === 'c') { if (w && w.breaks) G.onBreak(x, y); else if (!o.quiet) G.hintOnce('fissure', 'La roche est fissurée… un coup très lourd pourrait la briser.'); }
     });
-    G.audio.sfx(heavy ? 'swingHeavy' : 'swing');
+    G.audio.sfx('swing', { weapon: w ? w.wclass : 'lame' });
     if (heavy) { ringFx(P.x + Math.sin(P.face) * 1.6, P.z + Math.cos(P.face) * 1.6, 2.4, '#ffd7a0', 0.4); G.shake(0.25); }
     return hits;
   }
@@ -237,7 +237,7 @@ export function createCombat(G) {
     const faceTo = (a, k = 10) => { e.face += angleTo(e.face, a) * damp(k, dt); };
     if (e.state === 'dead') {
       const k = e.t / 0.6;
-      e.view.root.scale.setScalar(Math.max(0.01, 1 - k)); e.view.root.position.y = k * 0.6;
+      anim = { move: 0, dead: Math.min(1, k) }; e.view.animate(dt, anim);
       if (k >= 1) { group.remove(e.view.root); return false; }
       return true;
     }
@@ -342,7 +342,7 @@ export function createCombat(G) {
   /* ---------- Le Colosse de Brume ---------- */
   function updateBoss(e, dt, dist, toP, anim, faceTo) {
     const P = G.P, d = e.def;
-    if (e.hp < e.maxHp * 0.5 && e.phase === 1) { e.phase = 2; G.audio.sfx('roar'); G.shake(0.5); G.ui.toast('⚠', 'Le Colosse s’enrage !', 'Ses attaques s’accélèrent.'); spawnAdds(2); }
+    if (e.hp < e.maxHp * 0.5 && e.phase === 1) { e.phase = 2; G.audio.sfx('roar'); if (G.audio.bossPhase) G.audio.bossPhase(2); G.shake(0.5); G.ui.toast('⚠', 'Le Colosse s’enrage !', 'Ses attaques s’accélèrent.'); spawnAdds(2); }
     const fast = e.phase === 2 ? 0.75 : 1;
     switch (e.state) {
       case 'idle':
