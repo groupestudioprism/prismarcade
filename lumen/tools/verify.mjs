@@ -3,8 +3,8 @@
    node tools/verify.mjs
    ========================================================= */
 import { ISLANDS } from '../js/levels.js';
-import { buildIsland, evaluate, walkable } from '../js/logic.js';
-import { analyse } from './generate.mjs';
+import { buildIsland, evaluate, walkable, reachCells } from '../js/logic.js';
+import { analyse, analyseStages } from './generate.mjs';
 
 let fail = 0;
 const bad = (m) => { console.log('  ✗ ' + m); fail++; };
@@ -13,6 +13,14 @@ for (const def of ISLANDS) {
   let devices = 0;
   for (const z of def.zones) {
     if (z.area && !z.ents.some((e) => e.rot)) continue;   // zone d'aventure sans énigme de lumière
+    if (z.stages) {   // énigme à plusieurs étapes (Phare de Verre)
+      const r = analyseStages({ map: z.map, ents: z.ents, doors: z.doors, entry: z.spawn }, z.stages, z.final);
+      devices += r.rots;
+      if (r.escape) bad(`${z.title} : un faisceau sort de la zone`);
+      if (r.shortcut) bad(`${z.title} : la balise peut s'allumer portes fermées`);
+      r.stages.forEach((s) => { if (!s.sols) bad(`${z.title} : étape ${s.gate} sans solution`); if (s.initialSolved) bad(`${z.title} : étape ${s.gate} déjà résolue au départ`); });
+      continue;
+    }
     const gates = [...new Set(z.ents.filter((e) => e.gate && !e.optional).map((e) => e.gate))];
     const opt = z.ents.filter((e) => e.optional).map((e) => e.gate);
     const an = analyse(z.map, z.ents, gates, { barrier: z.barrier });
@@ -28,10 +36,10 @@ for (const def of ISLANDS) {
   // ronces et roches fissurées : franchissables une fois l'arme obtenue
   for (let y = 0; y < isl.h; y++) for (let x = 0; x < isl.w; x++) if (isl.terrain[y][x] === 'r' || isl.terrain[y][x] === 'c') isl.terrain[y][x] = ',';
   const st = isl.ents.find((e) => e.t === 'start');
-  const seen = new Set([st.x + ',' + st.y]), q = [[st.x, st.y]];
-  // les intérieurs sont reliés par des portes (téléportation) : on part aussi de leur entrée
-  def.zones.filter((z) => z.interior).forEach((z) => { const k = (z.ox + z.spawn[0]) + ',' + (z.oy + z.spawn[1]); seen.add(k); q.push([z.ox + z.spawn[0], z.oy + z.spawn[1]]); });
-  while (q.length) { const [x, y] = q.shift(); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const k = (x + dx) + ',' + (y + dy); if (!seen.has(k) && walkable(isl, x + dx, y + dy)) { seen.add(k); q.push([x + dx, y + dy]); } } }
+  // les intérieurs sont reliés par des portes (téléportation) : on part aussi de leur entrée ; grappin compris
+  const starts = [[st.x, st.y]];
+  def.zones.filter((z) => z.interior).forEach((z) => starts.push([z.ox + z.spawn[0], z.oy + z.spawn[1]]));
+  const seen = reachCells(isl, starts);
   isl.ents.filter((e) => ['shard', 'page', 'wisp'].includes(e.t)).forEach((e) => { if (!seen.has(e.x + ',' + e.y)) bad(`objet ${e.t} inaccessible (${e.x}, ${e.y})`); });
   isl.ents.filter((e) => e.rot).forEach((e) => { if (![[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => seen.has((e.x + dx) + ',' + (e.y + dy)))) bad(`objet orientable hors de portée (${e.x}, ${e.y})`); });
   def.zones.forEach((z) => { if (!seen.has((z.ox + z.spawn[0]) + ',' + (z.oy + z.spawn[1]))) bad(`arrivée de ${z.title} inaccessible`); });

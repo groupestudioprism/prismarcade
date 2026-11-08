@@ -53,6 +53,8 @@ const P = {
   swords: '<path d="M4 4l11 11M20 4L9 15M13 17l4 4M11 17l-4 4M15 15l2 2M9 15l-2 2"/>',
   spark: '<path d="M12 2l2 7 7 3-7 3-2 7-2-7-7-3 7-3z" fill="currentColor" fill-opacity=".35"/>',
   dodge: '<path d="M4 16c4 0 6-8 10-8h6"/><path d="M17 5l3 3-3 3"/>',
+  hook: '<path d="M5 20l5-5"/><circle cx="12" cy="13" r="2.6"/><path d="M14 11l4-6M16 3l5 2-2 5" /><path d="M10.5 14.5L7 11" stroke-dasharray="1.5 1.8"/>',
+  seed: '<path d="M12 21c-4-2-6-6-5-11 4 0 8 2 9 6 1 3-1 5-4 5z" fill="#7fd6b4" fill-opacity=".45"/><path d="M12 21c0-5 1-8 4-11"/>',
   hand: '<path d="M8 12V5a1.5 1.5 0 0 1 3 0v6M11 10V4a1.5 1.5 0 0 1 3 0v6M14 10V5a1.5 1.5 0 0 1 3 0v8c0 4-2 8-6 8-3 0-5-2-6-5l-2-4a1.5 1.5 0 0 1 2.5-1.5L8 13"/>',
 };
 export function icon(name, cls = '') {

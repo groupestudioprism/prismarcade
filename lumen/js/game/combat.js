@@ -40,13 +40,13 @@ export function createCombat(G) {
 
   /* ---------- Variantes de couleur (Forêt de Verre) ---------- */
   const sparkCol = (def, big) => def.spark || (def.family === 'brume' ? (big ? '#d8b4fe' : '#c9b6ff') : '#b5e08a');
-  function tintView(root, hex) {
+  function tintView(root, hex, k = 0.6, ke = 0.5) {
     const tc = new THREE.Color(hex);
     root.traverse((o) => {
       if (!o.isMesh || !o.material) return;
       o.material = o.material.clone();
-      if (o.material.color) o.material.color.lerp(tc, o.material.type === 'MeshBasicMaterial' ? 0.35 : 0.6);
-      if (o.material.emissive) o.material.emissive.lerp(tc, 0.5);
+      if (o.material.color) o.material.color.lerp(tc, o.material.type === 'MeshBasicMaterial' ? Math.min(0.8, k * 0.6) : k);
+      if (o.material.emissive) o.material.emissive.lerp(tc, ke);
     });
   }
 
@@ -57,6 +57,7 @@ export function createCombat(G) {
       for (let k = 0; k < (sp.n || 1); k++) {
         const key = `${z.id}:${si}:${k}`;
         if (enemies.some((e) => e.key === key)) continue;
+        if (sp.room && G.isGateOpen(sp.room)) continue;                 // salle déjà libérée : elle le reste
         if (G.st.world.killed[key]) continue;                         // élite ou boss vaincu pour de bon
         if (deadAt[key] && clock - deadAt[key] < 90) continue;          // réapparition après un moment
         const def = ENEMIES[sp.type];
@@ -65,7 +66,7 @@ export function createCombat(G) {
         let cx = sp.x + (sp.n > 1 ? Math.cos(a) * 1.2 : 0), cy = sp.y + (sp.n > 1 ? Math.sin(a) * 1.2 : 0);
         const x = W(z.ox + cx), zz = W(z.oy + cy);
         const view = CREATURES[def.model || sp.type](def.tint);
-        if (def.tint && def.model !== 'colosse') tintView(view.root, def.tint);
+        if (def.tint && def.model !== 'colosse') tintView(view.root, def.tint, def.tintK, def.tintE);
         view.root.position.set(x, 0, zz);
         add(view.root);
         const hp = Math.round(def.hp * (sp.elite ? 1.2 : 1));
@@ -85,6 +86,7 @@ export function createCombat(G) {
   /* ---------- Dégâts ---------- */
   function dealDamage(e, base, dtype, opts = {}) {
     if (e.state === 'dead') return 0;
+    if (e.boss && e.state === 'intro') return 0; /* QA-VISUEL : invulnérable pendant l'annonce du boss */
     const P = G.P;
     // bouclier : de face, sauf arme lourde ou onde
     if (e.def.shield && !opts.heavy && !opts.onde && e.state !== 'stun' && e.state !== 'attack') {
@@ -176,7 +178,7 @@ export function createCombat(G) {
       if (t === 'r') { if (w && w.cuts) G.onCut(x, y); else if (!o.quiet) { G.hintOnce('ronces', 'Ces ronces sont trop épaisses pour un bâton. Il faudrait une vraie lame.'); } }
       if (t === 'c') { if (w && w.breaks) G.onBreak(x, y); else if (!o.quiet) G.hintOnce('fissure', 'La roche est fissurée… un coup très lourd pourrait la briser.'); }
     });
-    G.audio.sfx(heavy ? 'swingHeavy' : 'swing');
+    G.audio.sfx('swing', { weapon: w ? w.wclass : 'lame' });
     if (heavy) { ringFx(P.x + Math.sin(P.face) * 1.6, P.z + Math.cos(P.face) * 1.6, 2.4, '#ffd7a0', 0.4); G.shake(0.25); }
     return hits;
   }
@@ -237,7 +239,7 @@ export function createCombat(G) {
     const faceTo = (a, k = 10) => { e.face += angleTo(e.face, a) * damp(k, dt); };
     if (e.state === 'dead') {
       const k = e.t / 0.6;
-      e.view.root.scale.setScalar(Math.max(0.01, 1 - k)); e.view.root.position.y = k * 0.6;
+      anim = { move: 0, dead: Math.min(1, k) }; e.view.animate(dt, anim);
       if (k >= 1) { group.remove(e.view.root); return false; }
       return true;
     }
@@ -342,7 +344,7 @@ export function createCombat(G) {
   /* ---------- Le Colosse de Brume ---------- */
   function updateBoss(e, dt, dist, toP, anim, faceTo) {
     const P = G.P, d = e.def;
-    if (e.hp < e.maxHp * 0.5 && e.phase === 1) { e.phase = 2; G.audio.sfx('roar'); G.shake(0.5); G.ui.toast('⚠', 'Le Colosse s’enrage !', 'Ses attaques s’accélèrent.'); spawnAdds(2); }
+    if (e.hp < e.maxHp * 0.5 && e.phase === 1) { e.phase = 2; G.audio.sfx('roar'); if (G.audio.bossPhase) G.audio.bossPhase(2); G.shake(0.5); G.ui.toast('⚠', 'Le Colosse s’enrage !', 'Ses attaques s’accélèrent.'); spawnAdds(2); }
     const fast = e.phase === 2 ? 0.75 : 1;
     switch (e.state) {
       case 'idle':

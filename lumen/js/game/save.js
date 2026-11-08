@@ -56,9 +56,10 @@ export const saves = {
     const list = await this.list();
     const m = list[slot];
     if (!m) return null;
-    if (m.where === 'cloud' && m._data) { try { return normalize(JSON.parse(m._data)); } catch (e) { return null; } }
+    const usable = (d) => !!d && typeof d === 'object' && !Array.isArray(d) && !!d.player && typeof d.player === 'object';   // une sauvegarde sans joueur n'est pas une sauvegarde
+    if (m.where === 'cloud' && m._data) { try { const d = JSON.parse(m._data); return usable(d) ? normalize(d) : null; } catch (e) { return null; } }
     const l = store.get(localKey(slot));
-    return l ? normalize(l.data) : null;
+    return l && usable(l.data) ? normalize(l.data) : null;
   },
   /* la sauvegarde la plus récente, tous emplacements confondus */
   async latest() {

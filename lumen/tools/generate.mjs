@@ -9,7 +9,7 @@
      - tout est accessible à pied depuis l'entrée.
    Le résultat est déterministe (graine) : on peut le régénérer à l'identique.
    ========================================================= */
-import { buildIsland, evaluate, walkable, ORDER, DIRS } from '../js/logic.js';
+import { buildIsland, evaluate, walkable, reachCells, ORDER, DIRS } from '../js/logic.js';
 
 export function rng(seed) {
   let a = seed >>> 0;
@@ -64,7 +64,7 @@ function attempt(spec, seed) {
   const beamCells = new Set();     // cases traversées par la solution
   (spec.ents || []).forEach((e) => used.set(e.x + ',' + e.y, e));
   const freeForDevice = (x, y) => x > 0 && y > 0 && x < w - 1 && y < h - 1 && cell(x, y) === '.' && !used.has(x + ',' + y) && !tpl.protect.has(x + ',' + y);
-  const passable = (x, y) => x > 0 && y > 0 && x < w - 1 && y < h - 1 && cell(x, y) === '.' && !used.has(x + ',' + y);
+  const passable = (x, y) => x > 0 && y > 0 && x < w - 1 && y < h - 1 && (cell(x, y) === '.' || cell(x, y) === ' ') && !used.has(x + ',' + y);   // un faisceau traverse aussi les vides (Canopée)
   const ents = (spec.ents || []).map((e) => Object.assign({}, e));
   const pathDevices = [];
   const add = (e, onPath) => { ents.push(e); used.set(e.x + ',' + e.y, e); if (onPath) pathDevices.push(e); return e; };
@@ -79,11 +79,12 @@ function attempt(spec, seed) {
     return [x, y];
   };
   /* Trajet : turns virages (miroirs ou relais), puis une cible. */
+  const maxLen = spec.maxLen || 4;   // longueur maximale d'un tronçon (plus long pour franchir un vide)
   const walk = (x, y, d, turns, relayAt = []) => {
     for (let i = 0; i < turns; i++) {
       let ok = false;
       for (let tries = 0; tries < 12 && !ok; tries++) {
-        const len = 1 + Math.floor(R() * 4);
+        const len = 1 + Math.floor(R() * maxLen);
         const p = advance(x, y, d, len);
         if (!p || !freeForDevice(p[0], p[1])) continue;
         if (relayAt.includes(i)) {
@@ -104,7 +105,7 @@ function attempt(spec, seed) {
   };
   const target = (x, y, d, color, gate) => {
     for (let tries = 0; tries < 10; tries++) {
-      const len = 1 + Math.floor(R() * 4);
+      const len = 1 + Math.floor(R() * maxLen);
       const p = advance(x, y, d, len);
       if (p && freeForDevice(p[0], p[1])) return add({ t: 'receiver', x: p[0], y: p[1], color, gate }, false);
     }
@@ -202,19 +203,11 @@ export function analyse(rows, ents, gates, opts = {}) {
   return { isl, rots, total, sols, escape, initialSolved, reached, set, states, lit0: r0 };
 }
 
-/* Accessibilité à pied depuis l'entrée (toutes portes ouvertes) */
+/* Accessibilité à pied depuis l'entrée (toutes portes ouvertes ; poteaux de grappin compris) */
 export function reach(rows, ents, from, barrier) {
   const isl = buildIsland({ zones: [{ ox: 0, oy: 0, map: rows, ents, barrier }], bridges: [] });
   Object.values(isl.gates).forEach((g) => (g.open = true));
-  const seen = new Set([from[0] + ',' + from[1]]), q = [from];
-  while (q.length) {
-    const [x, y] = q.shift();
-    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-      const nx = x + dx, ny = y + dy, k = nx + ',' + ny;
-      if (!seen.has(k) && walkable(isl, nx, ny)) { seen.add(k); q.push([nx, ny]); }
-    }
-  }
-  return seen;
+  return reachCells(isl, [from]);
 }
 
 /* ---------- Génération avec contrôle qualité ---------- */
@@ -277,10 +270,76 @@ export function generate(spec, { seed = 1, maxTries = 4000, log = false } = {}) 
     if (!(spec.exits || []).every(([x, y]) => seen.has(x + ',' + y))) continue;
     if (!ents.filter((e) => e.rot).every(near)) continue;
     if (!(spec.mustReach || []).every(([x, y]) => seen.has(x + ',' + y))) continue;
+    // le trajet doit passer des deux côtés d'un vide (la salle impose alors de franchir le grappin)
+    if (spec.span) { const side = (e) => (spec.span.axis === 'x' ? e.x : e.y) < spec.span.at; const pd = ents.filter((e) => pathDevices.includes(e) && e.rot); if (!(pd.some(side) && pd.some((e) => !side(e)))) continue; }
     const final = analyse(rows, ents, [spec.gate], { barrier: spec.barrier });
     const clean = ents.map((e) => { const o = Object.assign({}, e); delete o._sol; return o; });
     if (log) console.log(`  graine ${s} : ${final.total} combinaisons, ${final.sols.length} solution(s)`);
     return { seed: s, map: rows, ents: clean, stats: { combos: final.total, solutions: final.sols.length, devices: ents.filter((e) => e.rot).length, path: pathDevices.length } };
   }
   throw new Error('Aucune énigme valide trouvée pour ' + JSON.stringify(spec).slice(0, 120));
+}
+
+/* =========================================================
+   Énigme à plusieurs étapes (Phare de Verre) : des portes (stages) qui s'ouvrent l'une après l'autre,
+   puis la balise (gate finale). Vérification par force brute, étape par étape, comme un joueur :
+   - à l'étape i, seuls les objets ACCESSIBLES (portes précédentes ouvertes) peuvent être tournés,
+     les autres restent dans leur état initial ; une porte ouverte le reste ;
+   - chaque étape doit avoir au moins une solution et ne pas être résolue au départ ;
+   - la balise doit avoir au moins une solution portes ouvertes, et ne jamais s'allumer portes fermées ;
+   - aucun faisceau ne doit jamais sortir de la zone (toutes combinaisons, toutes portes).
+   zone = { map, ents, doors, entry } ; stages = [ids de portes dans l'ordre] ; final = id de la porte finale.
+   ========================================================= */
+export function analyseStages(zone, stages, final) {
+  const z = { ox: 0, oy: 0, map: zone.map, ents: zone.ents.map((e) => Object.assign({}, e)), doors: zone.doors || [], barrier: zone.barrier };
+  const isl = buildIsland({ zones: [z], bridges: [] });
+  const rots = isl.ents.filter((e) => e.rot);
+  const states = (e) => (e.t === 'mirror' ? [0, 1] : ORDER);
+  const getv = (e) => (e.t === 'mirror' ? e.state : e.t === 'lantern' ? e.dir : e.out);
+  const setv = (e, v) => { if (e.t === 'mirror') e.state = v; else if (e.t === 'lantern') e.dir = v; else e.out = v; };
+  const init = rots.map(getv);
+  const setOpen = (open) => Object.values(isl.gates).forEach((g) => (g.open = open.has(g.id)));
+  const accessible = (open) => {
+    setOpen(open);
+    const seen = reachCells(isl, [zone.entry]);
+    return rots.map((e) => [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => seen.has((e.x + dx) + ',' + (e.y + dy))));
+  };
+  const report = { stages: [], escape: false, total: rots.reduce((a, e) => a * states(e).length, 1), rots: rots.length };
+  /* énumère les combinaisons des objets d'indices idx (les autres restent à l'état initial) */
+  const enumerate = (idx, open, wanted, fn) => {
+    const sizes = idx.map((i) => states(rots[i]).length);
+    const tot = sizes.reduce((a, b) => a * b, 1);
+    for (let n = 0; n < tot; n++) {
+      rots.forEach((e, i) => setv(e, init[i]));
+      let k = n; idx.forEach((i, j) => { setv(rots[i], states(rots[i])[k % sizes[j]]); k = Math.floor(k / sizes[j]); });
+      setOpen(open);
+      const r = evaluate(isl);
+      if (r.segs.some((s) => s.open)) report.escape = true;
+      if (wanted.every((g) => isl.gates[g].open)) fn(n);
+    }
+    rots.forEach((e, i) => setv(e, init[i]));
+  };
+  const open = new Set();
+  const seq = stages.concat([final]);
+  seq.forEach((gid, si) => {
+    const acc = accessible(open);
+    const idx = rots.map((_, i) => i).filter((i) => acc[i]);
+    // état de départ : rien n'est résolu
+    rots.forEach((e, i) => setv(e, init[i])); setOpen(open); evaluate(isl);
+    const initialSolved = isl.gates[gid].open;
+    let sols = 0;
+    enumerate(idx, open, [gid], () => sols++);
+    report.stages.push({ gate: gid, accessible: idx.length, combos: idx.reduce((a, i) => a * states(rots[i]).length, 1), sols, initialSolved });
+    open.add(gid);
+  });
+  // la balise ne doit jamais s'allumer si une porte reste fermée (aucun raccourci)
+  report.shortcut = false;
+  for (let k = 0; k < stages.length; k++) {
+    const op = new Set(stages.slice(0, k)); const all = rots.map((_, i) => i);
+    enumerate(all, op, [final], () => { report.shortcut = true; });
+  }
+  // fuites : toutes combinaisons, avec chaque préfixe de portes ouvertes
+  for (let k = 0; k <= stages.length; k++) enumerate(rots.map((_, i) => i), new Set(stages.slice(0, k)), [], () => {});
+  report.ok = !report.escape && !report.shortcut && report.stages.every((s) => s.sols > 0 && !s.initialSolved);
+  return report;
 }

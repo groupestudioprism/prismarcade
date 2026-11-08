@@ -53,9 +53,35 @@ export default {
     "temple"
    ],
    "area": true
+  },
+  "canopee": {
+   "name": "La Canopée",
+   "zones": [
+    "can1",
+    "can2",
+    "can3",
+    "can4"
+   ]
+  },
+  "phare": {
+   "name": "Le Phare de Verre",
+   "zones": [
+    "phare_f"
+   ]
   }
  },
- "pages": {},
+ "pages": {
+  "orin5": {
+   "title": "Journal d’Orin — V",
+   "text": "Dans la forêt, j’ai compris pourquoi le vert ne suffit pas. Le jaune, le magenta et le cyan n’existent qu’à deux : ce sont des lumières qui se tiennent par la main. Le Phare de Verre est bâti sur cette idée. Il ne s’allume que si trois lumières différentes acceptent de brûler ensemble. J’aurais dû m’en souvenir, plus tard, quand j’ai voulu tout éclairer d’un seul feu."
+  }
+ },
+ "stageGates": [
+  "fc0",
+  "ph_d1",
+  "ph_d2"
+ ],
+ "endTitle": "Le Phare de Verre brille",
  "wisp": {
   "name": "Lueur de verre",
   "text": "Une Lueur transparente flotte entre les troncs."
@@ -1236,11 +1262,12 @@ export default {
     "#.........#",
     "#.T.....T.#",
     "#.........#",
-    "###########"
+    "#####.#####"
    ],
    "ents": [],
    "area": true,
-   "theme": "foret",
+   "theme": "canopee",
+   "music": "canopee",
    "props": [
     {
      "t": "sign",
@@ -1248,7 +1275,7 @@ export default {
      "y": 3,
      "w": 1,
      "h": 1,
-     "text": "Ici s’élèvera le Phare de Verre. Ambre dit qu’il lui manque encore trois couleurs…"
+     "text": "Le Phare de Verre se dresse au bout de la Canopée, tout là-haut. Il lui faut le jaune, le magenta et le cyan, ensemble. Au sud, un pont de lumière attend celui qui saura grimper."
     }
    ],
    "chests": [
@@ -1275,6 +1302,811 @@ export default {
     "y": 5,
     "name": "Cristal du Belvédère"
    }
+  },
+  {
+   "id": "can1",
+   "region": "canopee",
+   "title": "Les Branches basses",
+   "num": 0,
+   "secret": false,
+   "ox": 78,
+   "oy": 16,
+   "spawn": [
+    8,
+    2
+   ],
+   "entryGate": "b_canopee",
+   "hint": "Grappin de lumière : tiens-toi à côté d’un poteau, tourné vers le poteau d’en face, puis appuie sur E. Le câble fait le reste.",
+   "map": [
+    "########.#    #######",
+    "#T...T....    ......#",
+    "#.........    ......#",
+    "#.........    ......#",
+    "#.........    ......#",
+    "#.........    ......#",
+    "#.........    .......",
+    "#.........    ......#",
+    "#.........    ......#",
+    "#.........    ......#",
+    "#.........    ......#",
+    "#T........    .T..T.#",
+    "##########    #######"
+   ],
+   "ents": [
+    {
+     "t": "post",
+     "x": 9,
+     "y": 6
+    },
+    {
+     "t": "post",
+     "x": 14,
+     "y": 6
+    },
+    {
+     "t": "lantern",
+     "x": 16,
+     "y": 9,
+     "dir": "W",
+     "rot": true
+    },
+    {
+     "t": "mirror",
+     "x": 16,
+     "y": 3,
+     "state": 1,
+     "rot": true
+    },
+    {
+     "t": "receiver",
+     "x": 18,
+     "y": 3,
+     "color": "w",
+     "gate": "fc0"
+    }
+   ],
+   "area": true,
+   "theme": "canopee",
+   "music": "canopee",
+   "props": [
+    {
+     "t": "sign",
+     "x": 6,
+     "y": 5,
+     "w": 1,
+     "h": 1,
+     "text": "Les Branches basses. Les poteaux de verre s’accrochent deux par deux, de part et d’autre d’un vide. Place-toi devant le tien, face à l’autre, et lance le grappin."
+    },
+    {
+     "t": "sign",
+     "x": 16,
+     "y": 5,
+     "w": 1,
+     "h": 1,
+     "text": "Un cristal dort sur cette branche. Une lanterne, un miroir : tu connais la musique. Le pont des Feuilles s’ouvrira quand il brillera."
+    },
+    {
+     "t": "crystal",
+     "x": 3,
+     "y": 3,
+     "w": 1,
+     "h": 1
+    }
+   ],
+   "chests": [
+    {
+     "id": "ch_can_b",
+     "x": 19,
+     "y": 10,
+     "item": "grande_potion",
+     "n": 1
+    }
+   ],
+   "pickups": [
+    {
+     "t": "item",
+     "id": "graine1",
+     "item": "graine_canopee",
+     "x": 19,
+     "y": 1
+    }
+   ],
+   "spawns": [
+    {
+     "type": "eclat_ambre",
+     "x": 5,
+     "y": 8,
+     "n": 2
+    },
+    {
+     "type": "eclat",
+     "x": 3,
+     "y": 9,
+     "n": 1
+    }
+   ],
+   "warp": {
+    "id": "canopee",
+    "x": 3,
+    "y": 3,
+    "name": "Cristal de la Canopée"
+   },
+   "respawn": true
+  },
+  {
+   "id": "can2",
+   "region": "canopee",
+   "title": "Les Feuilles de lumière",
+   "num": 4,
+   "secret": false,
+   "ox": 102,
+   "oy": 17,
+   "spawn": [
+    0,
+    5
+   ],
+   "entryGate": "fc0",
+   "hint": "Le vide sépare deux rives. Les poteaux se relient d’un bord à l’autre : tourne ce qu’il faut des deux côtés.",
+   "seed": 2112,
+   "map": [
+    "###############",
+    "#.....   .....#",
+    "#.....   .....#",
+    "#.....   .....#",
+    "#.....   .....#",
+    "......   ......",
+    "#.....   .....#",
+    "#.....   .....#",
+    "#.....   .....#",
+    "#.....   .....#",
+    "###############"
+   ],
+   "ents": [
+    {
+     "t": "post",
+     "x": 5,
+     "y": 5
+    },
+    {
+     "t": "post",
+     "x": 9,
+     "y": 5
+    },
+    {
+     "t": "lantern",
+     "x": 4,
+     "y": 4,
+     "dir": "E",
+     "rot": true
+    },
+    {
+     "t": "mirror",
+     "x": 4,
+     "y": 8,
+     "state": 0,
+     "rot": true
+    },
+    {
+     "t": "mirror",
+     "x": 5,
+     "y": 8,
+     "state": 1,
+     "rot": true
+    },
+    {
+     "t": "mirror",
+     "x": 5,
+     "y": 7,
+     "state": 1,
+     "rot": true
+    },
+    {
+     "t": "mirror",
+     "x": 9,
+     "y": 7,
+     "state": 1,
+     "rot": true
+    },
+    {
+     "t": "receiver",
+     "x": 9,
+     "y": 9,
+     "color": "w",
+     "gate": "fc1"
+    },
+    {
+     "t": "mirror",
+     "x": 12,
+     "y": 3,
+     "state": 0,
+     "rot": true
+    },
+    {
+     "t": "mirror",
+     "x": 3,
+     "y": 4,
+     "state": 1,
+     "rot": true
+    },
+    {
+     "t": "shard",
+     "x": 13,
+     "y": 9
+    }
+   ],
+   "theme": "canopee",
+   "music": "canopee"
+  },
+  {
+   "id": "can3",
+   "region": "canopee",
+   "title": "La Passerelle des Sentinelles",
+   "num": 0,
+   "secret": false,
+   "ox": 120,
+   "oy": 14,
+   "spawn": [
+    1,
+    8
+   ],
+   "entryGate": "fc1",
+   "hint": "La salle de l’autre côté du vide est gardée. Tant que ses gardiens vivent, le sceau reste fermé.",
+   "map": [
+    "########                ",
+    "#......#                ",
+    "#......#  ########      ",
+    "          .#...###      ",
+    "          ......##      ",
+    "#......   ......##      ",
+    "#T.....   ......##   ###",
+    "#......   ......x.   ..#",
+    ".......   ...#..x.   ..x",
+    "#......   ......x.   ..#",
+    "#......   ......##   ###",
+    "#T...T.   ......##      ",
+    "#######   ......##      ",
+    "          .#...###      ",
+    "          ########      ",
+    "                        "
+   ],
+   "ents": [
+    {
+     "t": "post",
+     "x": 6,
+     "y": 8
+    },
+    {
+     "t": "post",
+     "x": 10,
+     "y": 8
+    },
+    {
+     "t": "post",
+     "x": 17,
+     "y": 8
+    },
+    {
+     "t": "post",
+     "x": 21,
+     "y": 8
+    },
+    {
+     "t": "post",
+     "x": 3,
+     "y": 5
+    },
+    {
+     "t": "post",
+     "x": 3,
+     "y": 2
+    }
+   ],
+   "area": true,
+   "theme": "canopee",
+   "music": "canopee",
+   "props": [
+    {
+     "t": "sign",
+     "x": 5,
+     "y": 7,
+     "w": 1,
+     "h": 1,
+     "text": "La Passerelle des Sentinelles. Les gardiens de l’arène ne traversent pas le vide : le grappin, lui, si."
+    },
+    {
+     "t": "brazier",
+     "x": 4,
+     "y": 6,
+     "w": 1,
+     "h": 1
+    },
+    {
+     "t": "brazier",
+     "x": 4,
+     "y": 10,
+     "w": 1,
+     "h": 1
+    },
+    {
+     "t": "crystal",
+     "x": 20,
+     "y": 13,
+     "w": 1,
+     "h": 1
+    }
+   ],
+   "chests": [
+    {
+     "id": "ch_can_p1",
+     "x": 2,
+     "y": 10,
+     "item": "anneau_canopee",
+     "n": 1
+    },
+    {
+     "id": "ch_can_arene",
+     "x": 14,
+     "y": 12,
+     "ecus": 120,
+     "item": "sceptre",
+     "n": 1
+    },
+    {
+     "id": "ch_can_niche",
+     "x": 5,
+     "y": 1,
+     "item": "fragment_coeur",
+     "n": 1
+    }
+   ],
+   "pickups": [
+    {
+     "t": "item",
+     "id": "graine2",
+     "item": "graine_canopee",
+     "x": 2,
+     "y": 7
+    },
+    {
+     "t": "item",
+     "id": "graine3",
+     "item": "graine_canopee",
+     "x": 23,
+     "y": 7
+    },
+    {
+     "t": "page",
+     "id": "pg_niche",
+     "page": "orin5",
+     "x": 2,
+     "y": 1
+    }
+   ],
+   "spawns": [
+    {
+     "type": "eclat_ambre",
+     "x": 12,
+     "y": 5,
+     "n": 3,
+     "room": "cn_combat"
+    },
+    {
+     "type": "lierre",
+     "x": 14,
+     "y": 4,
+     "n": 1,
+     "room": "cn_combat"
+    },
+    {
+     "type": "cerf_prisme",
+     "x": 12,
+     "y": 11,
+     "n": 1,
+     "room": "cn_combat"
+    },
+    {
+     "type": "sentinelle_azur",
+     "x": 14,
+     "y": 8,
+     "n": 1,
+     "room": "cn_combat",
+     "elite": true
+    }
+   ],
+   "doors": [
+    {
+     "gate": "cn_combat",
+     "look": "seal",
+     "cells": [
+      [
+       16,
+       7
+      ],
+      [
+       16,
+       8
+      ],
+      [
+       16,
+       9
+      ],
+      [
+       23,
+       8
+      ]
+     ]
+    }
+   ],
+   "combatRooms": [
+    {
+     "gate": "cn_combat",
+     "rect": [
+      10,
+      3,
+      15,
+      13
+     ]
+    }
+   ],
+   "respawn": true
+  },
+  {
+   "id": "can4",
+   "region": "canopee",
+   "title": "Le Nid de lumière",
+   "num": 5,
+   "secret": false,
+   "ox": 144,
+   "oy": 17,
+   "spawn": [
+    0,
+    5
+   ],
+   "entryGate": "cn_combat",
+   "hint": "Un prisme, trois cristaux, et un vide au milieu. Les deux paires de poteaux sont à toi.",
+   "seed": 3102,
+   "map": [
+    "###############",
+    "#.....  ......#",
+    "#.....  ......#",
+    "#.....  ......#",
+    "#.....  ......#",
+    "......  .......",
+    "#.....  ......#",
+    "#.....  ......#",
+    "#.....  ......#",
+    "#.....  ......#",
+    "###############"
+   ],
+   "ents": [
+    {
+     "t": "post",
+     "x": 5,
+     "y": 3
+    },
+    {
+     "t": "post",
+     "x": 8,
+     "y": 3
+    },
+    {
+     "t": "post",
+     "x": 5,
+     "y": 8
+    },
+    {
+     "t": "post",
+     "x": 8,
+     "y": 8
+    },
+    {
+     "t": "lantern",
+     "x": 8,
+     "y": 6,
+     "dir": "E",
+     "rot": true
+    },
+    {
+     "t": "mirror",
+     "x": 4,
+     "y": 6,
+     "state": 0,
+     "rot": true
+    },
+    {
+     "t": "prism",
+     "x": 4,
+     "y": 7
+    },
+    {
+     "t": "mirror",
+     "x": 9,
+     "y": 7,
+     "state": 0,
+     "rot": true
+    },
+    {
+     "t": "receiver",
+     "x": 9,
+     "y": 4,
+     "color": "r",
+     "gate": "fc2"
+    },
+    {
+     "t": "mirror",
+     "x": 4,
+     "y": 9,
+     "state": 0,
+     "rot": true
+    },
+    {
+     "t": "receiver",
+     "x": 10,
+     "y": 9,
+     "color": "g",
+     "gate": "fc2"
+    },
+    {
+     "t": "mirror",
+     "x": 1,
+     "y": 7,
+     "state": 1,
+     "rot": true
+    },
+    {
+     "t": "receiver",
+     "x": 1,
+     "y": 8,
+     "color": "b",
+     "gate": "fc2"
+    },
+    {
+     "t": "mirror",
+     "x": 4,
+     "y": 1,
+     "state": 0,
+     "rot": true
+    },
+    {
+     "t": "mirror",
+     "x": 13,
+     "y": 3,
+     "state": 1,
+     "rot": true
+    },
+    {
+     "t": "shard",
+     "x": 13,
+     "y": 9
+    }
+   ],
+   "theme": "canopee",
+   "music": "canopee"
+  },
+  {
+   "id": "phare_f",
+   "region": "phare",
+   "title": "Le Phare de Verre",
+   "num": 6,
+   "secret": false,
+   "ox": 162,
+   "oy": 11,
+   "spawn": [
+    0,
+    11
+   ],
+   "entryGate": "fc2",
+   "hint": "Le phare exige le jaune, le magenta et le cyan en même temps. Chaque salle donne sa couleur, mais il faudra défaire ce qui a ouvert les portes.",
+   "map": [
+    "###################",
+    "#.....#.....#.....#",
+    "#.....#.....x.....#",
+    "#.....#.....#.....#",
+    "#.....#.....#.....#",
+    "#.....#..#..#.....#",
+    "#.....x.....x.....#",
+    "#.....#.....#.....#",
+    "#.....#.....#.....#",
+    "#.....#.....#.....#",
+    "#.....#.....#.....#",
+    "......#.....#.....#",
+    "###################"
+   ],
+   "ents": [
+    {
+     "t": "beacon",
+     "x": 15,
+     "y": 6,
+     "gate": "end",
+     "need": [
+      "y",
+      "m",
+      "c"
+     ]
+    },
+    {
+     "t": "lantern",
+     "x": 1,
+     "y": 9,
+     "dir": "S",
+     "rot": true
+    },
+    {
+     "t": "mirror",
+     "x": 1,
+     "y": 6,
+     "state": 1,
+     "rot": true
+    },
+    {
+     "t": "mirror",
+     "x": 4,
+     "y": 9,
+     "state": 1,
+     "rot": true
+    },
+    {
+     "t": "vitrail",
+     "x": 3,
+     "y": 6,
+     "color": "y"
+    },
+    {
+     "t": "receiver",
+     "x": 4,
+     "y": 3,
+     "color": "w",
+     "gate": "ph_d1"
+    },
+    {
+     "t": "lantern",
+     "x": 9,
+     "y": 10,
+     "dir": "E",
+     "rot": true
+    },
+    {
+     "t": "prism",
+     "x": 9,
+     "y": 8
+    },
+    {
+     "t": "mirror",
+     "x": 7,
+     "y": 8,
+     "state": 0,
+     "rot": true
+    },
+    {
+     "t": "mirror",
+     "x": 11,
+     "y": 8,
+     "state": 1,
+     "rot": true
+    },
+    {
+     "t": "mirror",
+     "x": 7,
+     "y": 3,
+     "state": 1,
+     "rot": true
+    },
+    {
+     "t": "mirror",
+     "x": 11,
+     "y": 3,
+     "state": 0,
+     "rot": true
+    },
+    {
+     "t": "relay",
+     "x": 9,
+     "y": 3,
+     "mix": true,
+     "out": "W",
+     "rot": true
+    },
+    {
+     "t": "mirror",
+     "x": 9,
+     "y": 2,
+     "state": 1,
+     "rot": true
+    },
+    {
+     "t": "receiver",
+     "x": 7,
+     "y": 2,
+     "color": "m",
+     "gate": "ph_d2"
+    },
+    {
+     "t": "lantern",
+     "x": 13,
+     "y": 10,
+     "dir": "N",
+     "rot": true
+    },
+    {
+     "t": "vitrail",
+     "x": 14,
+     "y": 10,
+     "color": "c"
+    },
+    {
+     "t": "mirror",
+     "x": 17,
+     "y": 10,
+     "state": 1,
+     "rot": true
+    },
+    {
+     "t": "mirror",
+     "x": 17,
+     "y": 8,
+     "state": 0,
+     "rot": true
+    },
+    {
+     "t": "mirror",
+     "x": 15,
+     "y": 8,
+     "state": 0,
+     "rot": true
+    },
+    {
+     "t": "mirror",
+     "x": 15,
+     "y": 2,
+     "state": 0,
+     "rot": true
+    },
+    {
+     "t": "shard",
+     "x": 17,
+     "y": 1
+    }
+   ],
+   "theme": "phare_verre",
+   "music": "phare",
+   "doors": [
+    {
+     "gate": "ph_d1",
+     "look": "barrier",
+     "cells": [
+      [
+       6,
+       6
+      ]
+     ]
+    },
+    {
+     "gate": "ph_d2",
+     "look": "barrier",
+     "cells": [
+      [
+       12,
+       6
+      ],
+      [
+       12,
+       2
+      ]
+     ]
+    }
+   ],
+   "warp": {
+    "id": "phare",
+    "x": 3,
+    "y": 10,
+    "name": "Cristal du Phare de Verre"
+   },
+   "stages": [
+    "ph_d1",
+    "ph_d2"
+   ],
+   "final": "end",
+   "respawn": true
   }
  ],
  "bridges": [
@@ -1393,6 +2225,82 @@ export default {
     [
      17,
      55
+    ]
+   ]
+  },
+  {
+   "gate": "b_canopee",
+   "cells": [
+    [
+     86,
+     11
+    ],
+    [
+     86,
+     12
+    ],
+    [
+     86,
+     13
+    ],
+    [
+     86,
+     14
+    ],
+    [
+     86,
+     15
+    ]
+   ]
+  },
+  {
+   "gate": "fc0",
+   "cells": [
+    [
+     99,
+     22
+    ],
+    [
+     100,
+     22
+    ],
+    [
+     101,
+     22
+    ]
+   ]
+  },
+  {
+   "gate": "fc1",
+   "cells": [
+    [
+     117,
+     22
+    ],
+    [
+     118,
+     22
+    ],
+    [
+     119,
+     22
+    ]
+   ]
+  },
+  {
+   "gate": "fc2",
+   "cells": [
+    [
+     159,
+     22
+    ],
+    [
+     160,
+     22
+    ],
+    [
+     161,
+     22
     ]
    ]
   }

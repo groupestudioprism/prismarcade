@@ -45,6 +45,8 @@ export const CLOAK_COLORS = [
   { id: 'bordeaux', name: 'Bordeaux', hex: '#7d2a3a', unlock: 'teinte_bordeaux' },
   { id: 'ardoise', name: 'Ardoise', hex: '#4a5466', unlock: 'teinte_ardoise' },
   { id: 'or', name: 'Or pâle', hex: '#c99a3a', unlock: 'teinte_or' },
+  { id: 'ambre', name: 'Ambre', hex: '#d9892b', unlock: 'teinte_ambre' },
+  { id: 'turquoise', name: 'Turquoise', hex: '#2a9d8f', unlock: 'teinte_turquoise' },
 ];
 export const TRIMS = [
   { id: 'or', name: 'Or', hex: '#f0c66b' },
@@ -72,7 +74,7 @@ export const DEFAULT_LOOK = { hair: 'carre', hairColor: 'chatain', skin: 'p1', e
 export const UNLOCK_NAMES = {
   teinture_rose: 'Teinture rose aurore (cheveux)', teinture_azur: 'Teinture azur (cheveux)',
   tenue_exploratrice: 'Tenue d’exploratrice', tenue_chasseur: 'Tenue de chasseur de brume', tenue_aube: 'Robe de l’Aube', tenue_prisme: 'Étoffe prismatique',
-  teinte_pourpre: 'Teinte pourpre', teinte_emeraude: 'Teinte émeraude', teinte_bordeaux: 'Teinte bordeaux', teinte_ardoise: 'Teinte ardoise', teinte_or: 'Teinte or pâle',
+  teinte_pourpre: 'Teinte pourpre', teinte_emeraude: 'Teinte émeraude', teinte_bordeaux: 'Teinte bordeaux', teinte_ardoise: 'Teinte ardoise', teinte_or: 'Teinte or pâle', teinte_ambre: 'Teinte ambre', teinte_turquoise: 'Teinte turquoise',
   acc_plume: 'Plume d’Aube', acc_couronne: 'Couronne de fleurs', acc_foulard: 'Foulard', acc_boucles: 'Boucles d’oreilles', acc_lunettes: 'Lunettes d’aviatrice',
 };
 

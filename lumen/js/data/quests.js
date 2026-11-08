@@ -9,6 +9,8 @@
      reach { zone }           zone atteinte
      count { what, n }       pages, lampions, éclats…
    rewards : xp, ecus, items {id: n}, unlock [déblocages d'apparence], pa [xp, pièces Prism Arcade]
+   island : île de la quête (défaut : aube) · act : acte (quêtes principales)
+   after : quête qui se lance toute seule quand celle-ci est terminée · reqItem : objet nécessaire pour que la quête soit proposée
    ========================================================= */
 
 export const QUESTS = {
@@ -124,7 +126,7 @@ export const QUESTS = {
 
   /* ================= Quêtes principales — Acte II : la Forêt de Verre ================= */
   q_verre: {
-    kind: 'main', act: 2, title: 'Les vitraux de la Forêt', giver: 'ambre',
+    kind: 'main', island: 'foret', act: 2, title: 'Les vitraux de la Forêt', giver: 'ambre',
     summary: 'Les vitraux du Temple de Verre ne laissent plus passer que la brume. Ambre, la doyenne de Vitrebourg, t’apprend à lire les couleurs.',
     steps: [
       { id: 'parler', type: 'talk', npc: 'ambre', text: 'Parler à Ambre sur la place de Vitrebourg', zone: 'vitrebourg' },
@@ -138,7 +140,7 @@ export const QUESTS = {
   },
 
   s_givre: {
-    kind: 'side', title: 'Tisane de givre', giver: 'opaline',
+    kind: 'side', island: 'foret', title: 'Tisane de givre', giver: 'opaline',
     summary: 'Opaline prépare une tisane qui soigne mieux que n’importe quelle potion, mais il lui faut du givre de sous-bois, qui pousse dans la Lisière.',
     steps: [
       { id: 'fleurs', type: 'item', item: 'givre_foret', n: 4, text: 'Cueillir 4 givres de sous-bois (Lisière du Verre)', zone: 'lisiere' },
@@ -147,7 +149,7 @@ export const QUESTS = {
     rewards: { xp: 80, ecus: 50, items: { tisane_foret: 3 }, pa: [60, 20] },
   },
   s_eclats: {
-    kind: 'side', title: 'La commande de Silex', giver: 'silex',
+    kind: 'side', island: 'foret', title: 'La commande de Silex', giver: 'silex',
     summary: 'Silex, le maître verrier, manque d’éclats de vitrail pour sa commande. Les créatures de verre de la Lisière en laissent derrière elles.',
     steps: [
       { id: 'eclats', type: 'item', item: 'eclat_verre', n: 6, text: 'Rapporter 6 éclats de verre', zone: 'lisiere' },
@@ -156,12 +158,59 @@ export const QUESTS = {
     rewards: { xp: 90, ecus: 40, items: { pierre: 3 }, unlock: ['teinte_emeraude'], pa: [70, 25] },
   },
   s_chasse_verre: {
-    kind: 'side', title: 'Les cerfs de verre', giver: 'perle',
+    kind: 'side', island: 'foret', title: 'Les cerfs de verre', giver: 'perle',
     summary: 'Perle souffle le verre avec les éclats ramassés dans la forêt, mais les créatures de verre rôdent trop près du village.',
     steps: [
       { id: 'chasse', type: 'kill', n: 10, text: 'Vaincre 10 créatures (Lisière du Verre)', zone: 'lisiere' },
       { id: 'retour', type: 'talk', npc: 'perle', text: 'Faire ton rapport à Perle', zone: 'vitrebourg' },
     ],
     rewards: { xp: 120, ecus: 100, unlock: ['teinte_bordeaux'], pa: [80, 30] },
+  },
+
+  /* ================= Acte II, partie 2 : la Canopée et le Phare de Verre ================= */
+  q_phare_verre: {
+    kind: 'main', island: 'foret', act: 2, title: 'Le Phare de Verre', giver: 'ambre', after: 'q_verre',
+    summary: 'Le fragment vert est en sécurité, mais le Phare de Verre reste éteint. Il se dresse au bout de la Canopée et exige le jaune, le magenta et le cyan en même temps. Pour y monter, il faudra un grappin de lumière.',
+    steps: [
+      { id: 'silex', type: 'talk', npc: 'silex', text: 'Demander à Silex les plans du grappin de lumière (Verrerie)', zone: 'vitrebourg' },
+      { id: 'eclats', type: 'item', item: 'eclat_verre', n: 5, text: 'Rassembler 5 éclats de verre (Lisière, ou le marché de Galet)', zone: 'lisiere' },
+      { id: 'forge', type: 'talk', npc: 'silex', text: 'Rapporter les éclats à Silex pour qu’il forge le grappin', zone: 'vitrebourg' },
+      { id: 'canopee', type: 'reach', zone: 'can1', text: 'Prendre le pont au sud du Belvédère et grimper dans la Canopée' },
+      { id: 'branches', type: 'gates', gates: ['fc0', 'fc1'], text: 'Franchir les Branches basses, puis la salle des Feuilles de lumière', zone: 'can1' },
+      { id: 'passerelle', type: 'gates', gates: ['cn_combat'], text: 'Vaincre les gardiens de la Passerelle et briser le sceau', zone: 'can3' },
+      { id: 'nid', type: 'gates', gates: ['fc2'], text: 'Résoudre le Nid de lumière', zone: 'can4' },
+      { id: 'phare', type: 'gates', gates: ['end'], text: 'Rallumer le Phare de Verre : jaune, magenta et cyan en même temps', zone: 'phare_f' },
+      { id: 'retour', type: 'talk', npc: 'ambre', text: 'Annoncer la bonne nouvelle à Ambre', zone: 'vitrebourg' },
+    ],
+    rewards: { xp: 650, ecus: 320, items: { grande_potion: 2, manteau_verre: 1 }, pa: [450, 160] },
+  },
+
+  s_lampions_f: {
+    kind: 'side', island: 'foret', title: 'Les lampions de la Rosée', giver: 'mousse', requires: 'q_verre',
+    summary: 'Mousse, l’aubergiste de la Rosée, regrette les soirées d’avant la Brume, quand les sept lampions de la place brillaient jusqu’au matin. Fia sait les rallumer.',
+    steps: [
+      { id: 'lampions', type: 'count', what: 'lampions', n: 7, text: 'Rallumer les 7 lampions de Vitrebourg', zone: 'vitrebourg' },
+      { id: 'retour', type: 'talk', npc: 'mousse', text: 'Prévenir Mousse (Auberge de la Rosée)', zone: 'auberge_f' },
+    ],
+    rewards: { xp: 70, ecus: 70, unlock: ['teinte_ambre'], pa: [50, 20] },
+  },
+  s_colis: {
+    kind: 'side', island: 'foret', title: 'Livraison express', giver: 'galet', requires: 'q_verre',
+    summary: 'Galet a un colis urgent pour Perle, qui doit à son tour envoyer du sable à Ficus. Tout le monde est pressé à Vitrebourg, sauf les jambes de Galet.',
+    steps: [
+      { id: 'perle', type: 'talk', npc: 'perle', text: 'Porter le colis de Galet à Perle', zone: 'vitrebourg' },
+      { id: 'ficus', type: 'talk', npc: 'ficus', text: 'Apporter le sachet de sable à Ficus', zone: 'vitrebourg' },
+      { id: 'retour', type: 'talk', npc: 'galet', text: 'Rendre compte à Galet (marché)', zone: 'vitrebourg' },
+    ],
+    rewards: { xp: 80, ecus: 90, items: { elixir: 2, tisane_foret: 2 }, pa: [50, 20] },
+  },
+  s_graines: {
+    kind: 'side', island: 'foret', title: 'Graines de canopée', giver: 'ficus', requires: 'q_verre', reqItem: 'grappin',
+    summary: 'Ficus rêve de faire pousser des arbres de verre dans son jardin, mais leurs graines ne tombent que tout là-haut, sur les plates-formes de la Canopée. Le grappin ouvre des chemins que personne n’a empruntés depuis longtemps.',
+    steps: [
+      { id: 'graines', type: 'item', item: 'graine_canopee', n: 3, text: 'Trouver 3 graines de canopée (Branches basses, Passerelle)', zone: 'can1' },
+      { id: 'retour', type: 'talk', npc: 'ficus', text: 'Les rapporter à Ficus', zone: 'vitrebourg' },
+    ],
+    rewards: { xp: 140, ecus: 100, items: { grande_potion: 1 }, unlock: ['teinte_turquoise'], pa: [90, 35] },
   },
 };

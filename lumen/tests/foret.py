@@ -1,6 +1,11 @@
 import sys, json, time, subprocess
 from playwright.sync_api import sync_playwright
-srv = subprocess.Popen(["python3", "-m", "http.server", "8765"], cwd="/home/claude/prismarcade", stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+def wait_reloaded(pg, timeout=150000):
+    """Après un voyage (rechargement de page) : sondage actif au lieu d'un délai fixe."""
+    pg.wait_for_function("!window.__old && window.__lumen && __lumen.S && __lumen.G.zoneId && __lumen.G.zoneId() !== null", timeout=timeout, polling=500)
+    pg.wait_for_timeout(800)
+srv = subprocess.Popen(["python3", "-m", "http.server", "8775"], cwd="/home/claude/prismarcade", stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 time.sleep(1.5)
 errs = []; results = []
 def step(name, fn):
@@ -31,13 +36,13 @@ try:
         pg = b.new_page(viewport={"width": 1280, "height": 720})
         pg.on("pageerror", lambda e: errs.append("PAGEERR " + str(e)))
         pg.on("console", lambda m: errs.append("CONSOLE " + m.text) if m.type == "error" and "ERR_TUNNEL" not in m.text else None)
-        pg.goto("http://localhost:8765/lumen/", wait_until="load"); pg.wait_for_timeout(3500); pg.evaluate(HELP)
+        pg.goto("http://localhost:8775/lumen/", wait_until="load"); pg.wait_for_timeout(3500); pg.evaluate(HELP)
         ev = lambda js: pg.evaluate(js)
         step("aube: nouvelle partie", lambda: ev("(async()=>{await __lumen.G.startFrom(null,'auto'); T.pump(); return __lumen.S.mode})()"))
         pg.wait_for_timeout(1200)
         step("aube: calixte avant l'acte", lambda: ev("T.talk('calixte')"))
-        step("aube: voyage", lambda: ev("(()=>{const L=__lumen;L.st.flags.acte1_fini=1;L.st.quests.q_reveil={state:'done',step:3,base:{}};L.G.runEffects([{travel:{to:'foret',zone:'vitrebourg',cell:[12,7]}}]);return 'ok'})()"))
-        pg.wait_for_timeout(7000)
+        step("aube: voyage", lambda: ev("(()=>{const L=__lumen;L.st.flags.acte1_fini=1;L.st.quests.q_reveil={state:'done',step:3,base:{}};window.__old=1;L.G.runEffects([{travel:{to:'foret',zone:'vitrebourg',cell:[12,7]}}]);return 'ok'})()"))
+        wait_reloaded(pg)
         pg.evaluate(HELP)
         step("foret: chargée", lambda: ev("(()=>{const L=__lumen;return JSON.stringify({mode:L.S.mode,zone:L.G.zoneId(),isl:L.st.player.island,x:Math.round(L.P.x),z:Math.round(L.P.z)})})()"))
         pg.wait_for_timeout(1500)
@@ -73,12 +78,12 @@ try:
           const b=c.enemies.find(e=>e.boss);return b?JSON.stringify({type:b.type,hp:b.hp,state:b.state}):'absent'})()"""))
         pg.screenshot(path="/tmp/f_boss.png")
         step("boss: combat", lambda: ev("""(async()=>{const L=__lumen,c=L.combat;const b=c.enemies.find(e=>e.boss);
-          b.hp=b.maxHp*0.44;await T.tick(2500);const adds=c.enemies.filter(e=>e.adds&&e.state!=='dead').length;const ph=b.phase;b.hp=60;for(let i=0;i<40&&b.state!=='dead';i++){L.st.player.hp=999;L.P.x=b.x;L.P.z=b.z+b.def.radius+1.2;L.P.face=Math.PI;c.melee({mult:1});await T.tick(120);}
+          b.hp=b.maxHp*0.44;for(let i=0;i<60&&b.phase!==2&&b.state!=='dead';i++){L.st.player.hp=999;await T.tick(100);}await T.tick(800);const adds=c.enemies.filter(e=>e.adds&&e.state!=='dead').length;const ph=b.phase;b.hp=60;for(let i=0;i<40&&b.state!=='dead';i++){L.st.player.hp=999;L.P.x=b.x;L.P.z=b.z+b.def.radius+1.2;L.P.face=Math.PI;c.melee({mult:1});await T.tick(120);}
           await T.tick(2500);return JSON.stringify({adds,ph,state:b.state,flag:L.st.flags.boss_verre,warp:L.st.world.warps.temple,q:T.q('q_verre')})})()"""))
         step("coffre prisme_vert", lambda: ev("""(async()=>{const L=__lumen;L.tpZone('temple',[15,24]);await T.tick(300);const v=Object.values(L.world.chestViews).find(cv=>cv.c.id==='ch_prisme');return JSON.stringify({visible:v&&v.g.visible})})()"""))
         step("retour ambre", lambda: ev("(()=>{const L=__lumen;L.give('prisme_vert',1);L.G.screens.close();const r=T.talk('ambre');return JSON.stringify({r,q:T.q('q_verre'),flag:L.st.flags.verre_fini})})()"))
-        step("retour à l'Aube", lambda: ev("(()=>{const L=__lumen;L.G.screens.close();L.G.runEffects([{travel:{to:'aube',zone:'havre',cell:[27,7]}}]);return 'ok'})()"))
-        pg.wait_for_timeout(12000); pg.evaluate(HELP)
+        step("retour à l'Aube", lambda: ev("(()=>{const L=__lumen;L.G.screens.close();window.__old=1;L.G.runEffects([{travel:{to:'aube',zone:'havre',cell:[27,7]}}]);return 'ok'})()"))
+        wait_reloaded(pg); pg.evaluate(HELP)
         step("aube rechargée", lambda: ev("(()=>{const L=__lumen;return JSON.stringify({zone:L.G.zoneId(),isl:L.st.player.island,flag:L.st.flags.boss_verre,gates:Object.keys(L.st.otherWorlds||{})})})()"))
         pg.wait_for_timeout(500)
         b.close()

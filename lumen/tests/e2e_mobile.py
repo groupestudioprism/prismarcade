@@ -1,6 +1,6 @@
 import time, subprocess
 from playwright.sync_api import sync_playwright
-srv=subprocess.Popen(["python3","-m","http.server","8765"],cwd=__import__("os").path.abspath(__import__("os").path.join(__import__("os").path.dirname(__file__),"..","..")),stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL); time.sleep(1.5)
+srv=subprocess.Popen(["python3","-m","http.server","8775"],cwd=__import__("os").path.abspath(__import__("os").path.join(__import__("os").path.dirname(__file__),"..","..")),stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL); time.sleep(1.5)
 errs=[]
 try:
   with sync_playwright() as p:
@@ -9,7 +9,7 @@ try:
     pg=ctx.new_page()
     pg.on("pageerror",lambda e:errs.append(str(e)))
     pg.on("console",lambda m:errs.append(m.text) if m.type=="error" and "ERR_TUNNEL" not in m.text else None)
-    pg.goto("http://localhost:8765/lumen/?touch",wait_until="load"); pg.wait_for_timeout(4000)
+    pg.goto("http://localhost:8775/lumen/?touch",wait_until="load"); pg.wait_for_timeout(4000)
     pg.evaluate("__lumen.G.startFrom(null,'auto')"); pg.wait_for_timeout(1500)
     for _ in range(10): pg.evaluate("__lumen.G.screens.dialogOpen&&__lumen.G.screens.nextLine()")
     pg.evaluate("__lumen.tpZone('havre')"); pg.wait_for_timeout(1500)

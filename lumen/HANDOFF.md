@@ -265,3 +265,10 @@ Mise à jour du 06/11/2026 (session de stabilisation) :
 - **Prism Arcade :** fait (boutique, XP, classements à cadeaux, 14 jeux, carte « Grands jeux »).
 - **Studio-Prism :** la fiche produit Prism Arcade mentionne Lumen.
 - **Question en attente de l'utilisateur :** solution sans Storage pour ArchiVision et la médiathèque (voir §3).
+
+## Annexe GAMEPLAY — Acte II partie 2 (Canopée, grappin, Phare de Verre)
+- **Fait** : zones can1..can4 + phare_f (Forêt de Verre, 13 zones, 10 ponts), poteaux de grappin (`post`, `postLinks`/`reachCells` dans js/logic.js), phare à `need` y+m+c avec portes d'étape (`stageGates`, `analyseStages` dans tools/generate.mjs), quêtes q_phare_verre (principale, auto après q_verre via `after`), s_lampions_f, s_colis, s_graines (exige le grappin), objets grappin/anneau_canopee/manteau_verre, ennemis eclat_ambre/cerf_prisme/sentinelle_azur, fin d'acte générique (`acteN_fini`, `ISLAND_META.finale`).
+- **Outils** : `node tools/build-foret.mjs` (génère + vérifie, ~20 s), `node tools/reach.mjs [-v]` (accessibilité des deux îles, grappin inclus, via tools/reachlib.mjs), `node tools/verify.mjs` (~25 s). Zones : tools/areas-canopee.mjs.
+- **Audio** : main.js appelle audio.listener/step/sfx (receiver, relay, mirror, lantern, mixer, puzzle_solved, warp) et la propriété `z.music` (non renseignée dans les données : à ajouter côté zones si souhaité).
+- **Tests navigateur** (port 8771) : foret.py (attente 15 s au retour Aube), full.py OK ; systems.py : « boss: phase 2 » échoue car le boss meurt à l'étape précédente (dégâts joueur plus élevés, test dépendant de l'ordre, sans lien avec la Forêt). Phare résolu en navigateur (solution trouvée par force brute), saut de grappin vérifié (lent sous swiftshader).
+- **Limites** : durée ≈1h15 non mesurée en jeu ; visuels poteaux/anneaux en repli tant que GRAPHISME n'a pas fourni les modèles ; pas de `music` par zone ; combats de la passerelle non rejoués en navigateur.

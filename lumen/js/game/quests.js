@@ -60,13 +60,15 @@ export function createQuests(G) {
       let guard = 0, changed = true;
       while (changed && guard++ < 20) {
         changed = false;
+        // quêtes qui s'enchaînent toutes seules (la suivante démarre quand la précédente est terminée)
+        for (const id of Object.keys(QUESTS)) { const q = QUESTS[id]; if (q.after && !rec(id) && (q.island || 'aube') === G.def.id && api.state(q.after) === 'done') { api.start(id); changed = true; } }
         for (const id of api.active()) if (api.isStepDone(id)) { api.advance(id); changed = true; break; }
       }
     },
     /* étape « talk » en attente chez ce PNJ ? */
     waitingAt(npc) { return api.active().find((id) => { const s = api.step(id); return s && s.type === 'talk' && s.npc === npc; }) || null; },
     /* quête disponible chez ce PNJ (donneur, prérequis remplis, pas encore commencée) */
-    offeredBy(npc) { return Object.keys(QUESTS).find((id) => QUESTS[id].giver === npc && !rec(id) && QUESTS[id].kind === 'side' && (!QUESTS[id].requires || api.state(QUESTS[id].requires) === 'done')) || null; },
+    offeredBy(npc) { return Object.keys(QUESTS).find((id) => QUESTS[id].giver === npc && !rec(id) && QUESTS[id].kind === 'side' && (QUESTS[id].island || 'aube') === G.def.id && (!QUESTS[id].requires || api.state(QUESTS[id].requires) === 'done') && (!QUESTS[id].reqItem || (st().inv[QUESTS[id].reqItem] || 0) > 0)) || null; },
     /* objectif à afficher (quête principale d'abord, puis suivie) */
     tracked() {
       const t = st().tracked && api.state(st().tracked) === 'active' ? st().tracked : null;

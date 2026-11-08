@@ -67,4 +67,21 @@ export const ENEMIES = {
     xp: 300, ecus: [200, 200], drops: [['larme_verre', 1]], weak: { contondant: 1.3 }, resist: { percant: 0.7, lumiere: 0.8 },
     desc: 'Un colosse de vitrail et de racines. Son cœur de verre brille quand il reprend son souffle : c’est le moment de frapper.',
   },
+
+  /* ---------------- Canopée : variantes teintées aux couleurs rares ---------------- */
+  eclat_ambre: {
+    name: 'Éclat ambré', family: 'verre', model: 'brumelin', tint: '#ffd84d', spark: '#fff0a0', hp: 36, atk: 12, def: 0, speed: 3.3, behavior: 'chaser', aggro: 8, leash: 13, radius: 0.45,
+    xp: 12, ecus: [3, 7], drops: [['eclat_verre', 0.5], ['fibre', 0.2]], weak: { contondant: 1.5 }, resist: { lumiere: 0.7 },
+    desc: 'Un éclat de vitrail jaune, plus nerveux que ses cousins de la Lisière. Il ne tient pas en place.',
+  },
+  cerf_prisme: {
+    name: 'Cerf de prisme', family: 'verre', model: 'sanglier', tint: '#ff4fd0', tintK: 0.92, tintE: 0.9, spark: '#ffd0f4', hp: 84, atk: 21, def: 2, speed: 2.4, charge: 14, behavior: 'charger', aggro: 9, leash: 15, radius: 0.7,
+    xp: 24, ecus: [8, 14], drops: [['eclat_verre', 0.7], ['pierre', 0.4]], weak: { contondant: 1.3 }, resist: { lumiere: 0.8 },
+    desc: 'Un cerf de verre magenta qui charge plus vite et plus loin. Attends qu’il s’étourdisse contre un pilier.',
+  },
+  sentinelle_azur: {
+    name: 'Sentinelle d’azur', family: 'verre', model: 'gardien', tint: '#5fd0ff', spark: '#c8f0ff', hp: 138, atk: 22, def: 3, speed: 2.1, behavior: 'guard', shield: true, aggro: 6.5, leash: 9, radius: 0.65,
+    xp: 48, ecus: [20, 32], drops: [['eclat_verre', 1], ['grande_potion', 0.2]], weak: { contondant: 1.4 }, resist: { percant: 0.6, lumiere: 0.8 },
+    desc: 'La gardienne de la Passerelle. Son bouclier d’azur arrête tout ce qui vient de face : frappe-la dans le dos, ou brise-le au marteau.',
+  },
 };
