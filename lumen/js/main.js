@@ -17,6 +17,7 @@ import { audio, music } from './engine/audio.js';
 import { createInput } from './engine/input.js';
 import { buildWorld, glow, themeOf } from './world/build.js';
 import { Character } from './world/character.js';
+import { Lyra } from './world/lyra.js';
 import { ITEMS, UPGRADES, RECIPES } from './data/items.js';
 import { ENEMIES } from './data/enemies.js';
 import { NPCS } from './data/npcs.js';
@@ -204,16 +205,17 @@ G.helpHtml = () => input.touch
 /* =========================================================
    Lyra et Fia
    ========================================================= */
-const hero = new Character(lookToModel(st.look));
+const hero = new Lyra(lookToModel(st.look));   // nouveau modèle de Lyra (facetté, contours noirs, Fia intégrée)
 scene.add(hero.root);
-hero.root.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+hero.root.traverse((o) => { if (o.isMesh && !o.userData.noShadow) o.castShadow = true; });
 const fia = new THREE.Mesh(new THREE.SphereGeometry(0.13, 12, 8), glow('#fff0c2', 5)); scene.add(fia);
+fia.visible = false;   // Fia fait désormais partie du modèle de Lyra
 const fiaLight = new THREE.PointLight(0xffd9a0, LOW ? 0 : 6, 8, 2); scene.add(fiaLight);
 const chargeRing = new THREE.Mesh(new THREE.RingGeometry(0.9, 1.1, 32), new THREE.MeshBasicMaterial({ color: new THREE.Color('#9fe9ff').multiplyScalar(2), transparent: true, opacity: 0, depthWrite: false }));
 chargeRing.rotation.x = -Math.PI / 2; scene.add(chargeRing);
 const selRing = new THREE.Mesh(new THREE.TorusGeometry(0.98, 0.045, 6, 40), new THREE.MeshBasicMaterial({ color: new THREE.Color(0xffc861).multiplyScalar(2.6), transparent: true, opacity: 0.9 }));
 selRing.rotation.x = Math.PI / 2; selRing.visible = false; scene.add(selRing);
-G.applyLook = () => { hero.build(lookToModel(st.look)); hero.root.traverse((o) => { if (o.isMesh) o.castShadow = true; }); updateWeaponModel(); };
+G.applyLook = () => { hero.build(lookToModel(st.look)); hero.root.traverse((o) => { if (o.isMesh && !o.userData.noShadow) o.castShadow = true; }); updateWeaponModel(); };
 function updateWeaponModel() { const w = ITEMS[st.equip.weapon]; hero.setWeapon(w ? w.model : null); }
 
 /* =========================================================
@@ -1168,14 +1170,14 @@ function update(dt) {
   hero.animate(dt, {
     move: S.mode === 'play' ? Math.min(1, moving) : 0,
     swing: P.swing ? { t: P.swing.t / P.swing.dur, kind: P.swing.kind, combo: P.swing.combo } : null,
-    dodge: S.mode === 'grapple' ? 0.55 : P.dodging ? Math.min(1, P.dodgeT / 0.36) : 0, hurt: P.hurtT > 0 ? P.hurtT / 0.4 : 0,
-    spin: P.spinT > 0 ? 1 - P.spinT / 0.45 : 0, talk: false,
+    dodge: P.dodging && S.mode !== 'grapple' ? Math.min(1, P.dodgeT / 0.36) : 0, hurt: P.hurtT > 0 ? P.hurtT / 0.4 : 0,
+    spin: P.spinT > 0 ? 1 - P.spinT / 0.45 : 0, talk: false, grapple: S.mode === 'grapple', dead: !P.alive,
   });
   chargeRing.position.set(P.x, 0.08, P.z); chargeRing.material.opacity = P.chargeT > 0.2 ? Math.min(0.9, (P.chargeT - 0.2) * 2) : 0; chargeRing.scale.setScalar(P.chargeT > 0.55 ? 1.3 + Math.sin(t * 20) * 0.08 : 1);
   const fa = t * 1.6;
   fia.position.set(P.x + Math.cos(fa) * 0.75, 1.75 + Math.sin(t * 2.3) * 0.12, P.z + Math.sin(fa) * 0.75);
   if (P.spinT > 0) fia.position.set(P.x + Math.cos(t * 20) * 1.4, 1.1, P.z + Math.sin(t * 20) * 1.4);
-  fiaLight.position.copy(fia.position);
+  hero.root.updateMatrixWorld(true); hero.fiaWorld(fiaLight.position);
   fiaLight.intensity = LOW ? 0 : (['sanctuaire', 'temple'].includes(themeOf(zones[S.zone])) ? 14 : 6) * (P.chargeT > 0.55 ? 1.6 : 1);
   const tg = S.target;
   if (tg && tg.kind === 'device' && S.mode === 'play') { selRing.visible = true; selRing.position.set(tg.x, 0.47, tg.z); selRing.scale.setScalar(1 + Math.sin(t * 5) * 0.04); } else selRing.visible = false;

@@ -1,0 +1,230 @@
+{
+  "palette": {
+    "cloak": "#283568",
+    "cloakLight": "#3A4D8F",
+    "tunic": "#F4EFE6",
+    "tunicLight": "#FFFFFF",
+    "gold": "#E5B54F",
+    "skin": "#F7D6C4",
+    "cheek": "#EB9B98",
+    "eye": "#1B264F",
+    "star": "#FFFFFF",
+    "hair": "#5C3A28",
+    "trousers": "#4A3222",
+    "boots": "#5E3F2B",
+    "wood": "#7A5236",
+    "fia": "#FFF8DC",
+    "fiaCore": "#FFD166",
+    "outline": "#000000"
+  },
+  "animations": {
+    "IDLE": {
+      "duration_s": 3,
+      "loop": true,
+      "frames": 91,
+      "fps": 30
+    },
+    "WALK": {
+      "duration_s": 1.1,
+      "loop": true,
+      "frames": 34,
+      "fps": 30
+    },
+    "RUN": {
+      "duration_s": 0.65,
+      "loop": true,
+      "frames": 21,
+      "fps": 30
+    },
+    "DODGE_ROLL": {
+      "duration_s": 0.55,
+      "loop": false,
+      "frames": 18,
+      "fps": 30
+    },
+    "COMBO_1_2_3": {
+      "duration_s": 1.4,
+      "loop": false,
+      "frames": 43,
+      "fps": 30
+    },
+    "CHARGED_SPIN_SLASH": {
+      "duration_s": 1.2,
+      "loop": false,
+      "frames": 37,
+      "fps": 30
+    },
+    "WAVE_OF_LIGHT": {
+      "duration_s": 1,
+      "loop": false,
+      "frames": 31,
+      "fps": 30
+    },
+    "LIGHT_GRAPPLE": {
+      "duration_s": 0.9,
+      "loop": false,
+      "frames": 28,
+      "fps": 30
+    },
+    "HIT_REACTION": {
+      "duration_s": 0.4,
+      "loop": false,
+      "frames": 13,
+      "fps": 30
+    },
+    "DEFEATED": {
+      "duration_s": 2.5,
+      "loop": false,
+      "frames": 76,
+      "fps": 30
+    }
+  },
+  "moves": {
+    "COMBO_1_2_3": {
+      "type": "Mêlée (bâton)",
+      "duration": 1.4,
+      "phases": [
+        {
+          "name": "Coup 1 · balayage horizontal",
+          "windup": [
+            0,
+            0.12
+          ],
+          "active": [
+            0.18,
+            0.3
+          ],
+          "hit": 0.25
+        },
+        {
+          "name": "Coup 2 · frappe diagonale montante",
+          "windup": [
+            0.3,
+            0.45
+          ],
+          "active": [
+            0.58,
+            0.7
+          ],
+          "hit": 0.65
+        },
+        {
+          "name": "Coup 3 · estoc",
+          "windup": [
+            0.7,
+            0.85
+          ],
+          "active": [
+            1.02,
+            1.14
+          ],
+          "hit": 1.1
+        }
+      ],
+      "recovery": [
+        1.14,
+        1.4
+      ],
+      "range": 1.8,
+      "area": {
+        "shape": "cône avant",
+        "radius": 1.8,
+        "arc": 110
+      },
+      "cooldown": 0.2,
+      "telegraph": "L’anneau du bâton s’illumine à chaque coup."
+    },
+    "CHARGED_SPIN_SLASH": {
+      "type": "Zone rapprochée",
+      "duration": 1.2,
+      "windup": [
+        0,
+        0.45
+      ],
+      "active": [
+        0.55,
+        0.8
+      ],
+      "hit": 0.65,
+      "recovery": [
+        0.65,
+        1.2
+      ],
+      "range": 2.4,
+      "area": {
+        "shape": "cercle complet autour de Lyra",
+        "radius": 2.4,
+        "arc": 360
+      },
+      "cooldown": 3,
+      "telegraph": "Accroupie, bâton en arrière, la pointe accumule la lumière (anneau ×16, Fia ×1,8)."
+    },
+    "WAVE_OF_LIGHT": {
+      "type": "Capacité de zone (traverse les boucliers)",
+      "duration": 1,
+      "windup": [
+        0,
+        0.3
+      ],
+      "active": [
+        0.4,
+        0.85
+      ],
+      "hit": 0.45,
+      "recovery": [
+        0.45,
+        1
+      ],
+      "range": 3.5,
+      "area": {
+        "shape": "anneau / cercle",
+        "radius": 3.5,
+        "arc": 360
+      },
+      "cooldown": 5,
+      "telegraph": "Main libre levée, le cœur de Fia gonfle (×2,4) puis Fia tourne deux fois autour de Lyra."
+    },
+    "LIGHT_GRAPPLE": {
+      "type": "Utilitaire / déplacement",
+      "duration": 0.9,
+      "windup": [
+        0,
+        0.18
+      ],
+      "active": [
+        0.25,
+        0.6
+      ],
+      "hit": 0.25,
+      "recovery": [
+        0.6,
+        0.9
+      ],
+      "range": 12,
+      "area": {
+        "shape": "ligne droite",
+        "length": 12,
+        "width": 0.8
+      },
+      "cooldown": 2,
+      "telegraph": "Bâton pointé, Fia file vers la pointe et projette le câble de lumière."
+    },
+    "DODGE_ROLL": {
+      "type": "Esquive (invulnérable)",
+      "duration": 0.55,
+      "invulnerable": [
+        0.05,
+        0.45
+      ],
+      "cooldown": 0.5
+    },
+    "HIT_REACTION": {
+      "type": "Réaction",
+      "duration": 0.4
+    },
+    "DEFEATED": {
+      "type": "Défaite",
+      "duration": 2.5
+    }
+  }
+}
