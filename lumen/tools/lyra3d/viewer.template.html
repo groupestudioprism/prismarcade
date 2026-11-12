@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lyra et Fia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root { --bg: #1b1838; --panel: rgba(28, 24, 58, .86); --line: rgba(255,255,255,.12); --text: #f4efe6; --mut: #b9b3d6; --gold: #e5b54f; --accent: #ffd166; }
+  @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) { --bg: #e9e6f5; --panel: rgba(255,255,255,.88); --line: rgba(30,20,70,.12); --text: #1f1a3d; --mut: #5e5880; --gold: #b5852a; --accent: #c98a12; } }
+  :root[data-theme="light"] { --bg: #e9e6f5; --panel: rgba(255,255,255,.88); --line: rgba(30,20,70,.12); --text: #1f1a3d; --mut: #5e5880; --gold: #b5852a; --accent: #c98a12; }
+  :root[data-theme="dark"] { --bg: #1b1838; --panel: rgba(28, 24, 58, .86); --line: rgba(255,255,255,.12); --text: #f4efe6; --mut: #b9b3d6; --gold: #e5b54f; --accent: #ffd166; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 14px/1.45 Inter, system-ui, sans-serif; overflow: hidden; }
+  #c { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  .panel { position: fixed; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+  #side { top: 16px; left: 16px; width: 300px; max-height: calc(100% - 32px); overflow: auto; padding: 16px; }
+  h1 { margin: 0; font-size: 20px; font-weight: 800; letter-spacing: .02em; }
+  h1 span { color: var(--gold); }
+  h2 { margin: 16px 0 8px; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--mut); }
+  .anims { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  button, a.btn { font: 600 12.5px Inter, sans-serif; color: var(--text); background: rgba(127,127,170,.14); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; cursor: pointer; text-align: left; text-decoration: none; }
+  button:hover, a.btn:hover { border-color: var(--gold); }
+  button.on { background: var(--gold); color: #1d1636; border-color: var(--gold); }
+  .row { display: flex; gap: 6px; flex-wrap: wrap; }
+  label { display: flex; align-items: center; gap: 8px; margin: 6px 0; color: var(--mut); }
+  #info { font-size: 12.5px; color: var(--mut); }
+  #info b { color: var(--text); }
+  #info dl { display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; margin: 6px 0 0; }
+  #info dt { color: var(--mut); } #info dd { margin: 0; color: var(--text); }
+  #bar { bottom: 16px; left: 50%; transform: translateX(-50%); padding: 10px 14px; display: flex; gap: 12px; align-items: center; width: min(560px, calc(100% - 32px)); }
+  #bar input { flex: 1; accent-color: var(--gold); }
+  #time { font-variant-numeric: tabular-nums; min-width: 92px; color: var(--mut); font-size: 12px; }
+  .hitflag { position: fixed; top: 18px; right: 18px; padding: 8px 12px; font-weight: 800; color: #1d1636; background: var(--accent); border-radius: 10px; opacity: 0; transition: opacity .12s; }
+  .hitflag.on { opacity: 1; }
+  @media (max-width: 720px) { #side { top: auto; bottom: 86px; left: 16px; right: 16px; width: auto; max-height: 42%; } }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="side" class="panel">
+  <h1>Lyra <span>&amp;</span> Fia</h1>
+  <div style="color:var(--mut);font-size:12.5px;margin-top:4px">LUMEN : les Îles Brisées · modèle low-poly facetté</div>
+  <h2>Animations</h2>
+  <div class="anims" id="anims"></div>
+  <h2>Affichage</h2>
+  <label><input type="checkbox" id="vfx" checked> Effets visuels</label>
+  <label><input type="checkbox" id="area" checked> Zone de frappe au sol</label>
+  <label><input type="checkbox" id="outline" checked> Contour noir</label>
+  <label><input type="checkbox" id="slow"> Ralenti ×0,25</label>
+  <div class="row" style="margin-top:6px"><button data-v="front">Face</button><button data-v="side">Profil</button><button data-v="back">Dos</button><button data-v="top">Dessus</button></div>
+  <h2>Fiche</h2>
+  <div id="info"></div>
+  <h2>Fichier</h2>
+  <a class="btn" id="dl" download="Lyra_Fia.glb">Télécharger le GLB</a>
+</div>
+<div id="bar" class="panel"><button id="play">⏸</button><input type="range" id="scrub" min="0" max="1" step="0.001" value="0"><span id="time">0,00 s</span></div>
+<div class="hitflag" id="hitflag">FRAPPE</div>
+<script type="importmap">{ "imports": { "three": "__THREE__", "three/addons/": "__ADDONS__" } }</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const GLB = '__GLB__';
+const MOVES = __MOVES__;
+const NAMES_FR = { IDLE: 'Attente', WALK: 'Marche', RUN: 'Course', DODGE_ROLL: 'Roulade', COMBO_1_2_3: 'Combo 1-2-3', CHARGED_SPIN_SLASH: 'Coup chargé', WAVE_OF_LIGHT: 'Onde de lumière', LIGHT_GRAPPLE: 'Grappin de lumière', HIT_REACTION: 'Coup reçu', DEFEATED: 'Défaite' };
+const $ = (s) => document.querySelector(s);
+const renderer = new THREE.WebGLRenderer({ canvas: $('#c'), antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.15;
+renderer.shadowMap.enabled = true;
+const scene = new THREE.Scene();
+const dark = () => document.documentElement.dataset.theme ? document.documentElement.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+const camera = new THREE.PerspectiveCamera(35, 1, 0.05, 100);
+camera.position.set(1.9, 1.45, 3.6);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 0.8, 0); controls.enableDamping = true; controls.minDistance = 1.2; controls.maxDistance = 12;
+scene.add(new THREE.HemisphereLight(0xfff4e0, 0x4a3f6a, 1.6));
+const sun = new THREE.DirectionalLight(0xfff0d8, 2.4); sun.position.set(2.5, 4, 3); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -4, right: 4, top: 4, bottom: -4 }); scene.add(sun);
+const rim = new THREE.DirectionalLight(0xb9c8ff, 0.9); rim.position.set(-3, 2, -3); scene.add(rim);
+// petite île facettée sous les pieds
+const isle = new THREE.Group(); scene.add(isle);
+const top = new THREE.Mesh(new THREE.CylinderGeometry(3.4, 3.2, 0.3, 9), new THREE.MeshStandardMaterial({ color: 0x7cbf6a, flatShading: true, roughness: 1 })); top.position.y = -0.15; top.receiveShadow = true; isle.add(top);
+const under = new THREE.Mesh(new THREE.ConeGeometry(3.1, 3.6, 9), new THREE.MeshStandardMaterial({ color: 0x6b5a7a, flatShading: true, roughness: 1 })); under.rotation.x = Math.PI; under.position.y = -2.1; isle.add(under);
+function bg() { scene.background = new THREE.Color(dark() ? 0x1b1838 : 0xe9e6f5); scene.fog = new THREE.Fog(scene.background, 9, 26); }
+bg(); matchMedia('(prefers-color-scheme: dark)').addEventListener('change', bg);
+
+let model, mixer, actions = {}, current = null, nodes = {};
+const fx = { group: new THREE.Group() }; scene.add(fx.group);
+const ADD = THREE.AdditiveBlending;
+const gold = (hex, op = 0.9) => new THREE.MeshBasicMaterial({ color: new THREE.Color(hex).multiplyScalar(1.6), transparent: true, opacity: op, blending: ADD, depthWrite: false, side: THREE.DoubleSide });
+
+new GLTFLoader().load(GLB, (g) => {
+  model = g.scene; scene.add(model);
+  model.traverse((o) => {
+    if (o.name) nodes[o.name] = o;
+    if (o.isMesh) {
+      o.castShadow = !o.name.endsWith('_Outline');
+      // les couleurs par sommet sont stockées en sRGB brut : conversion pour l'affichage
+      const c = o.geometry.attributes.color;
+      if (c && !o.geometry.userData.lin) { for (let i = 0; i < c.count * c.itemSize; i++) { const v = c.array[i]; c.array[i] = v < 0.04045 ? v * 0.0773993808 : Math.pow(v * 0.9478672986 + 0.0521327014, 2.4); } c.needsUpdate = true; o.geometry.userData.lin = true; }
+      if (o.name.endsWith('_Outline')) o.material = new THREE.MeshBasicMaterial({ color: 0x000000 });
+    }
+  });
+  mixer = new THREE.AnimationMixer(model);
+  g.animations.forEach((a) => { actions[a.name] = mixer.clipAction(a); });
+  const box = $('#anims');
+  Object.keys(NAMES_FR).forEach((n) => { if (!actions[n]) return; const b = document.createElement('button'); b.textContent = NAMES_FR[n]; b.dataset.a = n; b.onclick = () => play(n); box.appendChild(b); });
+  play('IDLE');
+});
+$('#dl').href = GLB;
+
+function play(name) {
+  if (current) actions[current].stop();
+  current = name;
+  const a = actions[name]; a.reset(); a.setLoop(THREE.LoopRepeat); a.play();
+  document.querySelectorAll('#anims button').forEach((b) => b.classList.toggle('on', b.dataset.a === name));
+  clearFx(); lastT = 0;
+  const m = MOVES[name], d = a.getClip().duration;
+  let html = `<b>${NAMES_FR[name]}</b> · ${d.toFixed(2).replace('.', ',')} s${['IDLE', 'WALK', 'RUN'].includes(name) ? ' · en boucle' : ''}`;
+  if (m) {
+    const r = (x) => x.toFixed(2).replace('.', ',');
+    html += '<dl>';
+    if (m.phases) m.phases.forEach((p) => (html += `<dt>${p.name}</dt><dd>frappe à ${r(p.hit)} s</dd>`));
+    else if (m.hit !== undefined) html += `<dt>Préparation</dt><dd>${r(m.windup[0])} → ${r(m.windup[1])} s</dd><dt>Frappe</dt><dd>${r(m.hit)} s</dd><dt>Récupération</dt><dd>${r(m.recovery[0])} → ${r(m.recovery[1])} s</dd>`;
+    if (m.invulnerable) html += `<dt>Invulnérable</dt><dd>${r(m.invulnerable[0])} → ${r(m.invulnerable[1])} s</dd>`;
+    if (m.area) html += `<dt>Zone</dt><dd>${m.area.shape}${m.area.radius ? `, ${String(m.area.radius).replace('.', ',')} m` : ''}${m.area.arc && m.area.arc < 360 ? `, ${m.area.arc}°` : ''}${m.area.length ? `, ${m.area.length} m × ${String(m.area.width).replace('.', ',')} m` : ''}</dd>`;
+    if (m.cooldown !== undefined) html += `<dt>Recharge</dt><dd>${r(m.cooldown)} s</dd>`;
+    html += '</dl>';
+    if (m.telegraph) html += `<p style="margin:8px 0 0">${m.telegraph}</p>`;
+  }
+  $('#info').innerHTML = html;
+}
+
+/* ---------- Effets visuels ---------- */
+const sparks = [], puffs = [], trails = { staff: [], fia: [] };
+let ringFx = null, beam = null, area = null, lastT = 0;
+const W = new THREE.Vector3(), W2 = new THREE.Vector3();
+const sparkGeo = new THREE.OctahedronGeometry(0.018, 0), puffGeo = new THREE.IcosahedronGeometry(0.06, 0);
+function clearFx() {
+  [...sparks, ...puffs].forEach((p) => fx.group.remove(p.m)); sparks.length = puffs.length = 0;
+  ['staff', 'fia'].forEach((k) => { trails[k].forEach((t) => fx.group.remove(t)); trails[k].length = 0; });
+  if (ringFx) { fx.group.remove(ringFx); ringFx = null; } if (beam) { fx.group.remove(beam); beam = null; } if (area) { fx.group.remove(area); area = null; }
+}
+function spark(p, hex, v = 0.25) { const m = new THREE.Mesh(sparkGeo, gold(hex)); m.position.copy(p); fx.group.add(m); sparks.push({ m, v: new THREE.Vector3((Math.random() - 0.5) * v, Math.random() * v + 0.1, (Math.random() - 0.5) * v), life: 0.9 + Math.random() * 0.6, t: 0 }); }
+function puff(p) { const m = new THREE.Mesh(puffGeo, new THREE.MeshBasicMaterial({ color: 0xe6dfd3, transparent: true, opacity: 0.7, depthWrite: false })); m.position.copy(p); m.position.y = 0.04; fx.group.add(m); puffs.push({ m, t: 0, v: new THREE.Vector3((Math.random() - 0.5) * 0.4, 0.25, (Math.random() - 0.5) * 0.4) }); }
+const tipLocal = new THREE.Vector3(0.05, 0.8, 0);
+function tipWorld(out) { return nodes.Staff ? nodes.Staff.localToWorld(out.copy(tipLocal)) : out.set(0, 1, 0); }
+function trailPush(kind, a, b, hex) {
+  const list = trails[kind];
+  if (list.lastA) {
+    const g = new THREE.BufferGeometry().setFromPoints([list.lastA, list.lastB, a, b]); g.setIndex([0, 1, 2, 1, 3, 2]);
+    const m = new THREE.Mesh(g, gold(hex, 0.75)); m.userData.t = 0; fx.group.add(m); list.push(m);
+  }
+  list.lastA = a.clone(); list.lastB = b.clone();
+}
+function makeArea(m) {
+  if (area) fx.group.remove(area); area = null;
+  if (!m || !m.area || !$('#area').checked) return;
+  const A = m.area, mat = new THREE.MeshBasicMaterial({ color: 0xffd166, transparent: true, opacity: 0.22, depthWrite: false, side: THREE.DoubleSide });
+  let g;
+  if (A.length) { g = new THREE.PlaneGeometry(A.width, A.length); g.rotateX(-Math.PI / 2); g.translate(0, 0.012, A.length / 2); }
+  else if (A.arc < 360) { g = new THREE.CircleGeometry(A.radius, 24, Math.PI / 2 - (A.arc / 2) * Math.PI / 180, A.arc * Math.PI / 180); g.rotateX(-Math.PI / 2); g.translate(0, 0.012, 0); g.scale(1, 1, -1); g.rotateY(Math.PI); }
+  else { g = new THREE.RingGeometry(A.radius - 0.06, A.radius, 48); g.rotateX(-Math.PI / 2); g.translate(0, 0.012, 0); const fill = new THREE.Mesh(new THREE.CircleGeometry(A.radius, 48).rotateX(-Math.PI / 2).translate(0, 0.01, 0), new THREE.MeshBasicMaterial({ color: 0xffd166, transparent: true, opacity: 0.08, depthWrite: false })); area = new THREE.Group(); area.add(new THREE.Mesh(g, mat), fill); fx.group.add(area); area.userData.mat = mat; return; }
+  area = new THREE.Mesh(g, mat); area.userData.mat = mat; fx.group.add(area);
+}
+function hitTimes(m) { return m ? (m.phases ? m.phases.map((p) => p.hit) : m.hit !== undefined ? [m.hit] : []) : []; }
+
+let paused = false, last = performance.now();
+$('#play').onclick = () => { paused = !paused; $('#play').textContent = paused ? '▶' : '⏸'; };
+$('#scrub').oninput = (e) => { if (!current) return; paused = true; $('#play').textContent = '▶'; const a = actions[current]; a.time = +e.target.value * a.getClip().duration; mixer.update(0); };
+$('#outline').onchange = (e) => model && model.traverse((o) => { if (o.name.endsWith('_Outline')) o.visible = e.target.checked; });
+$('#area').onchange = () => current && makeArea(MOVES[current]);
+document.querySelectorAll('[data-v]').forEach((b) => b.onclick = () => {
+  const v = b.dataset.v, d = 3.6;
+  controls.target.set(0, 0.8, 0);
+  camera.position.set(v === 'side' ? d : 0.001, v === 'top' ? 6 : 1.0, v === 'front' ? d : v === 'back' ? -d : v === 'top' ? 0.01 : 0);
+});
+
+function loop(now) {
+  requestAnimationFrame(loop);
+  const dtReal = Math.min(0.05, (now - last) / 1000); last = now;
+  const dt = paused ? 0 : dtReal * ($('#slow').checked ? 0.25 : 1);
+  controls.update();
+  if (mixer && current) {
+    mixer.update(dt);
+    const a = actions[current], d = a.getClip().duration, t = a.time % d;
+    $('#scrub').value = t / d; $('#time').textContent = `${t.toFixed(2).replace('.', ',')} / ${d.toFixed(2).replace('.', ',')} s`;
+    const m = MOVES[current];
+    if (t < lastT) { clearFx(); makeArea(m); }
+    if (!area && m && m.area) makeArea(m);
+    const hits = hitTimes(m), hitNow = hits.some((h) => lastT < h && t >= h);
+    if (hitNow) { $('#hitflag').classList.add('on'); setTimeout(() => $('#hitflag').classList.remove('on'), 160); if (area) area.userData.mat.opacity = 0.55; }
+    if (area && area.userData.mat) area.userData.mat.opacity += (0.22 - area.userData.mat.opacity) * Math.min(1, dt * 6);
+    const vfx = $('#vfx').checked;
+    if (vfx && nodes.Fia_Core) {
+      nodes.Fia_Core.getWorldPosition(W);
+      // étincelles permanentes autour de Fia
+      if (Math.random() < 0.5) spark(W, Math.random() < 0.5 ? '#FFF8DC' : '#FFD166', 0.18);
+      // traînée de Fia pendant la course
+      if (current === 'RUN') trailPush('fia', W.clone().add(new THREE.Vector3(0, 0.03, 0)), W.clone().add(new THREE.Vector3(0, -0.03, 0)), '#FFD166'); else trails.fia.lastA = null;
+      // traînée du bâton (combo, coup chargé)
+      const swinging = (current === 'COMBO_1_2_3' && hits.some((h) => Math.abs(t - h) < 0.12)) || (current === 'CHARGED_SPIN_SLASH' && t > 0.45 && t < 0.85);
+      if (swinging) { tipWorld(W2); const base = nodes.Staff.localToWorld(new THREE.Vector3(0, 0.25, 0)); trailPush('staff', W2.clone(), base, '#FFF3B0'); } else trails.staff.lastA = null;
+      if (current === 'CHARGED_SPIN_SLASH' && t < 0.5) { tipWorld(W2); if (Math.random() < 0.8) spark(W2, '#FFF3B0', 0.1); }
+      // onde de lumière : anneau facetté qui s'agrandit
+      if (current === 'WAVE_OF_LIGHT' && lastT < 0.45 && t >= 0.45) { ringFx = new THREE.Mesh(new THREE.RingGeometry(0.85, 1, 12), gold('#FFD166', 0.95)); ringFx.rotation.x = -Math.PI / 2; ringFx.position.y = 0.3; ringFx.userData.t = 0; fx.group.add(ringFx); }
+      // grappin : rayon tendu vers le point d'ancrage
+      if (current === 'LIGHT_GRAPPLE') {
+        if (t >= 0.25 && t <= 0.62) { if (!beam) { beam = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 1, 5), gold('#FFF8DC', 1)); fx.group.add(beam); } tipWorld(W2); const end = W2.clone(); end.z += 12 * Math.min(1, (t - 0.25) / 0.08); end.y = W2.y; beam.position.copy(W2).lerp(end, 0.5); beam.scale.set(1, W2.distanceTo(end), 1); beam.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), end.clone().sub(W2).normalize()); }
+        else if (beam) { fx.group.remove(beam); beam = null; }
+      }
+      // poussière sous les pas
+      if (current === 'WALK' || current === 'RUN') ['FootL', 'FootR'].forEach((f) => { nodes[f].getWorldPosition(W2); const k = '_' + f; if (W2.y < 0.105 && !nodes[f][k]) { nodes[f][k] = true; for (let i = 0; i < (current === 'RUN' ? 3 : 2); i++) puff(W2); } if (W2.y > 0.13) nodes[f][k] = false; });
+    }
+    lastT = t;
+  }
+  sparks.forEach((s, i) => { s.t += dt || dtReal * 0.2; s.m.position.addScaledVector(s.v, dt); s.m.material.opacity = Math.max(0, 0.9 * (1 - s.t / s.life)); s.m.rotation.y += dt * 4; });
+  for (let i = sparks.length - 1; i >= 0; i--) if (sparks[i].t > sparks[i].life) { fx.group.remove(sparks[i].m); sparks.splice(i, 1); }
+  for (let i = puffs.length - 1; i >= 0; i--) { const p = puffs[i]; p.t += dt; p.m.position.addScaledVector(p.v, dt); p.m.scale.setScalar(1 + p.t * 3); p.m.material.opacity = Math.max(0, 0.7 * (1 - p.t / 0.6)); if (p.t > 0.6) { fx.group.remove(p.m); puffs.splice(i, 1); } }
+  ['staff', 'fia'].forEach((k) => { const L = trails[k]; for (let i = L.length - 1; i >= 0; i--) { const m = L[i]; m.userData.t += dt; m.material.opacity = Math.max(0, 0.75 * (1 - m.userData.t / (k === 'fia' ? 0.35 : 0.25))); if (m.userData.t > 0.4) { fx.group.remove(m); L.splice(i, 1); } } });
+  if (ringFx) { ringFx.userData.t += dt; const k = ringFx.userData.t / 0.45; ringFx.scale.setScalar(0.3 + k * 3.5); ringFx.material.opacity = Math.max(0, 0.95 * (1 - k)); if (k >= 1) { fx.group.remove(ringFx); ringFx = null; } }
+  const w = innerWidth, h = innerHeight;
+  if (renderer.domElement.width !== Math.floor(w * renderer.getPixelRatio())) { renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+  renderer.render(scene, camera);
+}
+requestAnimationFrame(loop);
+window.__viewer = { play, actions, get t() { return current && actions[current].time; }, setTime(t) { actions[current].time = t; mixer.update(0); }, pause() { paused = true; } };
+</script>
+</body>
+</html>
