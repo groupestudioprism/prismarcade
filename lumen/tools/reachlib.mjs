@@ -1,7 +1,7 @@
 /* LUMEN — contrôle d'accessibilité d'une île (partagé par build-*.mjs et reach.mjs).
    Toutes les portes et tous les ponts sont ouverts ; le grappin relie les poteaux (logic.js : postLinks).
    « cut » = ronces et roches fissurées franchissables (lame / marteau obtenus). */
-import { buildIsland, reachCells, postLinks } from '../js/logic.js';
+import { buildIsland, reachCells, postLinks, ventLinks } from '../js/logic.js';
 
 export function checkIsland(def, town) {
   const isl = buildIsland(def);
@@ -27,15 +27,16 @@ export function checkIsland(def, town) {
   isl.ents.forEach((e) => {
     if (['shard', 'page', 'wisp'].includes(e.t)) check(`${e.t} ${e.id}`, e.x, e.y);
     if (e.rot) { const ok = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => cut.has((e.x + a) + ',' + (e.y + b))); if (!ok) problems.push(`objet orientable ${e.id} hors de portée (${e.x}, ${e.y})`); }
-    if (e.t === 'post') {
-      const links = postLinks(isl, e);
+    if (e.t === 'post' || e.t === 'vent') {
+      const links = (e.t === 'vent' ? ventLinks : postLinks)(isl, e);
       if (!links.length) problems.push(`poteau ${e.id} (${e.x}, ${e.y}) sans liaison`);
       links.forEach((l) => { if (!l.to.id) problems.push('poteau sans id'); });
     }
   });
   // chaque poteau doit pouvoir être atteint à pied depuis une case voisine, et le retour doit exister (liens symétriques)
-  isl.ents.filter((e) => e.t === 'post').forEach((p) => {
-    postLinks(isl, p).forEach((l) => { if (!postLinks(isl, l.to).some((b) => b.to === p)) problems.push(`liaison à sens unique ${p.id} → ${l.to.id}`); });
+  isl.ents.filter((e) => e.t === 'post' || e.t === 'vent').forEach((p) => {
+    const lk = p.t === 'vent' ? ventLinks : postLinks;
+    lk(isl, p).forEach((l) => { if (!lk(isl, l.to).some((b) => b.to === p)) problems.push(`liaison à sens unique ${p.id} → ${l.to.id}`); });
   });
-  return { problems, notes, cells: cut.size, posts: isl.ents.filter((e) => e.t === 'post').length };
+  return { problems, notes, cells: cut.size, posts: isl.ents.filter((e) => e.t === 'post' || e.t === 'vent').length };
 }

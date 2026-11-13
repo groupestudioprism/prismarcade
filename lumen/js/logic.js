@@ -85,7 +85,7 @@ export function buildIsland(def) {
   // limites de chaque zone (pour vérifier qu'aucun faisceau n'en sort)
   const zoneRects = def.zones.map((z) => ({ x0: z.ox, y0: z.oy, x1: z.ox + Math.max(...z.map.map((r) => r.length)) - 1, y1: z.oy + z.map.length - 1 }));
   // solid : cases bloquées par des objets posés en jeu (coffres, PNJ immobiles…)
-  return { def, w, h, terrain, zoneAt, zoneRects, ents, entAt, gates, gateCell, solid: new Set(), initial: snapshot({ ents, gates }) };
+  return { def, w, h, terrain, zoneAt, zoneRects, ents, entAt, gates, gateCell, solid: new Set(), frozenTimers: true /* ACTE V : vrai pour les outils d’analyse ; le jeu le met à false */, initial: snapshot({ ents, gates }) };
 }
 
 /* Copie de l'état modifiable (orientations, portes) */

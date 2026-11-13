@@ -113,7 +113,7 @@ export function analyseTimed(zone, opts = {}) {
       for (let j = 0; j < rots.length && !found; j++) {
         const c = cost[node.pos + 1][j]; if (!Number.isFinite(c)) continue;
         const e = rots[j], st = states(e), cur = node.s.cfg[j];
-        const turns = e.t === 'mirror' ? [1] : [1, 3];
+        const turns = [1];   // rotate() ne tourne que dans le sens horaire
         for (const tn of turns) {
           const adv = advance(node.s, c);
           const cfg = adv.cfg.slice(); cfg[j] = (cur + tn) % st.length;
