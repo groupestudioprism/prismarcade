@@ -701,6 +701,13 @@ export default {
      "item": "corail_rouge",
      "x": 8,
      "y": 16
+    },
+    {
+     "t": "item",
+     "id": "corail3",
+     "item": "corail_rouge",
+     "x": 13,
+     "y": 13
     }
    ],
    "spawns": [
