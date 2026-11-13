@@ -299,6 +299,18 @@ function reEvaluate() {
   res.opened.forEach(onGateOpened);
   syncGates();
 }
+/* Ponts vers les donjons (Sanctuaire de Brume, Temple de Verre) : ils se déploient quand Lyra
+   arrive au bout du chemin, devant l'arche (après avoir franchi la haie de ronces). */
+const APPROACH_BRIDGES = { b_sanct: 'Le pont du Sanctuaire se déploie', b_temple: 'Le pont du Temple se déploie' };
+function approachBridges() {
+  Object.keys(APPROACH_BRIDGES).forEach((id) => {
+    const g = isl.gates[id]; if (!g || g.open) return;
+    if (!g.cells.some(([x, y]) => Math.hypot(W(x) - P.x, W(y) - P.z) < 5.5)) return;
+    openGate(id);
+    hud.toast('✦', APPROACH_BRIDGES[id], 'Fia illumine les planches une à une.');
+    autosave();
+  });
+}
 function openGate(id, quiet) {
   const g = isl.gates[id]; if (!g || g.open) return;
   g.open = true; st.world.gates[id] = 1;
@@ -1150,6 +1162,7 @@ function update(dt) {
     const z = zones[S.zone];
     if (z && z.exit) { const [ex, ez] = cellCenter(z, z.exit.cell); if (Math.hypot(ex - P.x, ez - P.z) < 1.1) { const oz = zones[zoneIndex[z.exit.to]]; audio.sfx('door'); fade(() => { teleport(W(oz.ox + z.exit.at[0]), W(oz.oy + z.exit.at[1]) + 0.6); P.face = 0; }); } }
     checkPickups();
+    if (Math.floor(t * 5) !== Math.floor((t - dt) * 5)) approachBridges();
     // cible d'interaction
     if (Math.floor(t * 10) !== Math.floor((t - dt) * 10)) {
       const tg = findTarget(); S.target = tg;
