@@ -3,13 +3,11 @@
    Fusionnés dans NPCS (npcs.js) et QUESTS (quests.js) par une ligne en bas de chaque fichier.
    Conventions : voir npcs.js et quests.js. Aucune condition n'utilise autre chose que flag / quest / step / has / count.
    ========================================================= */
-import { ISLANDS } from '../levels.js';
 
 const S = (q, id, st) => q.quest(id) === 'active' && q.step(id) === st;
 const FIA = (t) => ({ who: 'fia', t });
 const LYRA = (t) => ({ who: 'lyra', t });
-/* Tant que les Abysses Miroirs (Acte IV) ne sont pas fusionnées, Zéphyr ramène vers la Forêt de Verre ; ensuite, le passage par les Abysses prend le relais. */
-const sansAbysses = () => !ISLANDS.some((i) => i.id === 'abysses');
+/* Route : on arrive aux Pics depuis les Abysses Miroirs (fin de l’Acte IV, drapeau acte4_fini) : voir Lagon (abysses.js), Calixte (npcs.js) et Yaël (desert-npcs.js). Zéphyr ramène vers les îles précédentes. */
 
 export const NPCS_PICS = {
   /* ---------------- Borée, doyen du Col ---------------- */
@@ -214,7 +212,10 @@ export const NPCS_PICS = {
         say: ['Marchand le jour, passeur quand la brise le permet. Cristaux, fibre, bois : j’achète, je vends.'],
         choices: [
           { t: 'Acheter et vendre', do: [{ shop: 'zephyr', sell: true }] },
-          { t: 'Retourner à la Forêt de Verre', if: () => sansAbysses(), do: [{ travel: { to: 'foret', zone: 'vitrebourg', cell: [12, 7] } }] },
+          { t: 'Retourner aux Abysses Miroirs', do: [{ travel: { to: 'abysses', zone: 'greve', cell: [12, 7] } }] },
+          { t: 'Retourner au Désert des Échos', do: [{ travel: { to: 'desert', zone: 'cite', cell: [12, 7] } }] },
+          { t: 'Retourner à la Forêt de Verre', do: [{ travel: { to: 'foret', zone: 'vitrebourg', cell: [12, 7] } }] },
+          { t: 'Retourner à Havre-Aube', do: [{ travel: { to: 'aube', zone: 'havre', cell: [27, 7] } }] },
           { t: 'Au revoir' },
         ],
       },
@@ -339,8 +340,8 @@ export const NPCS_PICS = {
   },
 };
 
-/* Tessel (Forêt de Verre) : tant que les Abysses ne sont pas là, il propose la traversée vers les Pics. Fusionné dans npcs.js (voir bas de fichier). */
-export const TESSEL_PICS_CHOICE = { t: 'Partir pour les Pics du Vent', if: (q) => q.flag('acte2_fini') && sansAbysses(), do: [{ travel: { to: 'pics', zone: 'col', cell: [12, 7] } }] };
+/* Voyage vers les Pics : proposé par Lagon (Abysses), Calixte (Havre-Aube) et Yaël (Désert) une fois l’Acte IV terminé. */
+export const PICS_TRAVEL_CHOICE = { t: 'Partir pour les Pics du Vent', if: (q) => q.flag('acte4_fini'), do: [{ travel: { to: 'pics', zone: 'col', cell: [12, 7] } }] };
 
 export const QUESTS_PICS = {
   /* ================= Quêtes principales — Acte V : les Pics du Vent ================= */

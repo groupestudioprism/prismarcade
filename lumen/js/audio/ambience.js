@@ -3,6 +3,7 @@
    résonance, feu, insectes) et événements aléatoires (oiseaux,
    gouttes, craquements, pluie de verre, lointain).
    ========================================================= */
+import { DESERT_AMBIENCE } from './desert-audio.js';   /* ACTE III */
 import { A, tone, noise, clamp, mtof, dest } from './core.js';
 
 const PRE = {
@@ -19,11 +20,18 @@ const PRE = {
   canopee: { wind: 0.7, birds: 0.4, glassrain: 0.3, distant: 0.2 },
   phare: { wind: 0.5, glassrain: 0.4, distant: 0.3, hum: 0.2 },
   interieur: { fire: 0.6, wind: 0.04 },
+  /* ACTE IV */
+  greve: { wind: 0.3, water: 0.7, birds: 0.3, distant: 0.25 },
+  recifs: { wind: 0.4, water: 0.6, birds: 0.2, insects: 0.1, distant: 0.2 },
+  grotte: { water: 0.7, hum: 0.5, mist: 0.25, distant: 0.3 },
+  lac: { water: 0.9, hum: 0.4, distant: 0.2 },
+  phare_abysses: { water: 0.6, hum: 0.35, glassrain: 0.25, distant: 0.3 },
   combat: { wind: 0.15 }, boss: { hum: 0.3 }, boss2: { hum: 0.4 }, victoire: { birds: 0.4, wind: 0.1 },
 };
 /* ACTE V */
 import { PRE_PICS } from './themes-pics.js';
 Object.assign(PRE, PRE_PICS);
+Object.assign(PRE, DESERT_AMBIENCE);   /* ACTE III */
 const KEYS = ['wind', 'water', 'mist', 'hum', 'fire', 'insects', 'birds', 'glassrain', 'distant'];
 let base = {}, over = {}, manual = false, lay = null, timer = null, restore = 0.5, pending = null;
 

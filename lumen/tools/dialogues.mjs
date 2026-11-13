@@ -5,7 +5,7 @@ import { QUESTS } from '../js/data/quests.js';
 import { ITEMS } from '../js/data/items.js';
 
 let seed = 12345; const rnd = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
-const FLAGS = ['forge_ouverte', 'ysolde_plus', 'forge_remise', 'boss_colosse', 'boss_verre', 'acte1_fini', 'acte2_fini', 'verre_fini', 'lens_set', 'puits', 'boss_meunier', 'acte5_fini', 'moulin_col'];   /* ACTE V */
+const FLAGS = ['forge_ouverte', 'ysolde_plus', 'forge_remise', 'boss_colosse', 'boss_verre', 'acte1_fini', 'acte2_fini', 'verre_fini', 'lens_set', 'puits', 'acte3_fini', 'boss_echos', 'dore_fini', 'acte4_fini', 'boss_marees', 'varech_larme', 'boss_meunier', 'acte5_fini', 'moulin_col'];   /* ACTE V */
 const ITEM_IDS = Object.keys(ITEMS);
 const mkState = () => {
   const qs = {};

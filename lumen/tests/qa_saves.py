@@ -1,5 +1,5 @@
 """Sauvegardes hostiles / anciennes versions / migration."""
-import sys, json; sys.path.insert(0,'/home/claude/prismarcade/lumen/tests')
+import sys, json; sys.path.insert(0,__import__('os').path.dirname(__import__('os').path.abspath(__file__)))
 from qa_lib import *
 q=QA('sauvegardes', profile='/tmp/qa_prof_saves2'); q.load()
 J=q.js

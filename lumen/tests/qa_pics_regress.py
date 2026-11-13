@@ -8,6 +8,7 @@ J('Aube : Fia, quête', "T.q('q_reveil')")
 J('Aube : touche V sans capacité', "(()=>{const L=__lumen;const n=document.querySelectorAll('.toast').length;return String(!L.st.player.abilities.portails)})()", "true")
 J('Aube : pas de pierre de vent', "String(__lumen.isl.ents.filter(e=>e.t==='vent').length)", "0")
 q.done()
+time.sleep(3)   # laisse le serveur de la première session se fermer avant d'en relancer un
 q = QA('regress-foret', query='?low&nobloom&ile=foret'); q.load(); J = q.js
 J('Forêt : arrivée', """(async()=>{const m=await import('/lumen/js/game/state.js');const s=m.newState();
  s.player.island='foret';s.player.zone='vitrebourg';s.player.x=null;s.player.z=null;s.player.lvl=10;s.player.abilities={onde:true,grappin:true};s.flags.acte1_fini=1;s.inv.grappin=1;s.world=m.newWorld('havre');

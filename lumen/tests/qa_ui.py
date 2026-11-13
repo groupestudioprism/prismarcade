@@ -1,5 +1,5 @@
 """Clavier, menus, pause pendant un combat, dialogue au clavier, flou/onglet caché, redimensionnement, tactile."""
-import sys; sys.path.insert(0,'/home/claude/prismarcade/lumen/tests')
+import sys; sys.path.insert(0,__import__('os').path.dirname(__import__('os').path.abspath(__file__)))
 from qa_lib import *
 q=QA('ui', viewport=(800,450)); q.load()
 J=q.js; pg=q.pg

@@ -1,6 +1,6 @@
 # LUMEN : les Îles Brisées — document de conception
 
-*Prism Game · Studio Prism · version 0.5, Actes I et II en cours (novembre 2026)*
+*Prism Game · Studio Prism · version 0.7, Actes I à V (novembre 2026)*
 
 ---
 
@@ -173,8 +173,9 @@ Une île centrale en ruines, avec un autel pour les fragments, l'autel des capac
 - **Récompense** : fragment violet. Les portails s'activent.
 
 **Réalisation (Acte V, branche `acte5-pics`)** :
+- *Route* : on arrive aux Pics **depuis la fin de l’Acte IV** (`acte4_fini`) : Lagon (Abysses), Calixte (Havre-Aube), Yaël (Désert) proposent « Partir pour les Pics du Vent » (`travel { to: 'pics', zone: 'col', cell: [12, 7] }`) ; Zéphyr (Col) ramène aux Abysses, au Désert, à la Forêt ou à Havre-Aube. Tessel ne propose plus rien. La fin d’acte des Pics annonce l’île 6 « bientôt ».
 - *Géographie* (13 zones, 11 ponts) : le Col (village, 10 habitants, forge de Frimas, auberge du Chamois endormi, boutiques) ; les Courants (3 salles, `cr1`..`cr3`) ; la Terrasse des Girouettes ; les Pentes ; le Moulin du Grand Meunier (donjon : salle de combat, clé, relais à ressort, boss) ; les Sommets (Névé `so1`, Dalle `so2`, Crêtes `so3`, Souffle court `so4`) ; le Phare des Vents (3 étapes, faisceaux rouge, bleu, magenta).
-- *Planer* : entité `vent` (pierre de vent), reliée en ligne droite à une jumelle de l'autre côté d'un vide (`ventLinks`, portée 14, comme le grappin mais plus long). Capacité locale `abilities.planer`, donnée par Alizée (`teach: 'planer'`) ; mode de jeu `glide` (arc + voile) dans `js/game/pics-mech.js`. Rejouable à l'infini : on ne tombe jamais.
+- *Planer* : entité `vent` (pierre de vent), reliée en ligne droite à une jumelle de l'autre côté d'un vide (`ventLinks`, portée 14, comme le grappin mais plus long). Capacité `abilities.planer` : **clé unique avec l’Acte IV** (corniches des Abysses, donnée au Phare des Abysses) ; Alizée (`teach: 'planer'`) enseigne ici les pierres de vent et re-signale la capacité. Les deux mécaniques coexistent sous la même clé (entités `ledge` et `vent` distinctes, cibles d’interaction distinctes, `reachCells` gère les deux) ; mode de jeu `glide` (arc + voile) dans `js/game/pics-mech.js`. Rejouable à l'infini : on ne tombe jamais.
 - *Relais temporisés* : un relais avec `hold` (secondes) garde sa couleur après avoir été touché par un faisceau (`heldC`, `heldT`, `live`), puis s'éteint. `tools/timed.mjs` (`analyseTimed`) simule le temps (marche × 1,5, 0,6 s par action) et prouve : état initial non résolu, aucune fuite de faisceau, solution existante, **aucune solution statique**, marge ×0,75. Salles concernées : `cr3`, `so4`, salle des relais du Moulin.
 - *Plateformes qui montent* : ponts `look: 'lift'` (`lf1`, `lf3`), dalles dont les piliers se dressent quand le récepteur est éclairé ; une fois levées elles restent levées (comme les autres ponts : aucun piège possible).
 - *Portails* (récompense) : `abilities.portails`, touche V (bouton tactile ◎) ; deux portails reliés par île (`st.player.portals = { island, list: [{x, z}] }`), pose en plein air seulement, recharge anti-aller-retour. À réutiliser tel quel à l'Acte VI.
@@ -398,3 +399,24 @@ Le vérificateur essaie toutes les combinaisons d'orientations de chaque zone et
 
 ## Acte II partie 2 (implémenté)
 Canopée (can1..can4) : vides franchis par paires de poteaux de grappin (portée 9 cases, objet `grappin` obtenu chez Silex avec 5 éclats). Phare de Verre : balise y+m+c, trois salles, deux portes d'étape, solution unique vérifiée par force brute ; fin d'acte II générique. Quêtes : q_phare_verre, s_lampions_f, s_colis, s_graines.
+
+## Acte III : Le Désert des Échos (implémenté)
+Île 3, générée par `tools/build-desert.mjs` (zones : `tools/areas-desert.mjs`, données : `js/data/desert-*.js`, logique : `js/game/acte3.js`, rendu : `js/world/desert-props.js`, audio : `js/audio/desert-audio.js`).
+- **Régions** : Cité des Échos (village, 11 PNJ, 3 boutiques, forge, auberge), Dunes (salles de sable d1 à d4, esplanade, oasis), Temple enseveli (donjon, boss Gardien des Échos), Phare des Sables (vestibule à trois vasques puis salle de la balise).
+- **Mécaniques** : lames (`splitter`, semi-réfléchissantes : une partie du faisceau passe, l’autre est déviée), objets à porter (`carry`) posés sur des socles (`z.socles`), capacité Porter (donnée par Ambre, rattrapée à l’arrivée), tempêtes de sable par cycles (`isl.range` réduit : le faisceau s’éteint plus tôt ; une porte déjà ouverte ne se referme jamais ; l’abri ou l’attente suffisent).
+- **Vérification** : `analyse()` teste toutes les orientations et placements de socles (solution requise, état initial non résolu, objets à porter nécessaires, aucune fuite de faisceau).
+- **Contenu** : 3 quêtes principales, 7 secondaires, 6 ennemis (scarabée, scorpion, chacal, cactus, momie, écho) avec résistances, boss à 2 phases, fragment doré et capacité Orbe.
+- **Orbe** : Fia devient lanterne portative (lumière plus large, allume les vasques). Ce n’est pas une source de faisceau mobile : limite assumée.
+- **Tests** : `tests/qa_desert_boot.py`, `tests/qa_desert_full.py` (84 vérifications, port 8870), `tools/audit.py` (ciblage réel de chaque porte, coffre, PNJ, socle).
+
+## Acte IV (implémenté) : Les Abysses Miroirs
+
+**Idée :** la lumière rebondit sur l’eau. Les bassins d’eau miroir renvoient tout faisceau dans le sens de leur flèche ; une vanne règle leur niveau (haut : on ne peut pas marcher dessus et ils renvoient ; bas : on marche, la lumière passe). Fia, détachée de Lyra, devient l’**orbe** : posée sur un socle, elle émet un faisceau dans la direction qu’on lui donne.
+
+- **Moteur (`js/mech/eau.js`, `js/logic.js`) :** objets `pool` (bassin, champs `o` flèche, `valve` vanne liée, `inv` inversé), `valve` (état 0/1), `socle` (socle d’orbe, couleur optionnelle ; à ne pas confondre avec les socles d’objets portés de l’Acte III, `isl.socles`/`z.socles`, et la cible d’interaction `orbsocle` / `socle`), `ledge` (corniche de plané). L’orbe est un état de l’île (`isl.orb = { at, dir }`) sauvegardé dans `world.dev['@orb']` ; les vannes dans `world.dev[id]`. **Le format de sauvegarde ne change pas** (SAVE_VERSION = 6 avec l’Acte III ; l’Acte IV n’ajoute aucun champ) : capacités libres (`abilities.orbe`, `abilities.planer`), drapeaux `boss_marees`, `acte4_fini`.
+- **Île :** la Grève (village de pêcheurs, 9 PNJ + 1 à l’auberge, 4 boutiques, forge, auberge), les Récifs (exploration, 2 cachettes à roches fissurées), le lac souterrain (3 salles : miroir, vanne, orbe), les Grottes Miroirs (salle des Écumes, clé de corail, salle des Marées, arène du *Gardien des Marées*), le Phare des Abysses (3 salles à la suite, balise blanc + cyan), les Îlots du Reflet (après le phare : plané).
+- **Capacités :** `orbe` (clé unique, **donnée par le Temple enseveli de l’Acte III** (Fia lanterne : vasques et lumière plus large) ; l’Acte III n’en fait pas une source de faisceau, l’Acte IV ajoute donc, sous la même clé, la pose de l’orbe sur les **socles d’orbe** (entités `socle`, registre `isl.orbSocles`, état `isl.orb`) ; Marée la redonne si elle manque : sans conséquence) et **`planer`** (récompense du phare : sur une corniche gravée, tourné vers l’autre îlot, Interagir fait planer jusqu’à la corniche d’en face, vide de 7 cases au plus).
+- **Quêtes :** principales *Le lac qui ne reflète plus*, *Les Grottes Miroirs*, *Le Phare des Abysses* ; secondaires *Tisane de corail*, *Les colliers de Nacre*, *Le filet déchiré*, *Les crabes de Pétoncle*, *La perle de Murène*, *Les lampions du Coquillage*, *Étoiles de mer* (après le phare, demande de planer).
+- **Créatures :** crabe-lanterne (chargeur, faible aux coups lourds), méduse-reflet (à distance, résiste à la lumière), anguille d’ombre (rapide, faible à la lumière), sentinelle de corail (bouclier), boss Gardien des Marées (deux phases).
+- **Vérification :** `tools/analyse-abysses.mjs` explore l’espace des états (réglage de tous les objets × zone de marche de Lyra) : solution, aucune impasse, aucun faisceau qui sort, objets tous manœuvrables. `tools/build-abysses.mjs` assemble l’île et écrit `js/islands/abysses.js`.
+- **Route :** les Abysses s’atteignent **après l’Acte III** (`acte3_fini`) : Yaël (Désert), Calixte (Havre-Aube) ; retour par Lagon vers le Désert, Vitrebourg ou Havre-Aube. Tessel (Forêt) ne propose plus que le Désert.

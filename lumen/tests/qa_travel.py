@@ -1,5 +1,5 @@
 """Voyages aller-retour répétés, chargement inter-îles, sauvegarde pendant le voyage."""
-import sys, shutil, json; sys.path.insert(0,'/home/claude/prismarcade/lumen/tests')
+import sys, shutil, json; sys.path.insert(0,__import__('os').path.dirname(__import__('os').path.abspath(__file__)))
 from qa_lib import *
 shutil.rmtree('/tmp/qa_prof_travel', ignore_errors=True); shutil.copytree('/tmp/qa_prof_foret2','/tmp/qa_prof_travel')
 q=QA('voyages', profile='/tmp/qa_prof_travel'); q.load()

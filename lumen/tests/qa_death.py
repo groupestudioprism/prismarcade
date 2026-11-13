@@ -1,5 +1,5 @@
 """Mort et réapparition dans chaque zone des deux îles (clic réel sur « Se relever »)."""
-import sys, shutil; sys.path.insert(0,'/home/claude/prismarcade/lumen/tests')
+import sys, shutil; sys.path.insert(0,__import__('os').path.dirname(__import__('os').path.abspath(__file__)))
 from qa_lib import *
 which = sys.argv[1] if len(sys.argv)>1 else 'aube'
 if which=='foret':
