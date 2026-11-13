@@ -4,6 +4,7 @@
    Repère : x vers la droite, y vers le bas (en 3D, y de la grille = z).
    ========================================================= */
 
+import { poolUp, poolDir, orbSource, glideLinks } from './mech/eau.js';   /* ACTE IV */
 export const DIRS = { N: [0, -1], E: [1, 0], S: [0, 1], W: [-1, 0] };
 export const ORDER = ['N', 'E', 'S', 'W'];
 const LEFT = { N: 'W', W: 'S', S: 'E', E: 'N' };
@@ -34,8 +35,8 @@ export function filterColor(beam, glass) {
 /* Terrain : '.' herbe · ',' chemin · '#' roche / mur · 'T' arbre · 'H' bâtiment ou décor · '~' eau
    'r' ronces (coupées par une lame) · 'c' roche fissurée (brisée au marteau) · 'x' porte · '=' pont */
 export const BLOCK_TERRAIN = new Set(['#', 'T', 'H', '~', 'r', 'c']);
-const BLOCKING_ENTS = new Set(['lantern', 'mirror', 'prism', 'receiver', 'beacon', 'relay', 'vitrail', 'post']);
-const PICKUPS = new Set(['shard', 'page', 'wisp', 'start']);
+const BLOCKING_ENTS = new Set(['lantern', 'mirror', 'prism', 'receiver', 'beacon', 'relay', 'vitrail', 'post', 'valve', 'socle' /* ACTE IV */]);
+const PICKUPS = new Set(['shard', 'page', 'wisp', 'start', 'ledge' /* ACTE IV */]);
 
 /* Assemble les zones d'une île en une seule grille. */
 export function buildIsland(def) {
@@ -64,6 +65,8 @@ export function buildIsland(def) {
           const door = (z.doors || []).find((d) => d.cells.some(([dx, dy]) => dx === lx && dy === ly));
           const g = door ? gate(door.gate, 'barrier', door.look) : gate(z.barrier, 'barrier', z.barrier === 'lens' ? 'seal' : 'barrier');
           if (door && door.key) g.key = door.key;
+          if (door && door.hint) g.hint = door.hint;   /* ACTE IV : message de la porte verrouillée */
+          if (door && door.use) g.use = door.use;      /* ACTE IV : libellé de l’action */
           g.cells.push([x, y]); gateCell[x + ',' + y] = g.id;
         } else terrain[y][x] = ch;
       }
@@ -82,26 +85,35 @@ export function buildIsland(def) {
   ents.forEach((e) => { if ((e.t === 'receiver' || e.t === 'beacon' || e.t === 'relay') && e.gate) gate(e.gate, e.t === 'beacon' ? 'end' : 'bridge').receivers.push(e.id); });
   const entAt = {};
   ents.forEach((e) => { if (e.t !== 'start') entAt[e.x + ',' + e.y] = e; });
+  /* ACTE IV : vannes, socles d’orbe et orbe (état de l’île, voir js/mech/eau.js) */
+  const valves = {}, socles = {}, orb = { at: null, dir: 'E' };
+  ents.forEach((e) => { if (e.t === 'valve') { e.state = e.state ? 1 : 0; valves[e.id] = e; } if (e.t === 'socle') socles[e.id] = e; });
   // limites de chaque zone (pour vérifier qu'aucun faisceau n'en sort)
   const zoneRects = def.zones.map((z) => ({ x0: z.ox, y0: z.oy, x1: z.ox + Math.max(...z.map.map((r) => r.length)) - 1, y1: z.oy + z.map.length - 1 }));
   // solid : cases bloquées par des objets posés en jeu (coffres, PNJ immobiles…)
-  return { def, w, h, terrain, zoneAt, zoneRects, ents, entAt, gates, gateCell, solid: new Set(), initial: snapshot({ ents, gates }) };
+  return { def, w, h, terrain, zoneAt, zoneRects, ents, entAt, gates, gateCell, solid: new Set(), valves, socles, orb, initial: snapshot({ ents, gates, orb }) };
 }
 
 /* Copie de l'état modifiable (orientations, portes) */
 export function snapshot(isl) {
   const dev = {};
-  isl.ents.forEach((e) => { if (e.t === 'lantern') dev[e.id] = e.dir; if (e.t === 'relay') dev[e.id] = e.out; if (e.t === 'mirror') dev[e.id] = e.state; });
+  isl.ents.forEach((e) => { if (e.t === 'lantern') dev[e.id] = e.dir; if (e.t === 'relay') dev[e.id] = e.out; if (e.t === 'mirror') dev[e.id] = e.state; if (e.t === 'valve') dev[e.id] = e.state; /* ACTE IV */ });
+  if (isl.orb && isl.orb.at) dev['@orb'] = { at: isl.orb.at, dir: isl.orb.dir };   /* ACTE IV : l’orbe de Fia */
   const gates = {};
   Object.values(isl.gates).forEach((g) => (gates[g.id] = g.open ? 1 : 0));
   return { dev, gates };
 }
 export function restore(isl, snap) {
+  if (isl.orb) {   /* ACTE IV */
+    const o = (snap.dev || {})['@orb'];
+    isl.orb.at = o && isl.socles[o.at] ? o.at : null; isl.orb.dir = o && DIRS[o.dir] ? o.dir : 'E';
+  }
   isl.ents.forEach((e) => {
     if (!(e.id in (snap.dev || {}))) return;
     if (e.t === 'lantern' && DIRS[snap.dev[e.id]]) e.dir = snap.dev[e.id];
     if (e.t === 'relay' && DIRS[snap.dev[e.id]]) e.out = snap.dev[e.id];
     if (e.t === 'mirror') e.state = snap.dev[e.id] ? 1 : 0;
+    if (e.t === 'valve') e.state = snap.dev[e.id] ? 1 : 0;   /* ACTE IV */
   });
   Object.values(isl.gates).forEach((g) => (g.open = !!(snap.gates || {})[g.id]));
 }
@@ -111,6 +123,7 @@ export function rotate(ent) {
   if (ent.t === 'lantern') ent.dir = ORDER[(ORDER.indexOf(ent.dir) + 1) % 4];
   else if (ent.t === 'relay') ent.out = ORDER[(ORDER.indexOf(ent.out) + 1) % 4];
   else if (ent.t === 'mirror') ent.state = 1 - ent.state;
+  else if (ent.t === 'valve') ent.state = 1 - ent.state;   /* ACTE IV */
   else return false;
   return true;
 }
@@ -122,7 +135,7 @@ export function walkable(isl, x, y) {
   if (t === 'x' || t === '=') { const g = isl.gates[isl.gateCell[x + ',' + y]]; if (!g || !g.open) return false; }
   if (isl.solid && isl.solid.has(x + ',' + y)) return false;
   const e = isl.entAt[x + ',' + y];
-  return !(e && BLOCKING_ENTS.has(e.t));
+  return !(e && (BLOCKING_ENTS.has(e.t) || (e.t === 'pool' && poolUp(isl, e)) /* ACTE IV : bassin en eau */));
 }
 
 /* Trajet de tous les faisceaux. Renvoie les segments (en coordonnées de case) et les couleurs reçues par entité. */
@@ -133,6 +146,7 @@ export function trace(isl, active = {}) {
     if (e.t === 'lantern') stack.push({ x: e.x, y: e.y, d: e.dir, c: 'w', from: 0.32 });
     if (e.t === 'relay' && active[e.id]) stack.push({ x: e.x, y: e.y, d: e.out, c: active[e.id], from: 0.32 });
   });
+  { const os = orbSource(isl); if (os) stack.push(os); }   /* ACTE IV : l’orbe de Fia est une source de lumière */
   let guard = 0;
   while (stack.length && guard++ < 500) {
     const b = stack.pop();
@@ -150,6 +164,9 @@ export function trace(isl, active = {}) {
       if (BLOCK_TERRAIN.has(t) || blockedGate) { segs.push({ x0: sx, y0: sy, x1: x - dx * 0.5, y1: y - dy * 0.5, c: b.c, end: 'wall' }); break; }
       const e = isl.entAt[x + ',' + y];
       if (!e || PICKUPS.has(e.t)) continue;
+      /* ACTE IV : eau miroir (bassin en eau : renvoie la lumière dans le sens de sa flèche ; à sec : la lumière passe) et socle vide (la lumière passe) */
+      if (e.t === 'pool') { if (!poolUp(isl, e)) continue; segs.push({ x0: sx, y0: sy, x1: x, y1: y, c: b.c }); stack.push({ x, y, d: poolDir(e), c: b.c }); break; }
+      if (e.t === 'socle' && !(isl.orb && isl.orb.at === e.id)) continue;
       if (e.t === 'mirror') {
         segs.push({ x0: sx, y0: sy, x1: x, y1: y, c: b.c });
         stack.push({ x, y, d: MIRROR[e.state][b.d], c: b.c });
@@ -283,8 +300,10 @@ export function reachCells(isl, starts, opts = {}) {
   starts.forEach(([x, y]) => { seen.add(x + ',' + y); q.push([x, y]); });
   const posts = isl.ents.filter((e) => e.t === 'post');
   const linksOf = new Map(posts.map((p) => [p, opts.posts === false ? [] : postLinks(isl, p)]));
+  const ledges = new Map(isl.ents.filter((e) => e.t === 'ledge').map((e) => [e.x + ',' + e.y, opts.glide === false ? [] : glideLinks(isl, e, walkable)]));   /* ACTE IV : plané */
   while (q.length) {
     const [x, y] = q.shift();
+    for (const l of ledges.get(x + ',' + y) || []) { const lk = l.land.join(','); if (!seen.has(lk)) { seen.add(lk); q.push(l.land); } }
     for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
       const nx = x + dx, ny = y + dy, k = nx + ',' + ny;
       if (!seen.has(k) && ok(nx, ny)) { seen.add(k); q.push([nx, ny]); }
@@ -294,3 +313,6 @@ export function reachCells(isl, starts, opts = {}) {
   }
   return seen;
 }
+
+/* ACTE IV : liaisons de plané (voir js/mech/eau.js) */
+export const glideFrom = (isl, ledge) => glideLinks(isl, ledge, walkable);
