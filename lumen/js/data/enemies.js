@@ -85,3 +85,7 @@ export const ENEMIES = {
     desc: 'La gardienne de la Passerelle. Son bouclier d’azur arrête tout ce qui vient de face : frappe-la dans le dos, ou brise-le au marteau.',
   },
 };
+
+/* ACTE IV : Les Abysses Miroirs (js/data/abysses.js) */
+import { ENEMIES_A4 } from './abysses.js';
+Object.assign(ENEMIES, ENEMIES_A4);

@@ -214,3 +214,7 @@ export const QUESTS = {
     rewards: { xp: 140, ecus: 100, items: { grande_potion: 1 }, unlock: ['teinte_turquoise'], pa: [90, 35] },
   },
 };
+
+/* ACTE IV : Les Abysses Miroirs (js/data/abysses.js) */
+import { QUESTS_A4 } from './abysses.js';
+Object.assign(QUESTS, QUESTS_A4);

@@ -558,6 +558,8 @@ export const NPCS = {
         say: ['Je fais la traversée entre Vitrebourg et Havre-Aube. Tu veux rentrer ?'],
         choices: [
           { t: 'Retourner à Havre-Aube', do: [{ travel: { to: 'aube', zone: 'havre', cell: [27, 7] } }] },
+          /* ACTE IV : route des Abysses Miroirs (provisoire : l’Acte III, le Désert, s’intercalera) */
+          { t: 'Prendre la route des Abysses Miroirs', if: (q) => q.flag('acte2_fini'), do: [{ travel: { to: 'abysses', zone: 'greve', cell: [12, 7] } }] },
           { t: 'Pas maintenant' },
         ],
       },
@@ -589,3 +591,7 @@ export const NPCS = {
     ],
   },
 };
+
+/* ACTE IV : Les Abysses Miroirs (js/data/abysses.js) */
+import { NPCS_A4 } from './abysses.js';
+Object.assign(NPCS, NPCS_A4);

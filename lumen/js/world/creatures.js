@@ -10,6 +10,7 @@
 import * as THREE from 'three';
 import { Character } from './character.js';
 import { glassTexture } from './gfx.js';
+import { CREATURES_ABYSSES } from './creatures-abysses.js';   /* ACTE IV */
 
 const mat = (hex, o = {}) => new THREE.MeshStandardMaterial(Object.assign({ color: hex, flatShading: true, roughness: 0.8 }, o));
 const glow = (hex, k = 2.5) => new THREE.MeshBasicMaterial({ color: new THREE.Color(hex).multiplyScalar(k) });
@@ -335,4 +336,4 @@ function colosse(tint) {
   } };
 }
 
-export const CREATURES = { brumelin, ronceux, lanceur, sanglier, gardien, colosse };
+export const CREATURES = { brumelin, ronceux, lanceur, sanglier, gardien, colosse, ...CREATURES_ABYSSES /* ACTE IV */ };

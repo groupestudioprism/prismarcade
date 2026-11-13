@@ -982,7 +982,21 @@ export default {
     }
    ],
    "theme": "lac",
-   "music": "lac"
+   "music": "lac",
+   "puzzle": {
+    "rect": [
+     0,
+     0,
+     11,
+     11
+    ],
+    "entry": [
+     1,
+     5
+    ],
+    "final": "la1",
+    "label": "Le Miroir d’entrée"
+   }
   },
   {
    "id": "lac2",
@@ -1108,7 +1122,21 @@ export default {
     }
    ],
    "theme": "lac",
-   "music": "lac"
+   "music": "lac",
+   "puzzle": {
+    "rect": [
+     0,
+     0,
+     11,
+     11
+    ],
+    "entry": [
+     1,
+     5
+    ],
+    "final": "la2",
+    "label": "La Vanne du lac"
+   }
   },
   {
    "id": "lac3",
@@ -1191,7 +1219,21 @@ export default {
     }
    ],
    "theme": "lac",
-   "music": "lac"
+   "music": "lac",
+   "puzzle": {
+    "rect": [
+     0,
+     0,
+     11,
+     11
+    ],
+    "entry": [
+     1,
+     5
+    ],
+    "final": "la3",
+    "label": "L’orbe de Fia"
+   }
   },
   {
    "id": "grottes",

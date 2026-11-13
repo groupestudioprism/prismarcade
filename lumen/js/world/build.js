@@ -9,6 +9,7 @@ import { COLORS, DIRS } from '../logic.js';
 import { hash, T, W, BEAM_Y } from '../engine/util.js';
 import { U, tickGfx, patchSway, patchWater, glassTexture, shaftTexture, haloSprite, merge, mx, bakeStatic } from './gfx.js';
 import { createLife } from './life.js';
+import { abyssView, ABYSSES_ENTS } from './abysses.js';   /* ACTE IV */
 
 const C = (hex) => new THREE.Color(hex);
 const mat = (hex, o = {}) => new THREE.MeshStandardMaterial(Object.assign({ color: hex, flatShading: true, roughness: 0.9 }, o));
@@ -24,6 +25,12 @@ const THEMES = {
   phare_verre: { grass: '#8ad0c4', edge: '#a8e0d4', path: '#eaf4f0', dirt: '#6a7a8a', under: '#4a5f72', rock: '#b8d0dc', tuft: '#a8ecd8', leaves: [['#6fe6d6', '#86f0e0', '#5fd6c6'], ['#c8f6fc', '#d8e8ff', '#e0fbff']], blossom: 0.4, glass: true },
   temple: { grass: '#7ea4bc', edge: '#6e96b0', path: '#8eb2c8', dirt: '#34485a', under: '#243444', rock: '#5c84a0', tuft: '#7fd6e8', leaves: [['#4a8aa0', '#5a9ab0', '#3a7a90'], ['#4a8aa0', '#5a9ab0', '#3a7a90']], blossom: 0, floor: true },
   sanctuaire: { grass: '#8a84ae', edge: '#7a74a0', path: '#938db6', dirt: '#3f3a55', under: '#2e2840', rock: '#615a86', tuft: '#8f7ad6', leaves: [['#5a4a8a', '#6a5a9a', '#4a3a7a'], ['#5a4a8a', '#6a5a9a', '#4a3a7a']], blossom: 0, floor: true },
+  /* ACTE IV : Les Abysses Miroirs (turquoise, sable pâle, coraux) */
+  greve: { grass: '#8ccfae', edge: '#b6e4c4', path: '#efe2bd', dirt: '#8a7a62', under: '#2f5a6a', rock: '#8fb4c0', tuft: '#a8e8c4', leaves: [['#4fc8b4', '#5fd6c0', '#3fb8a4'], ['#ff9f8a', '#ff7f9a', '#ffc0a8']], blossom: 0.45 },
+  recifs: { grass: '#7ac8b0', edge: '#a0e0c8', path: '#e6dab4', dirt: '#7a6a58', under: '#2a5a6a', rock: '#7aa8b8', tuft: '#98e4c8', leaves: [['#3fb8c8', '#4fc8d8', '#2fa8b8'], ['#ff8f9a', '#ff6f8a', '#ffb0a8']], blossom: 0.6 },
+  grotte: { grass: '#4a8a92', edge: '#3a7a84', path: '#5a9aa2', dirt: '#1f3a48', under: '#14283a', rock: '#3a6a7c', tuft: '#5fe0d0', leaves: [['#2f8a9a', '#3a9aaa', '#257a8a'], ['#2f8a9a', '#3a9aaa', '#257a8a']], blossom: 0, floor: true },
+  lac: { grass: '#3f8a9a', edge: '#4a9aa8', path: '#6ab2b8', dirt: '#1b3646', under: '#12283a', rock: '#336a80', tuft: '#6ff0dc', leaves: [['#2f8a9a', '#3a9aaa', '#257a8a'], ['#2f8a9a', '#3a9aaa', '#257a8a']], blossom: 0, floor: true },
+  phare_abysses: { grass: '#5aa8b4', edge: '#6ab8c0', path: '#8ad0d0', dirt: '#1f4658', under: '#16304a', rock: '#4a86a0', tuft: '#8ff8e8', leaves: [['#3a9aaa', '#4aaaba', '#2f8a9a'], ['#3a9aaa', '#4aaaba', '#2f8a9a']], blossom: 0, floor: true },
   interieur: { grass: '#a0714f', edge: '#8f6446', path: '#a0714f', dirt: '#5a3f2f', under: '#3a2a22', rock: '#e9dcc2', tuft: '#a0714f', leaves: [['#5fae76', '#4f9a6a', '#468a5f'], ['#5fae76', '#4f9a6a', '#468a5f']], blossom: 0, floor: true, wood: true },
 };
 const GLASS_COLS = ['#3fc8bc', '#4fc8f0', '#3fc8bc', '#7fe0a8', '#a890f0', '#f08cc4', '#f0cc6a', '#4fc8f0'];
@@ -472,6 +479,8 @@ export function buildWorld(scene, isl, def, opts = {}) {
     } else if (e.t === 'wisp') {
       const c = new THREE.Mesh(new THREE.SphereGeometry(0.2, 12, 8), glow('#ffd1f0', 4)); c.position.y = 0.9; g.add(c);
       v.float = c; v.pick = true;
+    } else if (ABYSSES_ENTS.has(e.t)) {   /* ACTE IV : bassins, vannes, socles d’orbe, corniches */
+      abyssView(e, g, v, { M, glow, haloSprite, pedestal, BEAM_Y, T, isl });
     } else if (e.t === 'start') {
       const r = new THREE.Mesh(new THREE.TorusGeometry(0.9, 0.08, 6, 24), M.stone); r.rotation.x = Math.PI / 2; r.position.y = 0.04; g.add(r);
       const cr = new THREE.Mesh(new THREE.OctahedronGeometry(0.28, 0), glow('#9fe9ff', 2)); cr.position.y = 0.6; g.add(cr); v.float = cr; v.spinObj = cr;
@@ -848,6 +857,7 @@ export function buildWorld(scene, isl, def, opts = {}) {
     shafts.forEach((sm) => { if (sm.parent && sm.parent.visible) sm.material.opacity = sm.userData.base * (0.65 + 0.35 * Math.sin(t * 0.5 + sm.userData.ph)); });
     Object.values(views).forEach((v) => {
       if (!v.g.parent || !v.g.parent.visible) return;
+      if (v.tick) v.tick(t, dt, isl);   /* ACTE IV */
       if (v.head && v.target) { const want = v.target(); let d = want - v.head.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d)); v.head.rotation.y += d * (1 - Math.exp(-14 * dt)); }
       if (v.float) v.float.position.y = (v.floatY || (v.e.t === 'prism' ? BEAM_Y + 0.1 : v.e.t === 'start' ? 0.7 : 1)) + Math.sin(t * 2 + v.e.x) * 0.08;
       if (v.hook) v.hook.rotation.y += dt * 0.6;
@@ -909,7 +919,7 @@ export function buildWorld(scene, isl, def, opts = {}) {
   /* Une zone (et ses voisines) visibles ; les intérieurs seulement quand on y est */
   function showZones(current) {
     zones.forEach((z, zi) => { zoneGroups[zi].visible = current >= 0 && zones[current].interior ? zi === current : !z.interior; });
-    skyOn = !(current >= 0 && ['sanctuaire', 'temple', 'interieur'].includes(zones[current].theme));
+    skyOn = !(current >= 0 && ['sanctuaire', 'temple', 'interieur', 'grotte', 'lac', 'phare_abysses' /* ACTE IV */].includes(zones[current].theme));
     if (current >= 0 && current !== life.cur) { life.cur = current; life.setZone(current, props); }
   }
 

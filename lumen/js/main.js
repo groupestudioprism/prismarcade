@@ -10,7 +10,8 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ISLANDS, ISLAND_META, UPCOMING } from './levels.js';
-import { buildIsland, evaluate, rotate, walkable, snapshot, restore, COLORS, BLOCK_TERRAIN, DIRS, postLinks } from './logic.js';
+import { buildIsland, evaluate, rotate, walkable, snapshot, restore, COLORS, BLOCK_TERRAIN, DIRS, postLinks, glideFrom /* ACTE IV */ } from './logic.js';
+import { orbAct } from './mech/eau.js';   /* ACTE IV */
 import { platform } from './platform.js';
 import { $, esc, fmt, hash, lerp, clamp, damp, angleTo, rand, store, bus, T, W, BEAM_Y } from './engine/util.js';
 import { audio, music } from './engine/audio.js';
@@ -95,6 +96,12 @@ const AMB = {
   sanctuaire: { sky: [['#140f2c', '#2a1d55', '#3a2a6a'], ['#1d1640', '#3a2a6a', '#5a3f8a']], fog: [16, 75], hemi: 0.55, sun: 0.35, tint: '#9f88d8', fogColor: '#2a1d55' },
   canopee: { sky: [['#14423f', '#4fa890', '#c8d8b0'], ['#5ab8c8', '#bff0e0', '#fff0c8']], fog: [45, 160], hemi: 1.0, sun: 0.85, tint: '#c8ffe8' },
   phare_verre: { sky: [['#1a3a5a', '#5a8ac0', '#d0b8e0'], ['#6ab0e8', '#c8e8ff', '#fff4d8']], fog: [60, 210], hemi: 1.05, sun: 1.0, tint: '#d8f4ff' },
+  /* ACTE IV */
+  greve: { sky: [['#0c3a4a', '#2f9aa8', '#e6b8a8'], ['#3ab0d8', '#a8f0e8', '#fff0c8']], fog: [55, 190], hemi: 1.0, sun: 0.95, tint: '#c8fff0' },
+  recifs: { sky: [['#0c3a4a', '#2f9aa8', '#e6b8a8'], ['#3ab0d8', '#a8f0e8', '#fff0c8']], fog: [50, 180], hemi: 1.0, sun: 0.9, tint: '#c8fff0' },
+  grotte: { sky: [['#04161f', '#0a2e3a', '#10424e'], ['#06202c', '#0e3e4c', '#175a68']], fog: [14, 62], hemi: 0.6, sun: 0.3, tint: '#6ff0dc', fogColor: '#08303c' },
+  lac: { sky: [['#04161f', '#0a2e3a', '#10424e'], ['#06202c', '#0e3e4c', '#175a68']], fog: [16, 70], hemi: 0.65, sun: 0.3, tint: '#6ff0dc', fogColor: '#08303c' },
+  phare_abysses: { sky: [['#061c28', '#0e4050', '#1a6a78'], ['#082636', '#14586a', '#228a96']], fog: [20, 90], hemi: 0.75, sun: 0.4, tint: '#8ff8e8', fogColor: '#0a3846' },
   interieur: { sky: [['#1a120e', '#2a1d18', '#3a2a22'], ['#1a120e', '#2a1d18', '#3a2a22']], fog: [14, 40], hemi: 0.75, sun: 0.25, tint: '#ffd8b0', fogColor: '#241812' },
 };
 
@@ -133,6 +140,14 @@ const WARPS_BY = {
     { id: 'sanctuaire', name: 'Hall du Sanctuaire', zone: 'sanctuaire', cell: [15, 4], arrive: [15, 6], r: 2.2, where: 'Le Sanctuaire de Brume', needs: (st) => st.flags.boss_colosse, mesh: true },
     { id: 'phare', name: 'Cristal du Phare', zone: 'phare', cell: [3, 3], arrive: [4, 4], r: 2.2, where: 'Le Phare de l’Aube', needs: () => isl.gates.end && isl.gates.end.open, mesh: true },
   ],
+  /* ACTE IV : Les Abysses Miroirs */
+  abysses: [
+    { id: 'greve', name: 'Cristal de la Grève', zone: 'greve', cell: [15, 12], arrive: [15, 15], r: 4.6, where: 'La Grève' },
+    { id: 'lac', name: 'Cristal du Lac', zone: 'lac1', cell: [1, 8], arrive: [2, 7], r: 2.2, where: 'Le Lac souterrain' },
+    { id: 'grottes', name: 'Hall des Grottes', zone: 'grottes', cell: [15, 5], arrive: [15, 6], r: 2.2, where: 'Les Grottes Miroirs', needs: (st) => st.flags.boss_marees, mesh: true },
+    { id: 'phare', name: 'Cristal du Phare des Abysses', zone: 'phare_a', cell: [1, 3], arrive: [2, 3], r: 2.2, where: 'Le Phare des Abysses', needs: () => isl.gates.gr_arene && isl.gates.gr_arene.open, mesh: true },
+    { id: 'ilots', name: 'Cristal des Îlots', zone: 'ilots', cell: [9, 5], arrive: [10, 5], r: 2.2, where: 'Les Îlots du Reflet', needs: () => isl.gates.b_ilots && isl.gates.b_ilots.open, mesh: true },
+  ],
   foret: [
     { id: 'vitrebourg', name: 'Fontaine de Vitrebourg', zone: 'vitrebourg', cell: [15, 12], arrive: [15, 15], r: 4.6, where: 'Vitrebourg' },
     { id: 'vitraux', name: 'Cristal des Vitraux', zone: 'f1', cell: [1, 8], arrive: [2, 7], r: 2.2, where: 'Les Salles de Vitraux' },
@@ -162,7 +177,7 @@ let slot = 'auto';
 const P = { x: 0, y: 0, z: 0, vx: 0, vz: 0, face: 0, alive: true, dodging: false, dodgeT: 0, dodgeCD: 0, iframes: 0, swing: null, swingCD: 0, combo: 0, comboT: 0, chargeT: 0, spinT: 0, hurtT: 0, kbx: 0, kbz: 0, regenT: 0, buffRegen: 0 };
 const S = { mode: 'title', zone: -1, zoneT: 0, time: 0, yaw: 0.35, yawT: 0.35, pitch: 0.92, dist: TOUCH0 ? 15 : 17, camT: new THREE.Vector3(), shake: 0, hitstop: 0, restore: 0, restoreT: 0, wardrobe: false, finale: null, talkTo: null, boss: null, hints: {}, lastSave: 0, ambT: null };
 const G = {
-  scene, camera, isl, zones, def: DEF, P, audio, emit: ev.emit, on: ev.on, upcoming: UPCOMING,
+  scene, camera, isl, zones, def: DEF, P, audio, emit: ev.emit, on: ev.on, upcoming: UPCOMING, meta: META /* ACTE IV */,
   get st() { return st; },
   stats: () => calcStats(st), xpFor,
 };
@@ -449,7 +464,7 @@ function payCost(cost, disc) {
   if (st.player.ecus < e || !Object.entries(cost.mats).every(([id, n]) => (st.inv[id] || 0) >= n)) { audio.sfx('deny'); return false; }
   st.player.ecus -= e; Object.entries(cost.mats).forEach(([id, n]) => takeItem(st, id, n)); return true;
 }
-G.upgrade = (id, disc) => { const it = ITEMS[id], lvl = st.gear[id] || 0, next = UPGRADES[it.cat][lvl]; if (!next || !payCost(next, disc)) return; st.gear[id] = lvl + 1; audio.sfx('break'); setTimeout(() => audio.sfx('level'), 250); hud.toast(icon(it.icon), `${it.name} +${lvl + 1}`, `${IID === 'foret' ? 'Silex' : 'Bran'} a fait du beau travail.`, 'reward'); autosave(); };
+G.upgrade = (id, disc) => { const it = ITEMS[id], lvl = st.gear[id] || 0, next = UPGRADES[it.cat][lvl]; if (!next || !payCost(next, disc)) return; st.gear[id] = lvl + 1; audio.sfx('break'); setTimeout(() => audio.sfx('level'), 250); hud.toast(icon(it.icon), `${it.name} +${lvl + 1}`, `${META.smith || (IID === 'foret' ? 'Silex' : 'Bran')} a fait du beau travail.`, 'reward'); autosave(); };
 G.craft = (id, disc) => { if (st.inv[id] || !payCost(RECIPES[id], disc)) return; addItem(st, id, 1); audio.sfx('level'); hud.toast(icon(ITEMS[id].icon), ITEMS[id].name, 'Fabriqué à la forge.', 'reward'); autosave(); };
 
 /* ---------- Effets des dialogues ---------- */
@@ -470,6 +485,11 @@ G.runEffects = (list) => {
     if (e.flag) { st.flags[e.flag] = 1; if (/^acte\d+_fini$/.test(e.flag)) setTimeout(() => screens.actEnd(S.finaleRewards), 400); }
     if (e.open) openGate(e.open, false);
     if (e.equip) G.equip(e.equip, true);
+    if (e.ability) {   /* ACTE IV : capacités sauvegardées (orbe, planer) */
+      st.player.abilities[e.ability] = true;
+      const nm = { orbe: ['Orbe de Fia', 'Fia se pose sur un socle de lumière et éclaire tout droit. E pour la poser ou la tourner.'], planer: ['Planer', 'Sur une corniche, tourne-toi vers l’autre îlot et appuie sur E : Lyra plane de l’autre côté du vide.'] }[e.ability] || [e.ability, ''];
+      hud.toast('✦', 'Nouvelle capacité : ' + nm[0], nm[1], 'reward');
+    }
     if (e.teach) { st.player.abilities[e.teach] = true; hud.toast('✦', 'Nouvelle capacité : Onde de lumière', input.touch ? 'Bouton ✦ (35 énergie).' : 'Clic droit ou L (35 énergie).', 'reward'); }
     if (e.travel) { const tv = e.travel; setTimeout(() => G.travelTo(tv.to, tv.zone, tv.cell), 100); res.travel = true; }
     if (e.unlock) unlock(e.unlock);
@@ -662,7 +682,7 @@ function groundAt() {
   const z = zones[S.zone], t = isl.terrain[Math.round(P.z / T)] && isl.terrain[Math.round(P.z / T)][Math.round(P.x / T)];
   if (t === '=') return 'bois';
   const th = themeOf(z);
-  return z && z.interior ? 'bois' : th === 'temple' || th === 'sanctuaire' ? 'pierre' : th === 'foret' || th === 'canopee' || th === 'phare_verre' ? 'verre' : th === 'lande' ? 'terre' : 'herbe';
+  return z && z.interior ? 'bois' : th === 'temple' || th === 'sanctuaire' || th === 'grotte' || th === 'lac' || th === 'phare_abysses' /* ACTE IV */ ? 'pierre' : th === 'foret' || th === 'canopee' || th === 'phare_verre' ? 'verre' : th === 'lande' ? 'terre' : 'herbe';
 }
 function teleport(x, z) { P.x = x; P.z = z; P.vx = P.vz = 0; S.camT.set(x, 0.8, z); S.zone = -1; }
 function fade(cb) { const f = $('#fade'); f.classList.add('on'); setTimeout(() => { cb && cb(); f.classList.remove('on'); }, 450); }
@@ -677,7 +697,13 @@ function findTarget() {
   const push = (dist, max, o) => { if (dist < max) cands.push(Object.assign({ dist }, o)); };
   const zi = S.zone, z = zones[zi];
   // objets de lumière
-  isl.ents.forEach((e) => { if (e.rot && Math.abs(e.zone - zi) <= 0 && e.zone === zi) push(d(W(e.x), W(e.y)), 2.5, { kind: 'device', e, x: W(e.x), z: W(e.y), label: `Tourner ${{ lantern: 'la lanterne', mirror: 'le miroir', relay: 'le relais' }[e.t]}` }); });
+  isl.ents.forEach((e) => { if (e.rot && e.t !== 'socle' /* ACTE IV */ && Math.abs(e.zone - zi) <= 0 && e.zone === zi) push(d(W(e.x), W(e.y)), 2.5, { kind: 'device', e, x: W(e.x), z: W(e.y), label: `Tourner ${{ lantern: 'la lanterne', mirror: 'le miroir', relay: 'le relais', valve: 'la vanne (niveau de l’eau)' }[e.t]}` }); });
+  /* ACTE IV : socles de l’orbe de Fia, corniches de plané */
+  isl.ents.forEach((e) => {
+    if (e.zone !== zi) return;
+    if (e.t === 'socle') push(d(W(e.x), W(e.y)), 2.5, { kind: 'socle', e, x: W(e.x), z: W(e.y), label: !st.player.abilities.orbe ? 'Socle de lumière' : isl.orb.at === e.id ? 'Tourner l’orbe de Fia' : 'Poser l’orbe de Fia ici' });
+    if (e.t === 'ledge') push(d(W(e.x), W(e.y)) - 0.4, 2.4, { kind: 'ledge', e, x: W(e.x), z: W(e.y), label: !st.player.abilities.planer ? 'Corniche de pierre' : glideLink(e) ? `Planer vers ${DIR_WORDS[glideLink(e).dir]}` : 'Corniche · tourne-toi vers l’autre îlot' });
+  });
   // poteaux du grappin
   isl.ents.forEach((e) => { if (e.t === 'post' && e.zone === zi) push(d(W(e.x), W(e.y)) - (st.inv.grappin && pickLink(e) ? 1.0 : 0), 2.7, { kind: 'post', e, x: W(e.x), z: W(e.y), label: postLabel(e) }); });   // le poteau qu'on peut utiliser passe avant un miroir voisin
   // habitants
@@ -691,7 +717,7 @@ function findTarget() {
     if (p.t === 'house' && p.door) { const [x, zz] = cellCenter(pr.z, p.door); push(d(x, zz), 2.0, { kind: 'door', pr, x, z: zz, label: p.interior ? (p.lock && !st.inv[p.lock] && !st.flags['ouvert_' + p.id] ? `${p.name} (fermée à clé)` : `Entrer · ${p.name}`) : p.name }); }
     const [cx, cz] = [pr.g.position.x, pr.g.position.z];
     if (p.t === 'sign') push(d(cx, cz), 2.3, { kind: 'sign', pr, x: cx, z: cz, label: 'Lire le panneau' });
-    if (p.t === 'lamp' && !pr.g.userData.lit && (quests.state('s_lampions') === 'active' || quests.state('s_lampions_f') === 'active')) push(d(cx, cz), 2.4, { kind: 'lamp', pr, x: cx, z: cz, label: 'Rallumer le lampion avec Fia' });
+    if (p.t === 'lamp' && !pr.g.userData.lit && (quests.state('s_lampions') === 'active' || quests.state('s_lampions_f') === 'active' || quests.state('s_lampions_a') === 'active' /* ACTE IV */)) push(d(cx, cz), 2.4, { kind: 'lamp', pr, x: cx, z: cz, label: 'Rallumer le lampion avec Fia' });
     if (p.t === 'bed') push(d(cx, cz), 3.0, { kind: 'bed', pr, x: cx, z: cz, label: 'Se reposer' });
     if (p.t === 'desk') push(d(cx, cz), 3.0, { kind: 'desk', pr, x: cx, z: cz, label: 'Étudier les cartes d’Orin' });
     if (p.t === 'well' && !st.flags.puits) push(d(cx, cz), 2.4, { kind: 'well', pr, x: cx, z: cz, label: 'Regarder au fond du puits' });
@@ -703,7 +729,7 @@ function findTarget() {
     if (g.open || !(g.key || g.id === 'lens')) return;
     g.cells.forEach(([x, y]) => { if (g.id !== 'lens' && isl.zoneAt[y][x] !== zi && isl.zoneAt[y][x] !== -1) return; const wx = W(x), wz = W(y); push(d(wx, wz), 2.6, { kind: 'lock', g, x: wx, z: wz, label: g.id === 'lens' ? (st.inv.lentille ? 'Poser la Lentille d’Aube' : 'Un sceau de brume') : st.inv[g.key] ? 'Déverrouiller la porte' : 'Porte verrouillée' }); });
   });
-  const PRIO = { npc: -1.2, chest: -0.6, post: -0.2, device: -0.3, lock: -0.3, warp: 1.6, door: 0.2, sign: 0.4, lamp: -1.5, bed: 0.5, desk: 0, well: 0.6 };
+  const PRIO = { socle: -0.3, ledge: -0.2, /* ACTE IV */ npc: -1.2, chest: -0.6, post: -0.2, device: -0.3, lock: -0.3, warp: 1.6, door: 0.2, sign: 0.4, lamp: -1.5, bed: 0.5, desk: 0, well: 0.6 };
   cands.sort((a, b) => (a.dist + (PRIO[a.kind] || 0)) - (b.dist + (PRIO[b.kind] || 0)));
   return cands[0] || null;
 }
@@ -724,6 +750,25 @@ function postLabel(post) {
   const l = pickLink(post);
   return l ? `Lancer le grappin vers ${DIR_WORDS[l.dir]}` : 'Poteau de verre · tourne-toi vers l’autre rive';
 }
+/* ACTE IV : plané (capacité « planer », corniches de l’île des Abysses) : on franchit un vide entre deux corniches en ligne droite */
+function glideLink(ledge) {
+  const links = glideFrom(isl, ledge);
+  if (!links.length) return null;
+  if (links.length === 1) return links[0];
+  const fx = Math.sin(P.face), fz = Math.cos(P.face);
+  let best = null, bd = 0.3;
+  links.forEach((l) => { const [dx, dy] = DIRS[l.dir]; const dot = fx * dx + fz * dy; if (dot > bd) { bd = dot; best = l; } });
+  return best;
+}
+function startGlide(l) {
+  const to = { x: W(l.land[0]), z: W(l.land[1]) }, hook = { x: W(l.to.x), z: W(l.to.y) };
+  const dist = Math.hypot(to.x - P.x, to.z - P.z);
+  S.grap = { t: 0, dur: Math.max(1.1, 0.5 + dist / 9), from: { x: P.x, z: P.z }, to, hook, glide: true };
+  S.mode = 'grapple'; setTouch(false); input.clear(); hud.prompt('');
+  P.face = Math.atan2(to.x - P.x, to.z - P.z); P.vx = P.vz = 0; P.swing = null; P.dodging = false; P.chargeT = 0;
+  P.iframes = Math.max(P.iframes, S.grap.dur + 0.1);
+  audio.sfx('dodge');
+}
 const rope = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 1, 6), new THREE.MeshBasicMaterial({ color: new THREE.Color('#bff3ff').multiplyScalar(2.6), transparent: true, opacity: 0.95 }));
 rope.visible = false; scene.add(rope);
 const ropeTip = new THREE.Mesh(new THREE.OctahedronGeometry(0.2, 0), glow('#e8fbff', 4)); ropeTip.visible = false; scene.add(ropeTip);
@@ -742,13 +787,20 @@ function endGrapple() {
   S.grap = null; rope.visible = ropeTip.visible = false; if (world.grappleHide) world.grappleHide();
   S.mode = 'play'; setTouch(true); input.clear();
   audio.sfx('land'); sparks.burst(new THREE.Vector3(P.x, 0.4, P.z), '#9fe9ff', 14, 2.2, 1.5);
-  st.flags.a_grappe = 1;
+  if (g.glide) st.flags.a_plane = 1; else st.flags.a_grappe = 1;   /* ACTE IV */
   autosave();
 }
 function updateGrapple(dt) {
   const g = S.grap; g.t += dt;
   const k = Math.min(1, g.t / g.dur), cast = Math.min(1, k / 0.22), pull = Math.max(0, (k - 0.22) / 0.78), e = pull * pull * (3 - 2 * pull);
   if (!g.hit && cast >= 1) { g.hit = true; audio.sfx('grapple_hit'); sparks.burst(new THREE.Vector3(g.hook.x, 2.2, g.hook.z), '#e8fbff', 16, 2.5, 1); }
+  if (g.glide) {   /* ACTE IV : plané : longue courbe, sans câble */
+    const ek = k * k * (3 - 2 * k);
+    P.x = lerp(g.from.x, g.to.x, ek); P.z = lerp(g.from.z, g.to.z, ek); P.y = 0.4 + Math.sin(Math.PI * ek) * 2.4;
+    if (Math.random() < 0.5) sparks.burst(new THREE.Vector3(P.x, P.y + 0.6, P.z), '#9ffff0', 1, 0.6, 0.2, 1, 0.5);
+    if (k >= 1) endGrapple();
+    return;
+  }
   P.x = lerp(g.from.x, g.to.x, e); P.z = lerp(g.from.z, g.to.z, e); P.y = Math.sin(Math.PI * e) * 1.15;
   // câble : de la main de Lyra à la tête du poteau d'arrivée (visuel de world/ si disponible, sinon secours)
   const a = tmpV.set(P.x, P.y + 1.3, P.z);
@@ -763,6 +815,12 @@ function updateGrapple(dt) {
   if (k >= 1) endGrapple();
 }
 
+/* ACTE IV : si l’eau monte sous les pieds de Lyra, on la replace sur la case marchable la plus proche */
+function unstickPlayer() {
+  if (canStand(P.x, P.z)) return;
+  const cx = Math.round(P.x / T), cy = Math.round(P.z / T);
+  for (let r = 1; r < 6; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) { if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue; if (walkable(isl, cx + dx, cy + dy) && canStand(W(cx + dx), W(cy + dy))) { P.x = W(cx + dx); P.z = W(cy + dy); return; } }
+}
 function interact(back) {
   const t = S.target; if (!t) return;
   switch (t.kind) {
@@ -771,8 +829,22 @@ function interact(back) {
       for (let i = 0; i < n; i++) rotate(e);
       audio.sfx(e.t === 'vitrail' ? 'vitrail' : e.t === 'mirror' ? 'mirror' : e.t === 'relay' ? (e.mix ? 'mixer' : 'relay') : 'lantern', { x: W(e.x), z: W(e.y) });
       sparks.burst(new THREE.Vector3(W(e.x), BEAM_Y, W(e.y)), '#ffd98a', 10, 2, 1);
+      if (e.t === 'valve') { audio.sfx('door', { x: W(e.x), z: W(e.y) }); hud.toast('≈', e.state ? 'L’eau monte' : 'L’eau descend', 'Les bassins de la salle changent de niveau.'); unstickPlayer(); }
       reEvaluate(); autosave();
       break;
+    }
+    case 'socle': {   /* ACTE IV */
+      if (!st.player.abilities.orbe) { screens.message('Socle de lumière', 'Un socle de pierre creusé d’un anneau luisant. Une petite lumière pourrait s’y poser… mais Fia ne sait pas encore faire cela.'); break; }
+      const r = orbAct(isl, t.e, back);
+      audio.sfx('relay', { x: W(t.e.x), z: W(t.e.y) }); sparks.burst(new THREE.Vector3(W(t.e.x), BEAM_Y, W(t.e.y)), '#bff3ff', r === 'pose' ? 24 : 8, 2, 1);
+      if (r === 'pose') hud.toast('✦', 'Fia se pose sur le socle', 'Sa lumière part tout droit. Reviens appuyer sur E pour la tourner.');
+      reEvaluate(); autosave(); break;
+    }
+    case 'ledge': {
+      if (!st.player.abilities.planer) { screens.message('Corniche de pierre', 'Une dalle gravée d’un chevron, au bord du vide. De l’autre côté, une autre corniche lui répond. Il faudrait savoir planer pour les relier.'); break; }
+      const l = glideLink(t.e);
+      if (!l) { audio.sfx('deny'); hud.toast('✋', 'Aucune corniche en face', 'Tourne-toi vers l’autre îlot, puis réessaie.'); break; }
+      startGlide(l); break;
     }
     case 'post': {
       if (!st.inv.grappin) { screens.message('Poteau de verre', 'Un poteau de verre taillé, assez solide pour retenir un câble de lumière. De l’autre côté du vide, un deuxième poteau lui répond. Il faudrait un grappin pour les relier.'); break; }
@@ -1007,6 +1079,17 @@ ev.on('kill', (k) => {
 G.bossStart = (e) => { S.boss = e; music('boss', 1); hud.banner(e.def.place || 'Le Sanctuaire de Brume', e.def.name); };
 function bossDefeated(k) {
   const def = ENEMIES[(k && k.type) || 'colosse'] || ENEMIES.colosse;
+  if (def.bossFlag === 'boss_marees') {   /* ACTE IV : le Gardien des Marées */
+    st.flags.boss_marees = 1; S.boss = null; hud.bossBar(null);
+    audio.chord([392, 523, 659, 784, 1047], 0.15); S.victoryUntil = performance.now() + 20000; music('victoire', 1);
+    hud.banner('Victoire', 'Le Gardien des Marées s’apaise');
+    reward('b:' + IID + ':gardien', 320, 110);
+    updateChestVisibility();
+    st.world.warps.grottes = 1;
+    quests.check(); autosave();
+    setTimeout(() => hud.toast('✦', 'Un cristal de voyage s’est réveillé', 'Il te ramène au Hall des Grottes quand tu veux. Le pont vers le Phare des Abysses se déploie.'), 2500);
+    return;
+  }
   const flag = def.bossFlag || 'boss_colosse', verre = flag === 'boss_verre';
   st.flags[flag] = 1; S.boss = null; hud.bossBar(null);
   audio.chord([392, 523, 659, 784, 1047], 0.15); S.victoryUntil = performance.now() + 20000; music('victoire', 1);
@@ -1191,7 +1274,7 @@ function update(dt) {
   fia.position.set(P.x + Math.cos(fa) * 0.75, 1.75 + Math.sin(t * 2.3) * 0.12, P.z + Math.sin(fa) * 0.75);
   if (P.spinT > 0) fia.position.set(P.x + Math.cos(t * 20) * 1.4, 1.1, P.z + Math.sin(t * 20) * 1.4);
   hero.root.updateMatrixWorld(true); hero.fiaWorld(fiaLight.position);
-  fiaLight.intensity = LOW ? 0 : (['sanctuaire', 'temple'].includes(themeOf(zones[S.zone])) ? 14 : 6) * (P.chargeT > 0.55 ? 1.6 : 1);
+  fiaLight.intensity = LOW ? 0 : (['sanctuaire', 'temple', 'grotte', 'lac', 'phare_abysses' /* ACTE IV */].includes(themeOf(zones[S.zone])) ? 14 : 6) * (P.chargeT > 0.55 ? 1.6 : 1);
   const tg = S.target;
   if (tg && tg.kind === 'device' && S.mode === 'play') { selRing.visible = true; selRing.position.set(tg.x, 0.47, tg.z); selRing.scale.setScalar(1 + Math.sin(t * 5) * 0.04); } else selRing.visible = false;
   /* -------- habitants -------- */
@@ -1265,7 +1348,7 @@ function update(dt) {
   if (A.tint) tint.lerp(new THREE.Color(A.tint), 0.25);
   world.M.grass.color.copy(tint); world.M.foliage.color.copy(tint); world.M.tuft.color.copy(tint);
   ambient.mat.opacity = th === 'interieur' ? 0 : 0.35 + r * 0.6;
-  ambient.mat.color.set(th === 'sanctuaire' || th === 'lande' ? '#c9b6ff' : th === 'foret' || th === 'canopee' || th === 'phare_verre' || th === 'temple' ? '#bff3ff' : '#ffc4dc').multiplyScalar(1.4);
+  ambient.mat.color.set(th === 'sanctuaire' || th === 'lande' ? '#c9b6ff' : th === 'foret' || th === 'canopee' || th === 'phare_verre' || th === 'temple' || th === 'greve' || th === 'recifs' || th === 'grotte' || th === 'lac' || th === 'phare_abysses' /* ACTE IV */ ? '#bff3ff' : '#ffc4dc').multiplyScalar(1.4);
   if (!opening.musicLock && Math.floor(t) !== Math.floor(t - dt)) music(S.mode === 'title' ? 'title' : S.victoryUntil > performance.now() ? 'victoire' : S.boss && S.boss.state !== 'dead' ? (S.boss.phase === 2 ? 'boss2' : 'boss') : (zones[S.zone] && zones[S.zone].music) || th, S.mode === 'title' ? 0.6 : r);
 
   /* -------- monde -------- */
@@ -1327,7 +1410,8 @@ document.querySelectorAll('[data-ui]').forEach((b) => b.addEventListener('click'
 /* Outils de test (automatisation) */
 window.__lumen = {
   isl, S, P, G, get st() { return st; }, combat, quests, npcs, world, renderer, scene, camera,
-  set(id, v) { const e = isl.ents.find((x) => x.id === id); if (!e) return; if (e.t === 'mirror') e.state = v; else if (e.t === 'lantern') e.dir = v; else if (e.t === 'relay') e.out = v; reEvaluate(); },
+  set(id, v) { const e = isl.ents.find((x) => x.id === id); if (!e) return; if (e.t === 'mirror') e.state = v; else if (e.t === 'lantern') e.dir = v; else if (e.t === 'relay') e.out = v; else if (e.t === 'valve') e.state = v; /* ACTE IV */ reEvaluate(); },
+  setOrb(at, dir) { isl.orb.at = at; if (dir) isl.orb.dir = dir; reEvaluate(); },   /* ACTE IV */
   tp(x, y) { P.x = W(x); P.z = W(y); },
   tpZone(id, c) { const z = zones[zoneIndex[id]]; const cc = c || z.spawn; teleport(W(z.ox + cc[0]), W(z.oy + cc[1])); },
   give: (id, n) => giveItem(id, n),

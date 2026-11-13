@@ -93,8 +93,19 @@ const TH = {
     arp: { pat: '012321', every: 2, wave: 'triangle', vol: 0.045, dec: 0.4, oct: 1, rev: 0.4, min: 0 },
     mel: { wave: 'triangle', vol: 0.07, cut: 3500, vib: 5, rev: 0.5, density: 0.95, rest: 0.1, lo: 8, hi: 17, min: 0 },
     perc: { kick: 'x.......x.......', shaker: 'x.o.x.o.x.o.x.o.', kmin: 0.4, hmin: 0.1 }, bell: { p: 0.25, vol: 0.04, min: 0 } },
+  /* ACTE IV : Les Abysses Miroirs */
+  greve: { bpm: 88, root: 53, sc: 'maj', floor: 0.4, bpc: 2, swing: 0.08, prog: [[0, 'M9'], [2, 'm7'], [7, 'M'], [5, 'M7']],
+    pad: { wave: 'triangle', vol: 0.03, cut: 1800, oct: 0 }, bass: { pat: '0...5...0...3...', wave: 'sine', vol: 0.13, cut: 700, min: 0.1 },
+    arp: { pat: '01230213', every: 2, wave: 'glass', vol: 0.045, dec: 0.5, oct: 1, rev: 0.6, min: 0 },
+    mel: { wave: 'sine', vol: 0.06, cut: 3000, vib: 5, rev: 0.6, density: 0.8, rest: 0.3, lo: 8, hi: 16, min: 0.1 },
+    perc: { shaker: 'o.o.o.o.o.o.o.o.', hmin: 0.45, wood: '..x.......x.....', wmin: 0.6 }, bell: { p: 0.16, vol: 0.04, min: 0.2 } },
+  abysses: { bpm: 62, root: 50, sc: 'lyd', floor: 0.25, bpc: 2, prog: [[0, 'M9'], [7, 'M'], [9, 'm7'], [2, 'M7']],
+    pad: { wave: 'sawtooth', vol: 0.013, cut: 500, cutTo: 1000, oct: 0, sub: true }, bass: { pat: '0...............', wave: 'sine', vol: 0.13, min: 0.1 },
+    arp: { pat: '0231', every: 4, wave: 'glass', vol: 0.045, dec: 1.2, oct: 2, rev: 1, min: 0.1, p: 0.85 },
+    mel: { wave: 'glass', vol: 0.045, cut: 3400, vib: 0, rev: 1, density: 0.4, rest: 0.5, lo: 8, hi: 16, min: 0.4 },
+    perc: { gong: 'x...............', gmin: 0.5 }, bell: { p: 0.14, vol: 0.045, min: 0.1 } },
 };
-const ALIAS = { canopy: 'canopee', lighthouse: 'phare', phare_de_verre: 'phare', menu: 'title', aube: 'village', havre: 'village', sanctuary: 'sanctuaire', forest: 'foret', foretdeverre: 'foret', interior: 'interieur', auberge: 'interieur', boss1: 'boss', boss_phase2: 'boss2', victory: 'victoire', energie: 'puzzle', enigme: 'puzzle', salle: 'puzzle' };
+const ALIAS = { grotte: 'abysses', lac: 'abysses', recifs: 'greve', phare_abysses: 'phare', /* ACTE IV */ canopy: 'canopee', lighthouse: 'phare', phare_de_verre: 'phare', menu: 'title', aube: 'village', havre: 'village', sanctuary: 'sanctuaire', forest: 'foret', foretdeverre: 'foret', interior: 'interieur', auberge: 'interieur', boss1: 'boss', boss_phase2: 'boss2', victory: 'victoire', energie: 'puzzle', enigme: 'puzzle', salle: 'puzzle' };
 
 /* Instance de thème --------------------------------------------------- */
 let lastNow = 0, cur = null, fading = [], want = null, timer = null, level = 0.5;

@@ -314,7 +314,7 @@ export function createScreens(G) {
   /* ================= Forge ================= */
   function forge() {
     cur = 'forge';
-    const st = G.st, disc = st.flags.forge_remise ? 0.8 : 1, smith = G.def.id === 'foret' ? 'Silex' : 'Bran';
+    const st = G.st, disc = st.flags.forge_remise ? 0.8 : 1, smith = (G.meta && G.meta.smith) || (G.def.id === 'foret' ? 'Silex' : 'Bran') /* ACTE IV */;
     const owned = Object.keys(st.inv).filter((id) => ITEMS[id] && ['arme', 'armure'].includes(ITEMS[id].cat) && id !== 'veste_voyage' && id !== 'baton');
     const matsHtml = (m) => Object.entries(m).map(([id, n]) => `<span class="${(st.inv[id] || 0) >= n ? 'ok' : 'miss'}">${icon(ITEMS[id].icon)} ${esc(ITEMS[id].name)} ${st.inv[id] || 0}/${n}</span>`).join('');
     const can = (cost) => st.player.ecus >= Math.round(cost.ecus * disc) && Object.entries(cost.mats).every(([id, n]) => (st.inv[id] || 0) >= n);
@@ -323,7 +323,7 @@ export function createScreens(G) {
       return `<li class="${rarityCls(it.rarity)}"><span class="si">${icon(it.icon)}</span><div><b>${esc(it.name)} ${lvl ? '+' + lvl : ''}</b>${next ? `<small>Niveau ${lvl + 1} : ${it.cat === 'arme' ? 'attaque +' + Math.round(next.bonus * 100) + ' %' : 'défense +' + next.bonus}</small><div class="mats">${matsHtml(next.mats)}</div>` : '<small>Amélioration maximale.</small>'}</div>${next ? `<button class="btn small ${can(next) ? 'primary' : ''}" data-up="${id}" ${can(next) ? '' : 'disabled'}>${Math.round(next.ecus * disc)} ${icon('coin')}</button>` : '<span class="tag">Max</span>'}</li>`;
     });
     const craft = Object.entries(RECIPES).map(([id, r]) => { const it = ITEMS[id]; const have = st.inv[id]; return `<li class="${rarityCls(it.rarity)}"><span class="si">${icon(it.icon)}</span><div><b>${esc(it.name)}</b><small>${esc(it.desc)}</small><div class="mats">${matsHtml(r.mats)}</div></div>${have ? '<span class="tag">Possédé</span>' : `<button class="btn small ${can(r) ? 'primary' : ''}" data-craft="${id}" ${can(r) ? '' : 'disabled'}>${Math.round(r.ecus * disc)} ${icon('coin')}</button>`}</li>`; });
-    open(`<div class="panel shop-card"><div class="j-head"><div><p class="kicker">Forge</p><h2>${smith === 'Silex' ? 'Verrerie de Silex' : 'Forge de Bran'}</h2></div><div class="purse">${icon('coin')} <b>${fmt(st.player.ecus)}</b></div><button class="icon-btn" data-a="close">${icon('close')}</button></div>
+    open(`<div class="panel shop-card"><div class="j-head"><div><p class="kicker">Forge</p><h2>${smith === 'Silex' ? 'Verrerie de Silex' : smith === 'Bran' ? 'Forge de Bran' : 'Forge de ' + smith /* ACTE IV */}</h2></div><div class="purse">${icon('coin')} <b>${fmt(st.player.ecus)}</b></div><button class="icon-btn" data-a="close">${icon('close')}</button></div>
       <h4>Améliorer</h4><ul class="shop-list">${rows.join('') || `<li class="muted">${smith} améliore les armes et les armures (pas le bâton ni la veste de voyage).</li>`}</ul>
       <h4>Fabriquer</h4><ul class="shop-list">${craft.join('')}</ul></div>`);
     scr.onclick = (ev) => {

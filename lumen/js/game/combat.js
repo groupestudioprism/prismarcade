@@ -344,7 +344,7 @@ export function createCombat(G) {
   /* ---------- Le Colosse de Brume ---------- */
   function updateBoss(e, dt, dist, toP, anim, faceTo) {
     const P = G.P, d = e.def;
-    if (e.hp < e.maxHp * 0.5 && e.phase === 1) { e.phase = 2; G.audio.sfx('roar'); if (G.audio.bossPhase) G.audio.bossPhase(2); G.shake(0.5); G.ui.toast('⚠', 'Le Colosse s’enrage !', 'Ses attaques s’accélèrent.'); spawnAdds(2); }
+    if (e.hp < e.maxHp * 0.5 && e.phase === 1) { e.phase = 2; G.audio.sfx('roar'); if (G.audio.bossPhase) G.audio.bossPhase(2); G.shake(0.5); G.ui.toast('⚠', (e.def.rageName || 'Le Colosse') + ' s’enrage !', 'Ses attaques s’accélèrent.'); spawnAdds(2); }
     const fast = e.phase === 2 ? 0.75 : 1;
     switch (e.state) {
       case 'idle':

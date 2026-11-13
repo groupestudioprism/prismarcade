@@ -74,3 +74,7 @@ export const SHOPS = {
     ],
   },
 };
+
+/* ACTE IV : Les Abysses Miroirs (js/data/abysses.js) */
+import { SHOPS_A4 } from './abysses.js';
+Object.assign(SHOPS, SHOPS_A4);

@@ -55,6 +55,7 @@ place(A.ilots, 3, 66);
 const lacZone = (id, num, title, hint, ox, g, ents, entryGate, exitGate) => zone({
   id, region: 'lac', title, theme: 'lac', music: 'lac', num, ox, oy: 0, entry: [0, 5], entryGate, exits: [[10, 5]], hint,
   map: g.map((r) => r.join('')), ents: ents.concat([{ t: 'shard', id: 'sh_' + id, x: 1, y: 9 }]),
+  puzzle: { rect: [0, 0, 11, 11], entry: [1, 5], final: exitGate, label: title },
 });
 lacZone('lac1', 1, 'Le Miroir d’entrée',
   'L’eau du lac renvoie la lumière dans le sens de la flèche gravée sur son bord. Tourne la lanterne et le miroir : le rayon doit descendre jusqu’au cristal.',
@@ -127,17 +128,7 @@ const bridges = [
 ];
 
 /* ---------------- Vérifications ---------------- */
-const check = (id, label, zoneSpec, stages, final) => {
-  const t0 = Date.now();
-  const r = analyseRoom(zoneSpec, stages, final);
-  if (!r.ok) throw new Error(`${label} : ${r.problems.join(' | ')}`);
-  report.push(`${label.padEnd(26)} ${r.devices} objets · ${r.orb ? 'orbe · ' : ''}${r.stages.map((s) => `${s.gate}: ${s.solutions} sol., ${s.moves} gestes min., ${s.states} états`).join(' · ')} · ${((Date.now() - t0) / 1000).toFixed(1)} s`);
-};
-for (const id of ['lac1', 'lac2', 'lac3']) {
-  const z = byId[id];
-  check(id, z.title, { map: z.map, ents: z.ents.filter((e) => e.t !== 'shard'), doors: z.doors, entry: z.entry }, [], [].concat(z.ents.find((e) => e.gate).gate));
-}
-for (const z of [byId.phare_a, byId.grottes]) {
+for (const z of [byId.lac1, byId.lac2, byId.lac3, byId.phare_a, byId.grottes]) {
   analysePuzzles(z).forEach((r) => {
     if (!r.ok) throw new Error(`${r.label} : ${r.problems.join(' | ')}`);
     report.push(`${r.label.padEnd(26)} ${r.devices} objets · ${r.orb ? 'orbe · ' : ''}${r.stages.map((x) => `${x.gate}: ${x.solutions} sol., ${x.moves} gestes min., ${x.states} états`).join(' · ')} · ${(r.ms / 1000).toFixed(1)} s`);
