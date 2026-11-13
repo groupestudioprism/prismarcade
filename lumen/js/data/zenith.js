@@ -59,6 +59,10 @@ export const ZENITH_NPCS = {
           'Bien sûr. La citadelle est à vous, et l’archipel aussi. Revenez quand vous voulez contempler le Prisme : il vous attendra au sommet.',
         ],
         do: [{ step: 'q_epilogue' }, { flag: 'epilogue_ok' }],
+        choices: [
+          { t: 'Revoir la scène finale', if: (q) => q.flag('fin_jeu'), do: [{ replay: 'fin' }] },
+          { t: 'Merci, Célestine' },
+        ],
       },
       {
         if: (q) => fini(q),
@@ -71,6 +75,10 @@ export const ZENITH_NPCS = {
       {
         if: () => true,
         say: ['La citadelle respire à nouveau. Que la lumière te guide.'],
+        choices: [
+          { t: 'Revoir la scène finale', if: (q) => q.flag('fin_jeu'), do: [{ replay: 'fin' }] },
+          { t: 'Merci, Célestine' },
+        ],
       },
     ],
   },

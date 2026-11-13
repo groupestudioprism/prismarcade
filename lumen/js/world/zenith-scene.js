@@ -65,7 +65,7 @@ export function createZenithScene(scene, isl, zones, zoneIndex) {
   /* ---------- les six faisceaux ---------- */
   const beamGeo = new THREE.CylinderGeometry(0.5, 0.5, 1, 8, 1, true);
   const beams = SIX.map((L) => {
-    const m = new THREE.Mesh(beamGeo, new THREE.MeshBasicMaterial({ color: new THREE.Color(L.c).multiplyScalar(2.2), transparent: true, opacity: 0, fog: false, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
+    const m = new THREE.Mesh(beamGeo, new THREE.MeshBasicMaterial({ color: new THREE.Color(L.c), transparent: true, opacity: 0, fog: false, depthWrite: false, blending: THREE.NormalBlending, side: THREE.DoubleSide }));
     m.visible = false; root.add(m); return { m, k: 0, tgt: 0 };
   });
 
@@ -104,8 +104,8 @@ export function createZenithScene(scene, isl, zones, zoneIndex) {
         const a = top.clone(), z2 = o.tip;
         dir.subVectors(z2, a); const len = dir.length(); dir.normalize();
         b.m.position.copy(a).addScaledVector(dir, len / 2 * b.k); q.setFromUnitVectors(up, dir); b.m.quaternion.copy(q);
-        b.m.scale.set(1 + Math.sin(t * 5 + i) * 0.12, len * b.k, 1 + Math.sin(t * 5 + i) * 0.12);
-        b.m.material.opacity = 0.55 * Math.min(1, b.k * 1.5);
+        b.m.scale.set(1.7 + Math.sin(t * 5 + i) * 0.2, len * b.k, 1.7 + Math.sin(t * 5 + i) * 0.2);
+        b.m.material.opacity = 0.85 * Math.min(1, b.k * 1.5);
       }
     });
     brume.rotation.y += dt * 0.02;

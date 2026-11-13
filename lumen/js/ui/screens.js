@@ -380,7 +380,7 @@ export function createScreens(G) {
   function actEnd(info) {
     cur = 'end';
     open(`<div class="panel end-card"><p class="kicker">Acte ${G.def.num || 1} terminé</p><h1>${esc(G.def.endTitle || (G.def.num === 2 ? 'Le Temple de Verre est libéré' : 'Le phare de l’Aube brille'))}</h1><p class="lead">${esc(G.def.ending)}</p>
-      <div class="stats"><div><b>${fmtTime(G.st.playTime)}</b><small>temps de jeu</small></div><div><b>${G.completion()} %</b><small>île complétée</small></div><div><b>${G.st.player.lvl}</b><small>niveau</small></div><div><b>${G.st.stats.kills}</b><small>créatures vaincues</small></div><div><b>${G.quests.done('side').length}</b><small>quêtes secondaires</small></div></div>
+      <div class="stats"><div><b>${fmtTime(G.st.playTime)}</b><small>temps de jeu</small></div><div><b>${G.completion()} %</b><small>île complétée</small></div>${G.completionAll ? `<div><b>${G.completionAll().total} %</b><small>archipel complété</small></div>` : ''}<div><b>${G.st.player.lvl}</b><small>niveau</small></div><div><b>${G.st.stats.kills}</b><small>créatures vaincues</small></div><div><b>${G.quests.done('side').length}</b><small>quêtes secondaires</small></div></div>
       ${info && info.xp ? `<p class="gain">🎁 +${fmt(info.xp)} XP · +${fmt(info.coins)} pièces sur Prism Arcade</p>` : ''}
       <div class="next"><h3>La suite du voyage</h3>${G.upcoming.map((u) => `<div class="up"><span>Île ${u.num}</span><b>${esc(u.name)}</b><small>${esc(u.what)} · bientôt</small></div>`).join('')}</div>
       <div class="actions"><button class="btn primary" data-a="close">Continuer à explorer</button><a class="btn" href="../#/">Retour à Prism Arcade</a></div></div>`, 'end');
