@@ -1,0 +1,7 @@
+{
+  "appId": "com.studioprism.lumen",
+  "appName": "LUMEN",
+  "webDir": "www",
+  "backgroundColor": "#0b0f24",
+  "android": { "allowMixedContent": false }
+}

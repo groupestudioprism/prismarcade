@@ -1,0 +1,25 @@
+name: LUMEN APK
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '17' }
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - name: Compiler l'APK
+        run: bash lumen/android-app/build-apk.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lumen-apk
+          path: lumen/android-app/build/lumen.apk
+      - name: Publier dans une release
+        env: { GH_TOKEN: '${{ github.token }}' }
+        run: |
+          gh release delete lumen-apk -y --cleanup-tag 2>/dev/null || true
+          gh release create lumen-apk lumen/android-app/build/lumen.apk --title "LUMEN (Android)" --notes "APK de test de LUMEN. Installe-le sur Android (autoriser les sources inconnues)."
