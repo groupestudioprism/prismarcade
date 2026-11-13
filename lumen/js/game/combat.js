@@ -8,6 +8,7 @@
 import * as THREE from 'three';
 import { ENEMIES } from '../data/enemies.js';
 import { CREATURES } from '../world/creatures.js';
+import '../world/creatures-desert.js';   /* ACTE III : scarabée et scorpion s'ajoutent à CREATURES */
 import { T, W, rand, randi, angleTo, damp, lerp } from '../engine/util.js';
 
 export function createCombat(G) {
@@ -65,8 +66,8 @@ export function createCombat(G) {
         const a = (k / Math.max(1, sp.n)) * Math.PI * 2;
         let cx = sp.x + (sp.n > 1 ? Math.cos(a) * 1.2 : 0), cy = sp.y + (sp.n > 1 ? Math.sin(a) * 1.2 : 0);
         const x = W(z.ox + cx), zz = W(z.oy + cy);
-        const view = CREATURES[def.model || sp.type](def.tint);
-        if (def.tint && def.model !== 'colosse') tintView(view.root, def.tint, def.tintK, def.tintE);
+        const view = CREATURES[def.model || sp.type](def.matte ? undefined : def.tint);   /* ACTE III : matte = teinte sans variante de verre */
+        if (def.tint && (def.model !== 'colosse' || def.matte)) tintView(view.root, def.tint, def.tintK, def.tintE);
         view.root.position.set(x, 0, zz);
         add(view.root);
         const hp = Math.round(def.hp * (sp.elite ? 1.2 : 1));
@@ -128,7 +129,7 @@ export function createCombat(G) {
 
   /* ---------- Butin au sol ---------- */
   const coinGeo = new THREE.CylinderGeometry(0.16, 0.16, 0.05, 10), coinMat = new THREE.MeshStandardMaterial({ color: '#f0c66b', metalness: 0.8, roughness: 0.25, emissive: '#c99a3a', emissiveIntensity: 0.4 });
-  const matColors = { eclat_verre: '#9fe9ff', givre_foret: '#bff3ff', larme_verre: '#9fffe0', brume: '#b39cff', fibre: '#7aa84f', pierre: '#a29fb3', bois: '#c9965a', larme_colosse: '#c9a0ff' };
+  const matColors = { eclat_verre: '#9fe9ff', givre_foret: '#bff3ff', larme_verre: '#9fffe0', brume: '#b39cff', fibre: '#7aa84f', pierre: '#a29fb3', bois: '#c9965a', larme_colosse: '#c9a0ff', ecaille_scarabee: '#e0b050', dard_scorpion: '#ff9a50', bandelette: '#efe0b8', larme_sable: '#ffd98a', sable_dore: '#f0d080', fleur_dune: '#ffc0d0' /* ACTE III */ };
   function dropPickup(x, z, id, n) {
     const m = id === 'ecus' ? new THREE.Mesh(coinGeo, coinMat) : new THREE.Mesh(new THREE.OctahedronGeometry(0.2, 0), new THREE.MeshStandardMaterial({ color: matColors[id] || '#ffffff', emissive: matColors[id] || '#ffffff', emissiveIntensity: 0.6, flatShading: true }));
     if (id === 'ecus') m.rotation.x = Math.PI / 2;
@@ -344,7 +345,7 @@ export function createCombat(G) {
   /* ---------- Le Colosse de Brume ---------- */
   function updateBoss(e, dt, dist, toP, anim, faceTo) {
     const P = G.P, d = e.def;
-    if (e.hp < e.maxHp * 0.5 && e.phase === 1) { e.phase = 2; G.audio.sfx('roar'); if (G.audio.bossPhase) G.audio.bossPhase(2); G.shake(0.5); G.ui.toast('⚠', 'Le Colosse s’enrage !', 'Ses attaques s’accélèrent.'); spawnAdds(2); }
+    if (e.hp < e.maxHp * 0.5 && e.phase === 1) { e.phase = 2; G.audio.sfx('roar'); if (G.audio.bossPhase) G.audio.bossPhase(2); G.shake(0.5); G.ui.toast('⚠', `${d.name} s’enrage !`, 'Ses attaques s’accélèrent.');   /* ACTE III : nom du boss */ spawnAdds(2); }
     const fast = e.phase === 2 ? 0.75 : 1;
     switch (e.state) {
       case 'idle':
@@ -380,7 +381,7 @@ export function createCombat(G) {
             slashFx(e.x, e.z, e.face, 5, Math.PI * 1.1, '#c9a0ff', 1.4);
           } else if (e.atk === 'rocks') {
             const n = e.phase === 2 ? 5 : 3;
-            for (let i = 0; i < n; i++) shoot(e.x + Math.sin(toP) * 1.5, e.z + Math.cos(toP) * 1.5, toP + (i - (n - 1) / 2) * 0.28, { speed: 10, range: 16, size: 0.38, color: '#9f7aff', dmg: 14, owner: 'enemy', y: 2.2 });
+            for (let i = 0; i < n; i++) shoot(e.x + Math.sin(toP) * 1.5, e.z + Math.cos(toP) * 1.5, toP + (i - (n - 1) / 2) * 0.28, { speed: 10, range: 16, size: 0.38, color: d.bossColor || '#9f7aff', dmg: 14, owner: 'enemy', y: 2.2 });
             G.audio.sfx('magic');
           } else if (e.atk === 'summon') { spawnAdds(e.phase === 2 ? 3 : 2); G.audio.sfx('roar'); }
         }
@@ -388,7 +389,7 @@ export function createCombat(G) {
       }
       case 'attack':
         anim.attack = Math.min(1, e.t / 0.4);
-        if (e.t > 0.5) { if (e.atk === 'slam') { e.state = 'tired'; e.t = 0; e.tired = true; G.ui.damage(e.x, 4.6, e.z, 'Son cœur brille !', 'alert'); } else { e.state = 'walk'; e.cd = rand(1.2, 2.2) * fast; } }
+        if (e.t > 0.5) { if (e.atk === 'slam') { e.state = 'tired'; e.t = 0; e.tired = true; G.ui.damage(e.x, 4.6, e.z, d.tiredText || 'Son cœur brille !', 'alert'); } else { e.state = 'walk'; e.cd = rand(1.2, 2.2) * fast; } }
         break;
       case 'tired':
         anim.tired = true; e.tired = true;
@@ -403,7 +404,7 @@ export function createCombat(G) {
     for (let i = 0; i < n; i++) {
       const a = Math.random() * Math.PI * 2, x = b.x + Math.cos(a) * 3, z = b.z + Math.sin(a) * 3;
       if (!G.canStand(x, z, 0.4)) continue;
-      const at = b.def.adds || 'brumelin', def = ENEMIES[at], view = CREATURES[def.model || at](def.tint); if (def.tint) tintView(view.root, def.tint); view.root.position.set(x, 0, z); add(view.root);
+      const at = b.def.adds || 'brumelin', def = ENEMIES[at], view = CREATURES[def.model || at](def.matte ? undefined : def.tint); if (def.tint) tintView(view.root, def.tint); view.root.position.set(x, 0, z); add(view.root);
       enemies.push({ key: 'add' + Math.random(), type: at, def, zi: b.zi, z: b.z, view, x, z, hx: x, hz: z, vx: 0, vz: 0, face: 0, hp: def.hp, maxHp: def.hp, state: 'chase', t: 0, cd: 1, hurt: 0, kb: { x: 0, z: 0 }, adds: true, seen: true, wanderT: 1 });
       G.sparks.burst(new THREE.Vector3(x, 0.6, z), '#b39cff', 20, 3, 2);
     }
