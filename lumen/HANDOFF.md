@@ -272,3 +272,10 @@ Mise à jour du 06/11/2026 (session de stabilisation) :
 - **Audio** : main.js appelle audio.listener/step/sfx (receiver, relay, mirror, lantern, mixer, puzzle_solved, warp) et la propriété `z.music` (non renseignée dans les données : à ajouter côté zones si souhaité).
 - **Tests navigateur** (port 8771) : foret.py (attente 15 s au retour Aube), full.py OK ; systems.py : « boss: phase 2 » échoue car le boss meurt à l'étape précédente (dégâts joueur plus élevés, test dépendant de l'ordre, sans lien avec la Forêt). Phare résolu en navigateur (solution trouvée par force brute), saut de grappin vérifié (lent sous swiftshader).
 - **Limites** : durée ≈1h15 non mesurée en jeu ; visuels poteaux/anneaux en repli tant que GRAPHISME n'a pas fourni les modèles ; pas de `music` par zone ; combats de la passerelle non rejoués en navigateur.
+
+## Annexe — Acte III (Désert des Échos), état réel
+- **Fait** : île complète (11 zones, 9 ponts), jouable de bout en bout par voyage Aube/Forêt → Désert, fin d’acte avec « Île 4 » en « bientôt ». SAVE_VERSION 6 (champ `moved`, stat `resSable`). Clés de capacité : `porter` (Acte II), `orbe` (Acte III).
+- **Vérifié** : `node tools/verify.mjs`, `reach.mjs`, `coherence.mjs` (0 erreur), `dialogues.mjs` ; `tests/qa_desert_full.py` (marche réelle, ciblage, tempête, boss, vasques, phare, annexes, sauvegarde, allers-retours Forêt).
+- **Non vérifié** : jeu réel au clavier, GPU réel, équilibrage et durée (70-80 min estimées, non mesurées), ressenti des tempêtes.
+- **Reste** : la résistance `resSable` ne s’applique qu’aux coups de mêlée ; la quête « kill » compte toute créature (limite du moteur) ; îles 4 à 6 à faire.
+- Fichiers partagés modifiés (marqués `/* ACTE III */`) : levels.js, main.js, logic.js, combat.js, state.js, screens.js, build.js, music.js, ambience.js, data/{items,enemies,quests,shops,npcs,looks}.js, tests/qa_lib.py.

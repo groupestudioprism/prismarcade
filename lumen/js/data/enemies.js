@@ -85,3 +85,7 @@ export const ENEMIES = {
     desc: 'La gardienne de la Passerelle. Son bouclier d’azur arrête tout ce qui vient de face : frappe-la dans le dos, ou brise-le au marteau.',
   },
 };
+
+/* ACTE III : créatures du Désert des Échos */
+import { DESERT_ENEMIES } from './desert-enemies.js';
+Object.assign(ENEMIES, DESERT_ENEMIES);

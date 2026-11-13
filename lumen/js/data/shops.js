@@ -74,3 +74,7 @@ export const SHOPS = {
     ],
   },
 };
+
+/* ACTE III : boutiques du Désert des Échos */
+import { DESERT_SHOPS } from './desert-shops.js';
+Object.assign(SHOPS, DESERT_SHOPS);

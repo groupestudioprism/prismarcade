@@ -5,6 +5,7 @@
    Un planificateur à l'avance joue les notes ; les mélodies
    dérivent d'un motif graine qui évolue lentement.
    ========================================================= */
+import { DESERT_SCALE, DESERT_TH } from './desert-audio.js';   /* ACTE III */
 import { A, vol, tone, noise, mtof, clamp, rng, hash, state } from './core.js';
 
 const SC = { maj: [0, 2, 4, 5, 7, 9, 11], min: [0, 2, 3, 5, 7, 8, 10], dor: [0, 2, 3, 5, 7, 9, 10], lyd: [0, 2, 4, 6, 7, 9, 11], mix: [0, 2, 4, 5, 7, 9, 10], phr: [0, 1, 3, 5, 7, 8, 10], pent: [0, 2, 4, 7, 9], mpent: [0, 3, 5, 7, 10] };
@@ -94,6 +95,7 @@ const TH = {
     mel: { wave: 'triangle', vol: 0.07, cut: 3500, vib: 5, rev: 0.5, density: 0.95, rest: 0.1, lo: 8, hi: 17, min: 0 },
     perc: { kick: 'x.......x.......', shaker: 'x.o.x.o.x.o.x.o.', kmin: 0.4, hmin: 0.1 }, bell: { p: 0.25, vol: 0.04, min: 0 } },
 };
+/* ACTE III */ Object.assign(SC, DESERT_SCALE); Object.assign(TH, DESERT_TH);
 const ALIAS = { canopy: 'canopee', lighthouse: 'phare', phare_de_verre: 'phare', menu: 'title', aube: 'village', havre: 'village', sanctuary: 'sanctuaire', forest: 'foret', foretdeverre: 'foret', interior: 'interieur', auberge: 'interieur', boss1: 'boss', boss_phase2: 'boss2', victory: 'victoire', energie: 'puzzle', enigme: 'puzzle', salle: 'puzzle' };
 
 /* Instance de thème --------------------------------------------------- */

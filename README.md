@@ -54,12 +54,13 @@ Limite connue : les scores sont calculés dans le navigateur, sans serveur (forf
 
 Fichiers concernés : `js/cloud.js` (connexion, synchronisation, classements), `js/core.js` (`PA.merge`, `PA.useStore`) et `js/prism-presence.js` (présence dans le tableau de bord Studio Prism, copie de `shared/` du site).
 
-## Grand jeu : Lumen (version 0.5, Actes I et II)
+## Grand jeu : Lumen (version 0.5, Actes I à III)
 
 `lumen/` contient **Lumen : les Îles Brisées**, une aventure-puzzle en 3D (Three.js r160, fourni dans `lumen/vendor`, sans étape de compilation). On y joue sur `/lumen/` avec le même compte Prism Arcade : XP, pièces et sauvegarde passent par `PA.award` et `gameStats('lumen')`. **La sauvegarde de l'aventure est enregistrée sur l'appareil ; la sauvegarde en ligne demande une règle Firestore, qui n'est pas publiée pour l'instant.**
 
 - **Contenu actuel (Acte I) :** l'Île de l'Aube, avec le village de Havre-Aube (PNJ, 5 boutiques, forge, garde-robe), la Lande des Ronces, le Sanctuaire de Brume et son boss, 3 quêtes principales et 8 quêtes secondaires, un inventaire, des armes et des équipements, des combats et 10 zones d'énigmes. Compter environ 1 h 15 pour la quête principale.
 - **Acte II (0.5, partie 1) :** la Forêt de Verre, atteinte en barque depuis Havre-Aube une fois le phare rallumé : village de Vitrebourg, trois salles de vitraux (mélange des couleurs : vitraux, relais mélangeur), Lisière, Temple de Verre et son Gardien, 1 quête principale et 3 secondaires. La suite (Phare de Verre, canopée) arrive ensuite.
+- **Acte III (0.5) :** le Désert des Échos, atteint depuis Havre-Aube ou Vitrebourg une fois l’acte précédent terminé : Cité des Échos (village, 11 habitants, boutiques, forge, auberge), cinq salles de sable (lames semi-réfléchissantes, objets à porter sur des socles), Dunes balayées par des tempêtes de sable (les faisceaux portent moins loin : on attend ou on s’abrite, sans jamais de pénalité), Temple enseveli et son Gardien des Échos, vestibule et Phare des Sables. 3 quêtes principales, 7 secondaires, 6 types d’ennemis avec résistances. Récompense : fragment doré et capacité Orbe.
 - **Tests :** `lumen/tests/` (navigateur, Playwright) et `node lumen/tools/reach.mjs` (accessibilité des coffres et objets).
 - **Conception complète :** `lumen/DESIGN.md` (6 îles, environ 5 h pour la quête principale, environ 8 h 30 à 100 %).
 - **Seul fichier lié à la plateforme :** `lumen/js/platform.js`. Le remplacer suffira pour les futures versions PC et mobile.

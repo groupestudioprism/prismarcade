@@ -28,6 +28,7 @@ import { newState, newWorld, fromRun, normalize, addItem, takeItem, stats as cal
 import { saves } from './game/save.js';
 import { createQuests } from './game/quests.js';
 import { createCombat } from './game/combat.js';
+import { createAct3, DESERT_AMB } from './game/acte3.js';   /* ACTE III */
 import { createHud } from './ui/hud.js';
 import { createScreens } from './ui/screens.js';
 import { icon } from './ui/icons.js';
@@ -86,7 +87,7 @@ sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.03;
 scene.add(sun, sun.target);
 
 /* Ambiances par thème : ciel (aube ↔ crépuscule), brouillard, lumières */
-const AMB = {
+const AMB = {  /* ACTE III : Object.assign(AMB, DESERT_AMB) juste après */
   puzzle: { sky: null, fog: [75, 220], hemi: 1, sun: 1, tint: null },
   village: { sky: null, fog: [80, 230], hemi: 1.05, sun: 1.05, tint: null },
   lande: { sky: [['#4a3a78', '#8a7ab0', '#d9a0a8'], ['#5a7ad0', '#c0c8f0', '#f0c8b0']], fog: [50, 180], hemi: 0.95, sun: 0.95, tint: '#c9b6e8' },
@@ -97,6 +98,7 @@ const AMB = {
   phare_verre: { sky: [['#1a3a5a', '#5a8ac0', '#d0b8e0'], ['#6ab0e8', '#c8e8ff', '#fff4d8']], fog: [60, 210], hemi: 1.05, sun: 1.0, tint: '#d8f4ff' },
   interieur: { sky: [['#1a120e', '#2a1d18', '#3a2a22'], ['#1a120e', '#2a1d18', '#3a2a22']], fog: [14, 40], hemi: 0.75, sun: 0.25, tint: '#ffd8b0', fogColor: '#241812' },
 };
+Object.assign(AMB, DESERT_AMB);   /* ACTE III */
 
 /* =========================================================
    Monde
@@ -140,6 +142,15 @@ const WARPS_BY = {
     { id: 'temple', name: 'Hall du Temple', zone: 'temple', cell: [15, 4], arrive: [15, 6], r: 2.2, where: 'Le Temple de Verre', needs: (st) => st.flags.boss_verre, mesh: true },
     { id: 'canopee', name: 'Cristal de la Canopée', zone: 'can1', cell: [3, 3], arrive: [4, 4], r: 2.2, where: 'La Canopée', mesh: true },
     { id: 'phare', name: 'Cristal du Phare de Verre', zone: 'phare_f', cell: [3, 10], arrive: [4, 10], r: 2.2, where: 'Le Phare de Verre', needs: () => isl.gates.fc2 && isl.gates.fc2.open, mesh: true },
+  ],
+  /* ACTE III */
+  desert: [
+    { id: 'cite', name: 'Fontaine de la Cité', zone: 'cite', cell: [15, 12], arrive: [15, 15], r: 4.6, where: 'La Cité des Échos' },
+    { id: 'salles', name: 'Cristal des salles de sable', zone: 'd1', cell: [1, 8], arrive: [2, 7], r: 2.2, where: 'Les salles de sable', mesh: true },
+    { id: 'dunes', name: 'Cristal des Dunes', zone: 'dunes', cell: [6, 6], arrive: [7, 6], r: 2.2, where: 'Les Dunes', mesh: true },
+    { id: 'temple_d', name: 'Hall du Temple enseveli', zone: 'temple_d', cell: [15, 4], arrive: [15, 6], r: 2.2, where: 'Le Temple enseveli', needs: (st) => st.flags.boss_echos, mesh: true },
+    { id: 'phare_v', name: 'Cristal du vestibule', zone: 'ph_vest', cell: [3, 5], arrive: [4, 5], r: 2.2, where: 'Le vestibule du Phare', mesh: true },
+    { id: 'phare_d', name: 'Cristal du Phare des Sables', zone: 'phare_d', cell: [3, 10], arrive: [4, 10], r: 2.2, where: 'Le Phare des Sables', mesh: true },
   ],
 };
 const WARPS = WARPS_BY[IID] || [];
@@ -251,7 +262,7 @@ function applyWorld() {
   restore(isl, isl.initial);
   for (let y = 0; y < isl.h; y++) for (let x = 0; x < isl.w; x++) { const t0 = DEF.zones[isl.zoneAt[y][x]]; if (!t0) continue; const ch = t0.map[y - t0.oy] && t0.map[y - t0.oy][x - t0.ox]; if (ch === 'r' || ch === 'c') isl.terrain[y][x] = ch; }
   Object.values(isl.gates).forEach((g) => (g.open = false));
-  restore(isl, { dev: st.world.dev, gates: st.world.gates });
+  restore(isl, { dev: st.world.dev, gates: st.world.gates, pos: st.world.moved });   /* ACTE III : objets portés */
   Object.keys(st.world.cut).forEach((k) => { const [x, y] = k.split(',').map(Number); isl.terrain[y][x] = ','; world.removeCell('r', x, y); });
   Object.keys(st.world.broken).forEach((k) => { const [x, y] = k.split(',').map(Number); isl.terrain[y][x] = ','; world.removeCell('c', x, y); });
   Object.values(world.views).forEach((v) => { if (v.head && v.target) v.head.rotation.y = v.target(); if (v.pick) v.g.visible = !st.world.picked[v.e.id]; });
@@ -266,9 +277,10 @@ function applyWorld() {
   world.drawBeams(res.segs); refreshCrystals(true);
   syncGates();
   updateChestVisibility();
+  A3.applyWorld();   /* ACTE III */
   S.restore = S.restoreT = restoreLevel();
 }
-function syncGates() { st.world.dev = snapshot(isl).dev; Object.values(isl.gates).forEach((g) => { if (g.open) st.world.gates[g.id] = 1; }); }
+function syncGates() { const sn = snapshot(isl); st.world.dev = sn.dev; st.world.moved = sn.pos;   /* ACTE III */ Object.values(isl.gates).forEach((g) => { if (g.open) st.world.gates[g.id] = 1; }); }
 function updateChestVisibility() {
   Object.values(world.chestViews).forEach((cv) => { const ok = !cv.c.after || st.flags[cv.c.after]; cv.g.visible = ok; if (!ok) isl.solid.delete(cv.x + ',' + cv.y); else isl.solid.add(cv.x + ',' + cv.y); });
   WARPS.forEach((w) => { if (warpMeshes[w.id]) warpMeshes[w.id].visible = !w.needs || !!w.needs(st); });
@@ -281,6 +293,9 @@ function restoreLevel() {
 
 /* ---------- Cristaux ---------- */
 const snd = (n, o) => { try { audio.sfx(n, o); } catch (e) { /* le son ne doit jamais casser le jeu */ } };
+/* ACTE III : porter, tempêtes de sable, Orbe (voir game/acte3.js) */
+const A3 = createAct3(G, { S, P, isl, world, zones, zoneIndex, IID, hud, audio, snd, sparks, scene, fiaLight, fade, reEvaluate: () => reEvaluate(), openGate: (id) => openGate(id), autosave: () => autosave() });
+G.a3 = A3; G.islands = ISLANDS;
 let beamsOn = false;
 const litBefore = {};
 function refreshCrystals(silent) {
@@ -301,7 +316,7 @@ function reEvaluate() {
 }
 /* Ponts vers les donjons (Sanctuaire de Brume, Temple de Verre) : ils se déploient quand Lyra
    arrive au bout du chemin, devant l'arche (après avoir franchi la haie de ronces). */
-const APPROACH_BRIDGES = { b_sanct: 'Le pont du Sanctuaire se déploie', b_temple: 'Le pont du Temple se déploie' };
+const APPROACH_BRIDGES = { b_sanct: 'Le pont du Sanctuaire se déploie', b_temple: 'Le pont du Temple se déploie', b_temple_d: 'Le pont du Temple enseveli se déploie' /* ACTE III */ };
 function approachBridges() {
   Object.keys(APPROACH_BRIDGES).forEach((id) => {
     const g = isl.gates[id]; if (!g || g.open) return;
@@ -470,7 +485,7 @@ G.runEffects = (list) => {
     if (e.flag) { st.flags[e.flag] = 1; if (/^acte\d+_fini$/.test(e.flag)) setTimeout(() => screens.actEnd(S.finaleRewards), 400); }
     if (e.open) openGate(e.open, false);
     if (e.equip) G.equip(e.equip, true);
-    if (e.teach) { st.player.abilities[e.teach] = true; hud.toast('✦', 'Nouvelle capacité : Onde de lumière', input.touch ? 'Bouton ✦ (35 énergie).' : 'Clic droit ou L (35 énergie).', 'reward'); }
+    if (e.teach) { st.player.abilities[e.teach] = true; const tn = A3.teachNote(e.teach); if (tn) hud.toast('✦', tn[0], tn[1], 'reward'); else hud.toast('✦', 'Nouvelle capacité : Onde de lumière', input.touch ? 'Bouton ✦ (35 énergie).' : 'Clic droit ou L (35 énergie).', 'reward'); }
     if (e.travel) { const tv = e.travel; setTimeout(() => G.travelTo(tv.to, tv.zone, tv.cell), 100); res.travel = true; }
     if (e.unlock) unlock(e.unlock);
     if (e.heal) { const s = calcStats(st); st.player.hp = s.maxHp; st.player.en = s.maxEn; }
@@ -572,6 +587,7 @@ G.startFrom = async (state, s = 'auto', legacy = false, noIntro = false) => {
   hud.show(true); setTouch(true); input.enable(true); input.clear();
   // arrivée sur une autre île (voyage) : sa quête principale démarre toute seule (sinon Ambre n'ouvre jamais les ponts)
   if (META.first && !st.quests[META.first]) quests.start(META.first);
+  A3.arrive();   /* ACTE III : Porter / Orbe rattrapés à l'arrivée dans le Désert */
   quests.check(); npcMarkers(); hud.refresh();
   if (fresh) opening.wake(() => intro(), true);
   else if (legacy) setTimeout(() => hud.toast('✦', 'Bienvenue dans la nouvelle aventure', 'Tes énigmes et tes objets sont conservés. Séléné t’attend à Havre-Aube.'), 800);
@@ -635,6 +651,7 @@ G.hurtPlayer = (dmg, fx, fz, o = {}) => {
   const s = calcStats(st);
   let d = Math.max(1, Math.round(dmg - s.def * 0.8));
   if (o.brume && s.resBrume) d = Math.max(1, Math.round(d * (1 - s.resBrume)));
+  if (o.sable && s.resSable) d = Math.max(1, Math.round(d * (1 - s.resSable)));   /* ACTE III */
   st.player.hp = Math.max(0, st.player.hp - d);
   P.iframes = 0.85; P.hurtT = 0.4;
   const a = Math.atan2(P.x - fx, P.z - fz), k = o.knock || 1.5;
@@ -662,7 +679,7 @@ function groundAt() {
   const z = zones[S.zone], t = isl.terrain[Math.round(P.z / T)] && isl.terrain[Math.round(P.z / T)][Math.round(P.x / T)];
   if (t === '=') return 'bois';
   const th = themeOf(z);
-  return z && z.interior ? 'bois' : th === 'temple' || th === 'sanctuaire' ? 'pierre' : th === 'foret' || th === 'canopee' || th === 'phare_verre' ? 'verre' : th === 'lande' ? 'terre' : 'herbe';
+  return z && z.interior ? 'bois' : th === 'temple' || th === 'sanctuaire' ? 'pierre' : th === 'foret' || th === 'canopee' || th === 'phare_verre' ? 'verre' : th === 'lande' || th === 'desert' || th === 'cite' || th === 'ruines' ? 'terre' : th === 'temple_sable' || th === 'phare_sable' ? 'pierre' : 'herbe';   /* ACTE III */
 }
 function teleport(x, z) { P.x = x; P.z = z; P.vx = P.vz = 0; S.camT.set(x, 0.8, z); S.zone = -1; }
 function fade(cb) { const f = $('#fade'); f.classList.add('on'); setTimeout(() => { cb && cb(); f.classList.remove('on'); }, 450); }
@@ -671,13 +688,13 @@ function fade(cb) { const f = $('#fade'); f.classList.add('on'); setTimeout(() =
    Interactions
    ========================================================= */
 function cellCenter(z, c) { return [W(z.ox + c[0]), W(z.oy + c[1])]; }
-function findTarget() {
+function findTarget(all) {   /* all = true : renvoie tous les candidats triés (outil d'audit tools/audit.py) */
   const cands = [];
   const d = (x, z) => Math.hypot(x - P.x, z - P.z);
   const push = (dist, max, o) => { if (dist < max) cands.push(Object.assign({ dist }, o)); };
   const zi = S.zone, z = zones[zi];
   // objets de lumière
-  isl.ents.forEach((e) => { if (e.rot && Math.abs(e.zone - zi) <= 0 && e.zone === zi) push(d(W(e.x), W(e.y)), 2.5, { kind: 'device', e, x: W(e.x), z: W(e.y), label: `Tourner ${{ lantern: 'la lanterne', mirror: 'le miroir', relay: 'le relais' }[e.t]}` }); });
+  isl.ents.forEach((e) => { if (e.rot && Math.abs(e.zone - zi) <= 0 && e.zone === zi) push(d(W(e.x), W(e.y)), 2.5, { kind: 'device', e, x: W(e.x), z: W(e.y), label: `Tourner ${{ lantern: 'la lanterne', mirror: 'le miroir', relay: 'le relais', splitter: 'la lame' }[e.t]}` }); });
   // poteaux du grappin
   isl.ents.forEach((e) => { if (e.t === 'post' && e.zone === zi) push(d(W(e.x), W(e.y)) - (st.inv.grappin && pickLink(e) ? 1.0 : 0), 2.7, { kind: 'post', e, x: W(e.x), z: W(e.y), label: postLabel(e) }); });   // le poteau qu'on peut utiliser passe avant un miroir voisin
   // habitants
@@ -691,7 +708,7 @@ function findTarget() {
     if (p.t === 'house' && p.door) { const [x, zz] = cellCenter(pr.z, p.door); push(d(x, zz), 2.0, { kind: 'door', pr, x, z: zz, label: p.interior ? (p.lock && !st.inv[p.lock] && !st.flags['ouvert_' + p.id] ? `${p.name} (fermée à clé)` : `Entrer · ${p.name}`) : p.name }); }
     const [cx, cz] = [pr.g.position.x, pr.g.position.z];
     if (p.t === 'sign') push(d(cx, cz), 2.3, { kind: 'sign', pr, x: cx, z: cz, label: 'Lire le panneau' });
-    if (p.t === 'lamp' && !pr.g.userData.lit && (quests.state('s_lampions') === 'active' || quests.state('s_lampions_f') === 'active')) push(d(cx, cz), 2.4, { kind: 'lamp', pr, x: cx, z: cz, label: 'Rallumer le lampion avec Fia' });
+    if (p.t === 'lamp' && !pr.g.userData.lit && (quests.state('s_lampions') === 'active' || quests.state('s_lampions_f') === 'active' || quests.state('s_lampions_d') === 'active')) push(d(cx, cz), 2.4, { kind: 'lamp', pr, x: cx, z: cz, label: 'Rallumer le lampion avec Fia' });
     if (p.t === 'bed') push(d(cx, cz), 3.0, { kind: 'bed', pr, x: cx, z: cz, label: 'Se reposer' });
     if (p.t === 'desk') push(d(cx, cz), 3.0, { kind: 'desk', pr, x: cx, z: cz, label: 'Étudier les cartes d’Orin' });
     if (p.t === 'well' && !st.flags.puits) push(d(cx, cz), 2.4, { kind: 'well', pr, x: cx, z: cz, label: 'Regarder au fond du puits' });
@@ -703,9 +720,11 @@ function findTarget() {
     if (g.open || !(g.key || g.id === 'lens')) return;
     g.cells.forEach(([x, y]) => { if (g.id !== 'lens' && isl.zoneAt[y][x] !== zi && isl.zoneAt[y][x] !== -1) return; const wx = W(x), wz = W(y); push(d(wx, wz), 2.6, { kind: 'lock', g, x: wx, z: wz, label: g.id === 'lens' ? (st.inv.lentille ? 'Poser la Lentille d’Aube' : 'Un sceau de brume') : st.inv[g.key] ? 'Déverrouiller la porte' : 'Porte verrouillée' }); });
   });
-  const PRIO = { npc: -1.2, chest: -0.6, post: -0.2, device: -0.3, lock: -0.3, warp: 1.6, door: 0.2, sign: 0.4, lamp: -1.5, bed: 0.5, desk: 0, well: 0.6 };
+  A3.targets(zi, push, d);   /* ACTE III : objets portés, socles, vasques, abris, stèles */
+  const PRIO = { socle: -0.5, carry: -0.35, vasque: -0.4, shelter: 0.3, stele: 0.5, npc: -1.2, chest: -0.6, post: -0.2, device: -0.3, lock: -0.3, warp: 1.6, door: 0.2, sign: 0.4, lamp: -1.5, bed: 0.5, desk: 0, well: 0.6 };
   cands.sort((a, b) => (a.dist + (PRIO[a.kind] || 0)) - (b.dist + (PRIO[b.kind] || 0)));
-  return cands[0] || null;
+  A3.decorate(cands);
+  return all ? cands : (cands[0] || null);
 }
 /* ---------- Grappin de lumière ---------- */
 const DIR_WORDS = { N: 'le nord', E: 'l’est', S: 'le sud', W: 'l’ouest' };
@@ -767,9 +786,10 @@ function interact(back) {
   const t = S.target; if (!t) return;
   switch (t.kind) {
     case 'device': {
+      if (back && t.e.carry && A3.lift(t.e)) break;   /* ACTE III : R = porter */
       const e = t.e, n = back && (e.t === 'lantern' || e.t === 'relay') ? 3 : 1;
       for (let i = 0; i < n; i++) rotate(e);
-      audio.sfx(e.t === 'vitrail' ? 'vitrail' : e.t === 'mirror' ? 'mirror' : e.t === 'relay' ? (e.mix ? 'mixer' : 'relay') : 'lantern', { x: W(e.x), z: W(e.y) });
+      audio.sfx(e.t === 'vitrail' ? 'vitrail' : e.t === 'mirror' || e.t === 'splitter' ? 'mirror' : e.t === 'relay' ? (e.mix ? 'mixer' : 'relay') : 'lantern', { x: W(e.x), z: W(e.y) });
       sparks.burst(new THREE.Vector3(W(e.x), BEAM_Y, W(e.y)), '#ffd98a', 10, 2, 1);
       reEvaluate(); autosave();
       break;
@@ -806,6 +826,7 @@ function interact(back) {
       if (list.length < 2) { hud.toast('✦', 'Cristal de voyage réveillé', 'Réveille d’autres cristaux pour voyager de l’un à l’autre.'); snd('portal_open'); break; }
       screens.warps(list); break;
     }
+    case 'carry': case 'socle': case 'vasque': case 'shelter': case 'stele': A3.interact(t, back); break;   /* ACTE III */
     case 'lock': {
       const g = t.g;
       if (g.id === 'lens') { if (!st.inv.lentille) { screens.message('Le sceau de brume', 'Une brume épaisse et violette bouche l’entrée du phare. Seule la lumière de la Lentille d’Aube pourrait la dissiper.'); break; } takeItem(st, 'lentille', 1); st.flags.lens_set = 1; openGate('lens'); hud.banner('Phare de l’Aube', 'La Lentille est en place'); quests.check(); autosave(); break; }
@@ -1007,16 +1028,16 @@ ev.on('kill', (k) => {
 G.bossStart = (e) => { S.boss = e; music('boss', 1); hud.banner(e.def.place || 'Le Sanctuaire de Brume', e.def.name); };
 function bossDefeated(k) {
   const def = ENEMIES[(k && k.type) || 'colosse'] || ENEMIES.colosse;
-  const flag = def.bossFlag || 'boss_colosse', verre = flag === 'boss_verre';
+  const flag = def.bossFlag || 'boss_colosse', verre = flag === 'boss_verre', win = def.win || null;   /* ACTE III : win = fin de boss propre à l'île */
   st.flags[flag] = 1; S.boss = null; hud.bossBar(null);
   audio.chord([392, 523, 659, 784, 1047], 0.15); S.victoryUntil = performance.now() + 20000; music('victoire', 1);
-  hud.banner('Victoire', verre ? 'Le Gardien de Verre est brisé' : 'Le Colosse de Brume est dissipé');
-  if (!verre) giveItem('lentille', 1);
-  reward('b:' + IID + ':' + (verre ? 'gardien' : 'colosse'), verre ? 300 : 250, verre ? 100 : 80);
+  if (win) A3.bossWon(def); else hud.banner('Victoire', verre ? 'Le Gardien de Verre est brisé' : 'Le Colosse de Brume est dissipé');
+  if (!verre && !win) giveItem('lentille', 1);
+  reward('b:' + IID + ':' + (win ? win.key : verre ? 'gardien' : 'colosse'), win ? win.xp : verre ? 300 : 250, win ? win.coins : verre ? 100 : 80);
   updateChestVisibility();
-  st.world.warps[verre ? 'temple' : 'sanctuaire'] = 1;
+  if (!win) st.world.warps[verre ? 'temple' : 'sanctuaire'] = 1;
   quests.check(); autosave();
-  setTimeout(() => hud.toast('✦', 'Un cristal de voyage s’est réveillé', verre ? 'Il te ramène au Temple de Verre quand tu veux. Le fragment vert t’attend dans le coffre de l’arène.' : 'Il te ramène à Havre-Aube quand tu veux.'), 2500);
+  if (!win) setTimeout(() => hud.toast('✦', 'Un cristal de voyage s’est réveillé', verre ? 'Il te ramène au Temple de Verre quand tu veux. Le fragment vert t’attend dans le coffre de l’arène.' : 'Il te ramène à Havre-Aube quand tu veux.'), 2500);
 }
 
 /* =========================================================
@@ -1083,13 +1104,14 @@ function onZoneChange(zi, prev) {
   const rn = DEF.regions[z.region] ? DEF.regions[z.region].name : z.title;
   const prevZ = zones[prev];
   if (!prevZ || prevZ.region !== z.region || first) {
-    if (z.area) hud.banner(z.interior ? 'Havre-Aube' : z.dungeon ? 'Donjon' : 'Région', z.title);
+    if (z.area) hud.banner(z.interior ? rn : z.dungeon ? 'Donjon' : 'Région', z.title);   /* ACTE III : nom de la région (et non « Havre-Aube ») */
     else if (!z.secret) hud.banner(rn, z.title);
     else hud.banner('Chambre secrète', z.title);
   }
   if (first && (!z.area || z.hint)) { const g = z.ents.find((e) => e.gate && !e.optional); if (!(g && isl.gates[g.gate] && isl.gates[g.gate].open)) setTimeout(() => hud.toast('💡', z.title, z.hint), 900); }
   WARPS.forEach((w) => { if (w.zone === z.id && !w.needs) st.world.warps[w.id] = 1; });
   if ((z.dungeon || z.respawn) && first) { st.player.respawn = { zone: z.id, cell: z.spawn }; snd('checkpoint'); setTimeout(() => hud.toast('⚠', z.title, 'Si tu tombes ici, Fia te ramènera à l’entrée.'), 1500); }
+  A3.zoneChange(zi);   /* ACTE III */
   const th = themeOf(z);
   music(S.boss ? 'boss' : z.music || th, S.restore);
   quests.check(); npcMarkers(); hud.refresh();
@@ -1166,7 +1188,7 @@ function update(dt) {
     // cible d'interaction
     if (Math.floor(t * 10) !== Math.floor((t - dt) * 10)) {
       const tg = findTarget(); S.target = tg;
-      hud.prompt(tg ? (input.touch ? `✋ ${esc(tg.label)}` : `<kbd>E</kbd> ${esc(tg.label)}${tg.kind === 'device' && tg.e.t !== 'mirror' ? ' · <kbd>R</kbd> autre sens' : ''}`) : '');
+      hud.prompt(tg ? (input.touch ? `✋ ${esc(tg.label)}` : `<kbd>E</kbd> ${esc(tg.label)}${tg.alt ? ` · <kbd>R</kbd> ${tg.alt}` : tg.kind === 'device' && tg.e.t !== 'mirror' && tg.e.t !== 'splitter' ? ' · <kbd>R</kbd> autre sens' : ''}`) : '');
     }
     if (S.time - S.lastSave > 60) saveTo('auto');
     // salles de combat : barrière fermée tant que des créatures vivent
@@ -1192,8 +1214,9 @@ function update(dt) {
   if (P.spinT > 0) fia.position.set(P.x + Math.cos(t * 20) * 1.4, 1.1, P.z + Math.sin(t * 20) * 1.4);
   hero.root.updateMatrixWorld(true); hero.fiaWorld(fiaLight.position);
   fiaLight.intensity = LOW ? 0 : (['sanctuaire', 'temple'].includes(themeOf(zones[S.zone])) ? 14 : 6) * (P.chargeT > 0.55 ? 1.6 : 1);
+  A3.update(dt, t);   /* ACTE III : tempêtes de sable, objet porté, Orbe */
   const tg = S.target;
-  if (tg && tg.kind === 'device' && S.mode === 'play') { selRing.visible = true; selRing.position.set(tg.x, 0.47, tg.z); selRing.scale.setScalar(1 + Math.sin(t * 5) * 0.04); } else selRing.visible = false;
+  if (tg && (tg.kind === 'device' || tg.kind === 'socle' || tg.kind === 'carry') && S.mode === 'play') { selRing.visible = true; selRing.position.set(tg.x, 0.47, tg.z); selRing.scale.setScalar(1 + Math.sin(t * 5) * 0.04); } else selRing.visible = false;
   /* -------- habitants -------- */
   npcs.forEach((n) => {
     if (!world.zoneGroups[n.zi].visible) return;
@@ -1265,7 +1288,7 @@ function update(dt) {
   if (A.tint) tint.lerp(new THREE.Color(A.tint), 0.25);
   world.M.grass.color.copy(tint); world.M.foliage.color.copy(tint); world.M.tuft.color.copy(tint);
   ambient.mat.opacity = th === 'interieur' ? 0 : 0.35 + r * 0.6;
-  ambient.mat.color.set(th === 'sanctuaire' || th === 'lande' ? '#c9b6ff' : th === 'foret' || th === 'canopee' || th === 'phare_verre' || th === 'temple' ? '#bff3ff' : '#ffc4dc').multiplyScalar(1.4);
+  ambient.mat.color.set(A.amb || (th === 'sanctuaire' || th === 'lande' ? '#c9b6ff' : th === 'foret' || th === 'canopee' || th === 'phare_verre' || th === 'temple' ? '#bff3ff' : '#ffc4dc')).multiplyScalar(1.4);
   if (!opening.musicLock && Math.floor(t) !== Math.floor(t - dt)) music(S.mode === 'title' ? 'title' : S.victoryUntil > performance.now() ? 'victoire' : S.boss && S.boss.state !== 'dead' ? (S.boss.phase === 2 ? 'boss2' : 'boss') : (zones[S.zone] && zones[S.zone].music) || th, S.mode === 'title' ? 0.6 : r);
 
   /* -------- monde -------- */
@@ -1331,5 +1354,5 @@ window.__lumen = {
   tp(x, y) { P.x = W(x); P.z = W(y); },
   tpZone(id, c) { const z = zones[zoneIndex[id]]; const cc = c || z.spawn; teleport(W(z.ox + cc[0]), W(z.oy + cc[1])); },
   give: (id, n) => giveItem(id, n),
-  completion, interact: () => interact(false), target: () => S.target, saveTo, openGate,
+  findTarget, WARPS, canStand: (x, z) => canStand(x, z), completion, interact: () => interact(false), interactBack: () => interact(true), target: () => S.target, saveTo, openGate, a3: A3,
 };

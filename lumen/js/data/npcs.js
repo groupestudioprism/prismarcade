@@ -330,6 +330,7 @@ export const NPCS = {
         say: ['Le phare brille ! Pour la première fois depuis longtemps, je vois la route : au sud-est, une île couverte d’arbres de verre. La Forêt de Verre. Je t’y emmène quand tu veux.'],
         choices: [
           { t: 'Partir pour la Forêt de Verre', do: [{ travel: { to: 'foret', zone: 'vitrebourg', cell: [12, 7] } }] },
+          { t: 'Partir pour le Désert des Échos', if: (q) => q.flag('acte2_fini'), do: [{ travel: { to: 'desert', zone: 'cite', cell: [12, 7] } }] },   /* ACTE III */
           { t: 'Pas maintenant' },
         ],
       },
@@ -369,7 +370,7 @@ export const NPCS = {
           'Pour monter, il faut un grappin de lumière. Orin en avait dessiné les plans, et Silex, le maître verrier, les garde dans son atelier. Dis-lui que c’est moi qui t’envoie.',
           FIA('Un grappin ! On va voler d’arbre en arbre ! Enfin… de poteau en poteau.'),
         ],
-        do: [{ take: 'prisme_vert', n: 1 }, { step: 'q_verre' }, { flag: 'verre_fini' }],
+        do: [{ take: 'prisme_vert', n: 1 }, { step: 'q_verre' }, { flag: 'verre_fini' }, { teach: 'porter' } /* ACTE III */],
       },
       {
         if: (q) => S(q, 'q_phare_verre', 'retour'),
@@ -558,6 +559,7 @@ export const NPCS = {
         say: ['Je fais la traversée entre Vitrebourg et Havre-Aube. Tu veux rentrer ?'],
         choices: [
           { t: 'Retourner à Havre-Aube', do: [{ travel: { to: 'aube', zone: 'havre', cell: [27, 7] } }] },
+          { t: 'Partir pour le Désert des Échos', if: (q) => q.flag('acte2_fini'), do: [{ travel: { to: 'desert', zone: 'cite', cell: [12, 7] } }] },   /* ACTE III */
           { t: 'Pas maintenant' },
         ],
       },
@@ -589,3 +591,7 @@ export const NPCS = {
     ],
   },
 };
+
+/* ACTE III : habitants de la Cité des Échos */
+import { DESERT_NPCS } from './desert-npcs.js';
+Object.assign(NPCS, DESERT_NPCS);

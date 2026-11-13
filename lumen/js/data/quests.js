@@ -214,3 +214,7 @@ export const QUESTS = {
     rewards: { xp: 140, ecus: 100, items: { grande_potion: 1 }, unlock: ['teinte_turquoise'], pa: [90, 35] },
   },
 };
+
+/* ACTE III : quêtes du Désert des Échos */
+import { DESERT_QUESTS } from './desert-quests.js';
+Object.assign(QUESTS, DESERT_QUESTS);

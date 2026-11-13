@@ -9,7 +9,7 @@
      - tout est accessible à pied depuis l'entrée.
    Le résultat est déterministe (graine) : on peut le régénérer à l'identique.
    ========================================================= */
-import { buildIsland, evaluate, walkable, reachCells, ORDER, DIRS } from '../js/logic.js';
+import { buildIsland, evaluate, walkable, reachCells, liftEnt, placeEnt, isMirrorLike, ORDER, DIRS } from '../js/logic.js';
 
 export function rng(seed) {
   let a = seed >>> 0;
@@ -167,14 +167,26 @@ function attempt(spec, seed) {
 }
 
 /* ---------- Vérification exhaustive d'une zone isolée ---------- */
+/* Les objets portés (« carry », capacité Porter) sont posés sur les socles de la zone : on essaie toutes les
+   façons de les répartir (une pièce par socle) en plus des orientations. opts.socles = [[x, y], …] (coordonnées locales).
+   Résultat : sols (numéros de configuration), carryFree (une solution existe SANS rien déplacer), connected (tous les
+   socles et objets restent accessibles à pied pour toute répartition, depuis opts.entry). */
 export function analyse(rows, ents, gates, opts = {}) {
-  const zone = { ox: 0, oy: 0, map: rows, ents: ents.map((e) => Object.assign({}, e)), barrier: opts.barrier };
+  const zone = { ox: 0, oy: 0, map: rows, ents: ents.map((e) => Object.assign({}, e)), barrier: opts.barrier, socles: opts.socles };
   const isl = buildIsland({ zones: [zone], bridges: [] });
   const rots = isl.ents.filter((e) => e.rot);
-  const states = (e) => (e.t === 'mirror' ? [0, 1] : ORDER);
-  const total = rots.reduce((a, e) => a * states(e).length, 1);
-  const set = (n) => { let k = n; rots.forEach((e) => { const s = states(e), v = s[k % s.length]; k = Math.floor(k / s.length); if (e.t === 'mirror') e.state = v; else if (e.t === 'lantern') e.dir = v; else e.out = v; }); };
-  const init = rots.map((e) => (e.t === 'mirror' ? e.state : e.t === 'lantern' ? e.dir : e.out));
+  const states = (e) => (isMirrorLike(e) ? [0, 1] : ORDER);
+  const movers = isl.ents.filter((e) => e.carry), socs = isl.socles;
+  const home = movers.map((e) => socs.findIndex((so) => so.x === e.x && so.y === e.y));
+  const placements = [];
+  (function rec(i, used, cur) { if (i === movers.length) { placements.push(cur.slice()); return; } for (let k = 0; k < socs.length; k++) { if (used.has(k)) continue; used.add(k); cur.push(k); rec(i + 1, used, cur); cur.pop(); used.delete(k); } })(0, new Set(), []);
+  const P = placements.length;
+  const pi0 = placements.findIndex((pl) => pl.every((k, i) => k === home[i]));
+  const orientTotal = rots.reduce((a, e) => a * states(e).length, 1);
+  const total = orientTotal * P;
+  const place = (pi) => { const pl = placements[pi]; movers.forEach((e) => liftEnt(isl, e)); movers.forEach((e, i) => placeEnt(isl, e, socs[pl[i]].x, socs[pl[i]].y)); };
+  const set = (n) => { const pi = n % P; let k = Math.floor(n / P); rots.forEach((e) => { const s = states(e), v = s[k % s.length]; k = Math.floor(k / s.length); if (isMirrorLike(e)) e.state = v; else if (e.t === 'lantern') e.dir = v; else e.out = v; }); if (movers.length) place(pi); };
+  const init = rots.map((e) => (isMirrorLike(e) ? e.state : e.t === 'lantern' ? e.dir : e.out));
   const resetGates = () => Object.values(isl.gates).forEach((g) => (g.open = false));
   const sols = [], reached = new Map();
   let escape = false;
@@ -196,16 +208,30 @@ export function analyse(rows, ents, gates, opts = {}) {
     });
   }
   // état initial
-  rots.forEach((e, i) => { if (e.t === 'mirror') e.state = init[i]; else if (e.t === 'lantern') e.dir = init[i]; else e.out = init[i]; });
+  rots.forEach((e, i) => { if (isMirrorLike(e)) e.state = init[i]; else if (e.t === 'lantern') e.dir = init[i]; else e.out = init[i]; });
+  if (movers.length) place(pi0 >= 0 ? pi0 : 0);
   resetGates();
   const r0 = evaluate(isl);
   const initialSolved = gates.some((g) => isl.gates[g] && isl.gates[g].open);
-  return { isl, rots, total, sols, escape, initialSolved, reached, set, states, lit0: r0 };
+  const carryFree = movers.length > 0 && sols.some((n) => n % P === pi0);
+  // connexité : pour chaque répartition des objets portés, les socles et les objets orientables restent accessibles à pied
+  let connected = true; const blocked = [];
+  if (movers.length && opts.entry) {
+    for (let pi = 0; pi < P && connected; pi++) {
+      place(pi); Object.values(isl.gates).forEach((g) => (g.open = true));
+      const seen = reachCells(isl, [opts.entry]);
+      const adj = (x, y) => [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => seen.has((x + a) + ',' + (y + b)));
+      const bad = socs.filter((so) => !adj(so.x, so.y)).map((so) => `socle ${so.x},${so.y}`).concat(rots.filter((e) => !adj(e.x, e.y)).map((e) => `${e.t} ${e.x},${e.y}`));
+      if (bad.length) { connected = false; blocked.push(...bad); }
+    }
+    place(pi0 >= 0 ? pi0 : 0); resetGates(); evaluate(isl);
+  }
+  return { isl, rots, movers, total, sols, escape, initialSolved, reached, set, states, lit0: r0, placements, pi0, P, carryFree, connected, blocked };
 }
 
 /* Accessibilité à pied depuis l'entrée (toutes portes ouvertes ; poteaux de grappin compris) */
-export function reach(rows, ents, from, barrier) {
-  const isl = buildIsland({ zones: [{ ox: 0, oy: 0, map: rows, ents, barrier }], bridges: [] });
+export function reach(rows, ents, from, barrier, socles) {
+  const isl = buildIsland({ zones: [{ ox: 0, oy: 0, map: rows, ents, barrier, socles }], bridges: [] });
   Object.values(isl.gates).forEach((g) => (g.open = true));
   return reachCells(isl, [from]);
 }
@@ -294,9 +320,9 @@ export function analyseStages(zone, stages, final) {
   const z = { ox: 0, oy: 0, map: zone.map, ents: zone.ents.map((e) => Object.assign({}, e)), doors: zone.doors || [], barrier: zone.barrier };
   const isl = buildIsland({ zones: [z], bridges: [] });
   const rots = isl.ents.filter((e) => e.rot);
-  const states = (e) => (e.t === 'mirror' ? [0, 1] : ORDER);
-  const getv = (e) => (e.t === 'mirror' ? e.state : e.t === 'lantern' ? e.dir : e.out);
-  const setv = (e, v) => { if (e.t === 'mirror') e.state = v; else if (e.t === 'lantern') e.dir = v; else e.out = v; };
+  const states = (e) => (isMirrorLike(e) ? [0, 1] : ORDER);
+  const getv = (e) => (isMirrorLike(e) ? e.state : e.t === 'lantern' ? e.dir : e.out);
+  const setv = (e, v) => { if (isMirrorLike(e)) e.state = v; else if (e.t === 'lantern') e.dir = v; else e.out = v; };
   const init = rots.map(getv);
   const setOpen = (open) => Object.values(isl.gates).forEach((g) => (g.open = open.has(g.id)));
   const accessible = (open) => {

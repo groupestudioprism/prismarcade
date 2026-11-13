@@ -6,10 +6,10 @@ import { ITEMS, UPGRADES, isStackable } from '../data/items.js';
 import { QUESTS } from '../data/quests.js';
 import { DEFAULT_LOOK, HAIR_COLORS, SKIN, EYES, CLOAK_COLORS, TRIMS, HEIGHTS, byId } from '../data/looks.js';
 
-export const SAVE_VERSION = 5;
+export const SAVE_VERSION = 6;   /* ACTE III : v6 = world.moved (objets portés) */
 
 /* Monde d'une île : tout ce qui change quand on joue (une île = un monde, voir otherWorlds) */
-export const newWorld = (firstWarp) => ({ dev: {}, gates: {}, picked: {}, cut: {}, broken: {}, chests: {}, lamps: {}, warps: firstWarp ? { [firstWarp]: 1 } : {}, killed: {} });
+export const newWorld = (firstWarp) => ({ dev: {}, gates: {}, picked: {}, cut: {}, broken: {}, chests: {}, lamps: {}, warps: firstWarp ? { [firstWarp]: 1 } : {}, killed: {}, moved: {} /* ACTE III : id → [x, y] ou null (en main) */ });
 
 export function newState() {
   return {
@@ -119,6 +119,7 @@ export function stats(st) {
     speed: 1 + (a && a.speed ? a.speed : 0) + accs.reduce((n, x) => n + (x.speed || 0), 0),
     regen: 6 + accs.reduce((n, x) => n + (x.regen || 0) * 8, 0),
     resBrume: accs.reduce((n, x) => n + (x.resBrume || 0), 0),
+    resSable: accs.reduce((n, x) => n + (x.resSable || 0), 0),   /* ACTE III */
     weapon: w || null, weaponId: st.equip.weapon, weaponLvl: wl,
   };
   return s;
