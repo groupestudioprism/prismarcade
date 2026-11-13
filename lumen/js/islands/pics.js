@@ -217,7 +217,8 @@ export default {
       9
      ],
      "side": "E",
-     "name": "Forge de Frimas"
+     "name": "Forge de Frimas",
+     "closed": "La forge est ouverte sur la rue : Frimas travaille dehors, près de l’enclume."
     },
     {
      "t": "house",
@@ -1876,7 +1877,7 @@ export default {
     {
      "id": "ch_cretes1",
      "x": 13,
-     "y": 10,
+     "y": 11,
      "item": "pelisse_cimes",
      "n": 1
     },

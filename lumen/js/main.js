@@ -724,7 +724,7 @@ function findTarget(all) {
     if (p.t === 'sign') push(d(cx, cz), 2.3, { kind: 'sign', pr, x: cx, z: cz, label: 'Lire le panneau' });
     if (p.t === 'lamp' && !pr.g.userData.lit && (quests.state('s_lampions') === 'active' || quests.state('s_lampions_f') === 'active')) push(d(cx, cz), 2.4, { kind: 'lamp', pr, x: cx, z: cz, label: 'Rallumer le lampion avec Fia' });
     if (p.t === 'lamp' && String(p.id || '').startsWith('fanion') && !pr.g.userData.lit) push(d(cx, cz), 2.4, { kind: 'fanion', pr, x: cx, z: cz, label: 'Hisser le fanion avec Fia' });   /* ACTE V */
-    if (p.t === 'bed') push(d(cx, cz), 3.0, { kind: 'bed', pr, x: cx, z: cz, label: 'Se reposer' });
+    if (p.t === 'bed') push(d(cx, cz), 3.4, { kind: 'bed', pr, x: cx, z: cz, label: 'Se reposer' });
     if (p.t === 'desk') push(d(cx, cz), 3.0, { kind: 'desk', pr, x: cx, z: cz, label: 'Étudier les cartes d’Orin' });
     if (p.t === 'well' && !st.flags.puits) push(d(cx, cz), 2.4, { kind: 'well', pr, x: cx, z: cz, label: 'Regarder au fond du puits' });
   });

@@ -12,6 +12,7 @@ import { SHOPS } from '../js/data/shops.js';
 import { ENEMIES } from '../js/data/enemies.js';
 import { UNLOCK_NAMES, OUTFITS, ACCESSORIES, HAIR_COLORS, CLOAK_COLORS, TRIMS } from '../js/data/looks.js';
 import { SAVE_VERSION } from '../js/game/state.js';
+import { buildIsland, postLinks, ventLinks } from '../js/logic.js';   /* ACTE V */
 
 const err = [], warn = [];
 const E = (m) => err.push(m), Wn = (m) => warn.push(m);
@@ -192,6 +193,19 @@ for (const f of flagsRead) {
   if (!re.test(mainSrc) && !JSON.stringify(ISLANDS).includes(`"${f}"`)) E(`Drapeau « ${f} » lu mais jamais posé`);
 }
 for (const f of [...flagsSet]) if (!flagsRead.has(f) && !mainSrc.includes(f)) Wn(`Drapeau « ${f} » posé mais jamais lu`);
+
+/* ---------- ACTE V : coffres posés sur une case d'atterrissage ou de départ d'un grappin / d'un courant d'air ----------
+   En jeu, un coffre rend sa case non marchable (isl.solid) : un lien dont l'arrivée est bouchée disparaît. */
+for (const I of ISLANDS) {
+  const isl = buildIsland(I);
+  const key = (l) => `${l.from ? l.from.id : '?'}>${l.dir}`;
+  const links = () => isl.ents.filter((e) => e.t === 'post' || e.t === 'vent').flatMap((e) => (e.t === 'post' ? postLinks : ventLinks)(isl, e).map((l) => key(Object.assign({ from: e }, l)) + `@${l.land}`));
+  const before = new Set(links());
+  I.zones.forEach((z) => (z.chests || []).forEach((c) => isl.solid.add((z.ox + c.x) + ',' + (z.oy + c.y))));
+  const after = new Set(links());
+  for (const k of before) if (!after.has(k)) E(`${I.id} : un coffre bouche l’atterrissage du lien ${k}`);
+  for (const e of isl.ents) if ((e.t === 'post' || e.t === 'vent') && isl.solid.has(e.x + ',' + e.y)) E(`${I.id} : un coffre sur ${e.id}`);
+}
 
 /* ---------- Objets inobtenables ---------- */
 const obtainable = new Set();

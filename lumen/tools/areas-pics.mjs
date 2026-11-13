@@ -26,7 +26,7 @@ function col() {
   const house = (id, x, y, w, h, extra) => { rect(g, x, y, w, h, 'H'); props.push(Object.assign({ t: 'house', id, x, y, w, h }, extra)); };
   house('auberge_p', 2, 1, 7, 3, { style: 'auberge', door: [5, 4], side: 'S', interior: 'auberge_p', name: 'Auberge du Chamois endormi', sign: 'lampion' });
   house('boree_h', 21, 1, 6, 3, { style: 'pierre', door: [24, 4], side: 'S', name: 'Maison de Borée', closed: 'Borée reçoit sur la place. Sa porte est fermée.' });
-  house('forge_p', 2, 8, 5, 3, { style: 'forge', door: [7, 9], side: 'E', name: 'Forge de Frimas' });
+  house('forge_p', 2, 8, 5, 3, { style: 'forge', door: [7, 9], side: 'E', name: 'Forge de Frimas', closed: 'La forge est ouverte sur la rue : Frimas travaille dehors, près de l’enclume.' });
   house('tourmente_h', 2, 16, 5, 3, { style: 'bois', door: [4, 15], side: 'N', name: 'Maison de Tourmente', closed: 'La porte est fermée. Derrière, on entend grincer de vieux engrenages.' });
   rect(g, 14, 11, 3, 3, 'H'); props.push({ t: 'cairn', id: 'cairn_col', x: 14, y: 11, w: 3, h: 3, warp: 'col', name: 'Cristal de voyage' });
   const stall = (id, x, y, color, name) => { rect(g, x, y, 2, 1, 'H'); props.push({ t: 'stall', id, x, y, w: 2, h: 1, color, name }); };
@@ -301,7 +301,7 @@ function cretes() {
       { t: 'flagpole', x: 7, y: 7, w: 1, h: 1 }, { t: 'flagpole', x: 18, y: 7, w: 1, h: 1 },
       { t: 'lamp', id: 'fanion_s1', x: 6, y: 3, w: 1, h: 1 }, { t: 'lamp', id: 'fanion_s2', x: 19, y: 3, w: 1, h: 1 }, { t: 'lamp', id: 'fanion_s3', x: 12, y: 9, w: 1, h: 1 },
     ],
-    chests: [{ id: 'ch_cretes1', x: 13, y: 10, item: 'pelisse_cimes', n: 1 }, { id: 'ch_cretes2', x: 6, y: 12, item: 'grande_potion', n: 2 }, { id: 'ch_cretes3', x: 22, y: 16, ecus: 160 }],
+    chests: [{ id: 'ch_cretes1', x: 13, y: 11, item: 'pelisse_cimes', n: 1 }, { id: 'ch_cretes2', x: 6, y: 12, item: 'grande_potion', n: 2 }, { id: 'ch_cretes3', x: 22, y: 16, ecus: 160 }],
     pickups: [{ t: 'item', id: 'edel6', item: 'edelweiss', x: 4, y: 14 }, { t: 'item', id: 'cerf3', item: 'cerf_volant', x: 12, y: 9 }, { t: 'item', id: 'edel7', item: 'edelweiss', x: 21, y: 8 }, { t: 'item', id: 'corne1', item: 'corne_cimes', x: 22, y: 10 }],
     spawns: [
       { type: 'givrelin', x: 6, y: 8, n: 2 },
