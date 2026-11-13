@@ -74,3 +74,7 @@ export const SHOPS = {
     ],
   },
 };
+
+/* ACTE VI : la Citadelle du Zénith */
+import { ZENITH_SHOPS } from './zenith.js';
+Object.assign(SHOPS, ZENITH_SHOPS);

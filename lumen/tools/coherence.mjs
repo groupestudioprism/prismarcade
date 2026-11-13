@@ -179,7 +179,7 @@ for (const [id, q] of Object.entries(QUESTS)) {
     const ok = NPCS[q.giver].talk.some((t) => JSON.stringify(t.do || []).includes(`"start":"${id}"`) || (t.choices || []).some((c) => JSON.stringify(c.do || []).includes(`"start":"${id}"`)));
     if (!ok) E(`${w} : le donneur ${q.giver} n’a aucun dialogue qui la démarre (effet start)`);
   }
-  if (q.kind === 'main' && !q.after && !q.requires && id !== 'q_reveil' && id !== 'q_verre') Wn(`${w} : principale sans requires/after`);
+  if (q.kind === 'main' && !q.after && !q.requires && id !== 'q_reveil' && id !== 'q_verre' && id !== 'q_porte' /* ACTE VI */) Wn(`${w} : principale sans requires/after`);
 }
 // quêtes démarrées par un dialogue mais définies pour un autre PNJ
 for (const [id, n] of Object.entries(NPCS)) for (const t of n.talk) for (const e of [...(t.do || []), ...(t.choices || []).flatMap((c) => c.do || [])]) if (e.start && QUESTS[e.start] && QUESTS[e.start].giver !== id && QUESTS[e.start].kind === 'side') Wn(`PNJ ${id} démarre ${e.start} dont le donneur est ${QUESTS[e.start].giver}`);

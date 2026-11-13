@@ -26,6 +26,14 @@ const THEMES = {
   sanctuaire: { grass: '#8a84ae', edge: '#7a74a0', path: '#938db6', dirt: '#3f3a55', under: '#2e2840', rock: '#615a86', tuft: '#8f7ad6', leaves: [['#5a4a8a', '#6a5a9a', '#4a3a7a'], ['#5a4a8a', '#6a5a9a', '#4a3a7a']], blossom: 0, floor: true },
   interieur: { grass: '#a0714f', edge: '#8f6446', path: '#a0714f', dirt: '#5a3f2f', under: '#3a2a22', rock: '#e9dcc2', tuft: '#a0714f', leaves: [['#5fae76', '#4f9a6a', '#468a5f'], ['#5fae76', '#4f9a6a', '#468a5f']], blossom: 0, floor: true, wood: true },
 };
+/* ACTE VI : la Citadelle du Zénith (blanc et or) */
+Object.assign(THEMES, {
+  zenith: { grass: '#f2ece0', edge: '#e6dcc6', path: '#f6e6b8', dirt: '#b8a888', under: '#9a8fa8', rock: '#efe8da', tuft: '#fff3cf', leaves: [['#f6e8b0', '#fff2c2', '#ecd98c'], ['#ffe0ec', '#ffd0e2', '#fff0f6']], blossom: 0.5 },
+  jardins: { grass: '#d9ecc8', edge: '#eef0cc', path: '#f8ecc4', dirt: '#b8a888', under: '#9a8fa8', rock: '#f2ead8', tuft: '#f4f0b0', leaves: [['#f2e6a8', '#ffefb8', '#e6d68a'], ['#ffd6e6', '#ffc4dc', '#fff0f6']], blossom: 0.6 },
+  salle: { grass: '#e8e0d0', edge: '#d8ccb4', path: '#ecdcae', dirt: '#6a5e50', under: '#4a4258', rock: '#f4eee0', tuft: '#ffe8a8', leaves: [['#f6e8b0', '#fff2c2', '#ecd98c'], ['#f6e8b0', '#fff2c2', '#ecd98c']], blossom: 0, floor: true },
+  phare_zenith: { grass: '#f6f0e4', edge: '#ece2cc', path: '#fbe9b0', dirt: '#b0a080', under: '#8f86a0', rock: '#fbf6ea', tuft: '#fff3cf', leaves: [['#f6e8b0', '#fff2c2', '#ecd98c'], ['#ffe0ec', '#ffd0e2', '#fff0f6']], blossom: 0.3, floor: true },
+});
+const PORTAL_COLS = ['#7fe6ff', '#ffb0e8', '#ffe27a', '#a8ffb8'];   /* ACTE VI : une teinte par paire de portails */
 const GLASS_COLS = ['#3fc8bc', '#4fc8f0', '#3fc8bc', '#7fe0a8', '#a890f0', '#f08cc4', '#f0cc6a', '#4fc8f0'];
 export const themeOf = (z) => (z && z.theme) || 'puzzle';
 
@@ -462,6 +470,15 @@ export function buildWorld(scene, isl, def, opts = {}) {
       const cap = new THREE.Mesh(new THREE.ConeGeometry(0.28, 0.32, 7), M.woodDark); cap.position.y = 2.95 - 0.38; cap.rotation.x = Math.PI; g.add(cap);
       const gm = new THREE.Mesh(new THREE.OctahedronGeometry(0.15, 0), glow('#9fe9ff', 2.4)); gm.position.y = 3.45; gm.scale.y = 1.5; g.add(gm); v.float = gm; v.spinObj = gm; v.floatY = 3.45;
       v.halo = haloSprite('#9fe9ff', 2.2, 0.5); v.halo.position.y = 3.45; g.add(v.halo); v.lit = true;
+    } else if (e.t === 'portal') {   /* ACTE VI : portail de lumière */
+      const pc = PORTAL_COLS[(e.pair || 'a').charCodeAt(0) % PORTAL_COLS.length];
+      pedestal(g, false);
+      const ring = new THREE.Group(); ring.position.y = BEAM_Y + 0.2;
+      const r1 = new THREE.Mesh(new THREE.TorusGeometry(0.8, 0.07, 8, 28), glow(pc, 2.6)); ring.add(r1);
+      const r2 = new THREE.Mesh(new THREE.TorusGeometry(0.58, 0.04, 6, 24), M.gold); ring.add(r2);
+      const disc = new THREE.Mesh(new THREE.CircleGeometry(0.76, 24), new THREE.MeshBasicMaterial({ color: new THREE.Color(pc).multiplyScalar(1.6), transparent: true, opacity: 0.34, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending })); ring.add(disc);
+      const disc2 = disc.clone(); disc2.rotation.y = Math.PI / 2; ring.add(disc2);
+      g.add(ring); v.spinObj = ring; v.halo = haloSprite(pc, 2.2, 0.5); v.halo.position.y = BEAM_Y + 0.2; g.add(v.halo); v.lit = true;
     } else if (e.t === 'shard') {
       const c = new THREE.Mesh(new THREE.OctahedronGeometry(0.3, 0), glow('#d8b4fe', 3)); c.position.y = 1; g.add(c);
       v.float = c; v.spinObj = c; v.pick = true;
@@ -483,13 +500,13 @@ export function buildWorld(scene, isl, def, opts = {}) {
 
   /* ---------- Bâtiments et décor des zones d'aventure ---------- */
   const props = [];   // { p, zi, g, kind, light? }
-  const roofs = { auberge: M.roofRed, pierre: M.roofSlate, forge: M.roofBrown, bois: M.roofBlue, phare: M.roofBlue };
+  const roofs = { auberge: M.roofRed, pierre: M.roofSlate, forge: M.roofBrown, bois: M.roofBlue, phare: M.roofBlue, marbre: new THREE.MeshStandardMaterial({ color: '#f0c66b', flatShading: true, roughness: 0.5, metalness: 0.2 }) /* ACTE VI */ };
   function house(p, z) {
     const g = new THREE.Group();
     const w = p.w * T, d = p.h * T, h = p.style === 'forge' ? 2.4 : 2.7;
     const cx = W(z.ox + p.x) + w / 2 - T / 2, cz = W(z.oy + p.y) + d / 2 - T / 2;
     g.position.set(cx, 0, cz);
-    const walls = new THREE.Mesh(new THREE.BoxGeometry(w - 0.3, h, d - 0.3), p.style === 'pierre' || p.style === 'phare' ? mat('#cfc9da') : M.plaster); walls.position.y = h / 2; walls.castShadow = true; walls.receiveShadow = true; g.add(walls);
+    const walls = new THREE.Mesh(new THREE.BoxGeometry(w - 0.3, h, d - 0.3), p.style === 'pierre' || p.style === 'phare' ? mat('#cfc9da') : p.style === 'marbre' ? mat('#f6f0e2') /* ACTE VI */ : M.plaster); walls.position.y = h / 2; walls.castShadow = true; walls.receiveShadow = true; g.add(walls);
     const base = new THREE.Mesh(new THREE.BoxGeometry(w - 0.1, 0.5, d - 0.1), M.stoneDark); base.position.y = 0.25; g.add(base);
     // colombages
     if (p.style === 'auberge' || p.style === 'bois') {

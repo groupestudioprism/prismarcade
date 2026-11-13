@@ -85,3 +85,7 @@ export const ENEMIES = {
     desc: 'La gardienne de la Passerelle. Son bouclier d’azur arrête tout ce qui vient de face : frappe-la dans le dos, ou brise-le au marteau.',
   },
 };
+
+/* ACTE VI : la Citadelle du Zénith */
+import { ZENITH_ENEMIES } from './zenith.js';
+Object.assign(ENEMIES, ZENITH_ENEMIES);

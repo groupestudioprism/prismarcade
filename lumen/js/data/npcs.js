@@ -589,3 +589,7 @@ export const NPCS = {
     ],
   },
 };
+
+/* ACTE VI : la Citadelle du Zénith */
+import { ZENITH_NPCS } from './zenith.js';
+Object.assign(NPCS, ZENITH_NPCS);

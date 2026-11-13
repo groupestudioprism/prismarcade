@@ -214,3 +214,7 @@ export const QUESTS = {
     rewards: { xp: 140, ecus: 100, items: { grande_potion: 1 }, unlock: ['teinte_turquoise'], pa: [90, 35] },
   },
 };
+
+/* ACTE VI : la Citadelle du Zénith */
+import { ZENITH_QUESTS } from './zenith.js';
+Object.assign(QUESTS, ZENITH_QUESTS);

@@ -9,6 +9,7 @@ import * as THREE from 'three';
 import { ENEMIES } from '../data/enemies.js';
 import { CREATURES } from '../world/creatures.js';
 import { T, W, rand, randi, angleTo, damp, lerp } from '../engine/util.js';
+import { updateBossZenith } from './boss-zenith.js';   /* ACTE VI */
 
 export function createCombat(G) {
   const enemies = [];
@@ -88,6 +89,7 @@ export function createCombat(G) {
     if (e.state === 'dead') return 0;
     if (e.boss && e.state === 'intro') return 0; /* QA-VISUEL : invulnérable pendant l'annonce du boss */
     const P = G.P;
+    if (e.shielded) { G.audio.sfx('block'); G.ui.damage(e.x, 4.4, e.z, 'Éclipse', 'block'); return 0; }   /* ACTE VI : bouclier du boss final */
     // bouclier : de face, sauf arme lourde ou onde
     if (e.def.shield && !opts.heavy && !opts.onde && e.state !== 'stun' && e.state !== 'attack') {
       const toP = Math.atan2(P.x - e.x, P.z - e.z);
@@ -116,6 +118,7 @@ export function createCombat(G) {
     G.sparks.burst(new THREE.Vector3(e.x, 1, e.z), sparkCol(e.def, true), e.boss ? 120 : 40, e.boss ? 8 : 4, 2.5);
     deadAt[e.key] = clock;
     if (e.elite || e.boss) G.st.world.killed[e.key] = 1;
+    if (e.boss) enemies.forEach((o) => { if (o.adds && o.state !== 'dead') { o.state = 'dead'; o.t = 0; G.ui.enemyBar(o, null); } });   /* ACTE VI : les ombres invoquées s’éteignent avec leur maître */
     G.st.stats.kills++; G.st.stats.killsBy[e.type] = (G.st.stats.killsBy[e.type] || 0) + 1;
     // butin
     const [a, b] = e.def.ecus; const ec = randi(a, b);
@@ -322,6 +325,7 @@ export function createCombat(G) {
         break;
       }
       case 'boss': updateBoss(e, dt, dist, toP, anim, faceTo); break;
+      case 'boss_zenith': updateBossZenith(kit, G, e, dt, dist, toP, anim, faceTo); break;   /* ACTE VI */
     }
     // déplacement avec collisions
     const kx = e.kb.x * dt, kz = e.kb.z * dt; e.kb.x *= Math.exp(-8 * dt); e.kb.z *= Math.exp(-8 * dt);
@@ -398,13 +402,13 @@ export function createCombat(G) {
     if (dist < d.radius + 0.6) G.hurtPlayer(8, e.x, e.z, { knock: 2.5, brume: true });
     G.ui.bossBar(e);
   }
-  function spawnAdds(n) {
+  function spawnAdds(n, typeOverride, tag) {   /* ACTE VI : type et étiquette facultatifs */
     const b = enemies.find((x) => x.boss); if (!b) return;
     for (let i = 0; i < n; i++) {
       const a = Math.random() * Math.PI * 2, x = b.x + Math.cos(a) * 3, z = b.z + Math.sin(a) * 3;
       if (!G.canStand(x, z, 0.4)) continue;
-      const at = b.def.adds || 'brumelin', def = ENEMIES[at], view = CREATURES[def.model || at](def.tint); if (def.tint) tintView(view.root, def.tint); view.root.position.set(x, 0, z); add(view.root);
-      enemies.push({ key: 'add' + Math.random(), type: at, def, zi: b.zi, z: b.z, view, x, z, hx: x, hz: z, vx: 0, vz: 0, face: 0, hp: def.hp, maxHp: def.hp, state: 'chase', t: 0, cd: 1, hurt: 0, kb: { x: 0, z: 0 }, adds: true, seen: true, wanderT: 1 });
+      const at = typeOverride || b.def.adds || 'brumelin', def = ENEMIES[at], view = CREATURES[def.model || at](def.tint); if (def.tint) tintView(view.root, def.tint); view.root.position.set(x, 0, z); add(view.root);
+      enemies.push({ key: 'add' + Math.random(), type: at, def, zi: b.zi, z: b.z, view, x, z, hx: x, hz: z, vx: 0, vz: 0, face: 0, hp: def.hp, maxHp: def.hp, state: 'chase', t: 0, cd: 1, hurt: 0, kb: { x: 0, z: 0 }, adds: true, tag: tag || null, seen: true, wanderT: 1 });
       G.sparks.burst(new THREE.Vector3(x, 0.6, z), '#b39cff', 20, 3, 2);
     }
   }
@@ -451,5 +455,6 @@ export function createCombat(G) {
   }
   function clearProjectiles() { projectiles.forEach((p) => group.remove(p.m)); projectiles.length = 0; }
 
+  const kit = { shoot, warnFx, ringFx, slashFx, spawnAdds, moveEnemy, enemies, rand };   /* ACTE VI */
   return { enemies, spawnZone, clearZone, resetAll, update, melee, ranged, onde, autoAim, dealDamage, clearProjectiles, dropPickup, ringFx, roomAlive: (gate) => enemies.some((e) => e.room === gate && e.state !== 'dead'), hasRoom: (gate) => enemies.some((e) => e.room === gate) };
 }
