@@ -37,6 +37,10 @@ import { createHud } from './ui/hud.js';
 import { createScreens } from './ui/screens.js';
 import { icon } from './ui/icons.js';
 import { createIntro } from './ui/intro.js';
+/* ACTE VI */
+import { createZenithScene } from './world/zenith-scene.js';
+import { createFin } from './game/fin.js';
+import { globalCompletion } from './game/completion.js';
 
 const params = new URLSearchParams(location.search);
 /* Une page = une île : le voyage enregistre l'île d'arrivée puis recharge la page (voir switchIsland). */
@@ -111,6 +115,11 @@ const AMB = {  /* ACTE III : Object.assign(AMB, DESERT_AMB) juste après */
   moulins: { sky: [['#18123a', '#2e2a66', '#4a4290'], ['#1d1848', '#3a3478', '#5a4fa0']], fog: [20, 90], hemi: 0.65, sun: 0.4, tint: '#b8acff', fogColor: '#2a2658' },
   phare_vents: { sky: [['#2a2a6a', '#6a6ac0', '#d0b8f0'], ['#6a8ae8', '#c0d0ff', '#fff4e8']], fog: [60, 210], hemi: 1.05, sun: 1.0, tint: '#e0e4ff' },
   interieur: { sky: [['#1a120e', '#2a1d18', '#3a2a22'], ['#1a120e', '#2a1d18', '#3a2a22']], fog: [14, 40], hemi: 0.75, sun: 0.25, tint: '#ffd8b0', fogColor: '#241812' },
+  /* ACTE VI : citadelle blanche et dorée au-dessus des nuages */
+  zenith: { sky: [['#3a2a6a', '#c88ab8', '#ffd8a0'], ['#4aa8e8', '#cfe8ff', '#fff2d0']], fog: [95, 340], hemi: 1.1, sun: 1.1, tint: '#fff4d6' },
+  jardins: { sky: [['#3a2a6a', '#c88ab8', '#ffd8a0'], ['#5ab8ee', '#d8f0ff', '#fff4d8']], fog: [80, 300], hemi: 1.08, sun: 1.05, tint: '#fffbe0' },
+  salle: { sky: [['#1d1636', '#3a2a5a', '#5a4a7a'], ['#2a2048', '#4a3a6a', '#7a6a9a']], fog: [20, 90], hemi: 0.7, sun: 0.4, tint: '#ffe9a8', fogColor: '#2e2448' },
+  phare_zenith: { sky: [['#3a2a6a', '#c88ab8', '#ffd8a0'], ['#4aa8e8', '#cfe8ff', '#fff2d0']], fog: [120, 420], hemi: 1.1, sun: 1.0, tint: '#fff4d6' },
 };
 Object.assign(AMB, DESERT_AMB);   /* ACTE III */
 
@@ -125,6 +134,7 @@ const MAIN_GATES = zones.filter((z) => !z.secret && !z.area).map((z) => z.ents.f
 const SECRET_GATES = zones.filter((z) => z.secret).map((z) => z.barrier);
 const OPT_GATES = isl.ents.filter((e) => e.optional && e.gate).map((e) => e.gate);
 const world = buildWorld(scene, isl, DEF, { low: LOW });
+const zscene = IID === 'zenith' ? createZenithScene(scene, isl, zones, zoneIndex) : null;   /* ACTE VI */
 const PAL = { dusk: DEF.sky.dusk.map((c) => new THREE.Color(c)), dawn: DEF.sky.dawn.map((c) => new THREE.Color(c)) };
 
 /* Objets dont le décor est fourni par world/ : on ne dessine un secours que si rien n'a été construit
@@ -179,6 +189,13 @@ const WARPS_BY = {
     { id: 'phare_d', name: 'Cristal du Phare des Sables', zone: 'phare_d', cell: [3, 10], arrive: [4, 10], r: 2.2, where: 'Le Phare des Sables', mesh: true },
   ],
 };
+/* ACTE VI */
+WARPS_BY.zenith = [
+  { id: 'porte', name: 'Fontaine de la Porte', zone: 'porte', cell: [15, 12], arrive: [15, 15], r: 4.6, where: 'La Porte du Zénith' },
+  { id: 'jardins', name: 'Cristal des Jardins', zone: 'jardins', cell: [3, 6], arrive: [4, 6], r: 2.2, where: 'Les Jardins célestes', needs: () => isl.gates.zg3 && isl.gates.zg3.open, mesh: true },
+  { id: 'salle', name: 'Hall de la Grande Salle', zone: 'salle', cell: [15, 5], arrive: [15, 6], r: 2.2, where: 'La Grande Salle', needs: (st) => st.flags.boss_zenith, mesh: true },
+  { id: 'phare', name: 'Cristal du Phare du Zénith', zone: 'phare_z', cell: [3, 10], arrive: [4, 10], r: 2.2, where: 'Le Phare du Zénith', needs: () => isl.gates.b_zenith && isl.gates.b_zenith.open, mesh: true },
+];
 /* ACTE V */
 WARPS_BY.pics = [
   { id: 'col', name: 'Cairn du Col', zone: 'col', cell: [15, 12], arrive: [15, 15], r: 4.6, where: 'Le Col' },
@@ -224,6 +241,8 @@ G.combat = createCombat(G);
 G.screens = createScreens(G);
 G.saves = saves;
 const hud = G.hud, quests = G.quests, combat = G.combat, screens = G.screens;
+const fin = zscene ? createFin(G, { S, scene3: zscene, setTouch, platform, IID, music, camera }) : null;   /* ACTE VI */
+G.fin = fin;
 
 /* ---------- Requêtes (dialogues, boutiques, quêtes) ---------- */
 G.counts = (what) => {
@@ -295,6 +314,7 @@ function npcMarkers() {
    Application de l'état sauvegardé au monde
    ========================================================= */
 function applyWorld() {
+  isl.portalsOff = !st.player.abilities.portails;   /* ACTE VI : sans la capacité, les portails sont éteints */
   // remise à zéro de l'île logique
   restore(isl, isl.initial);
   for (let y = 0; y < isl.h; y++) for (let x = 0; x < isl.w; x++) { const t0 = DEF.zones[isl.zoneAt[y][x]]; if (!t0) continue; const ch = t0.map[y - t0.oy] && t0.map[y - t0.oy][x - t0.ox]; if (ch === 'r' || ch === 'c') isl.terrain[y][x] = ch; }
@@ -354,7 +374,7 @@ function reEvaluate() {
 }
 /* Ponts vers les donjons (Sanctuaire de Brume, Temple de Verre) : ils se déploient quand Lyra
    arrive au bout du chemin, devant l'arche (après avoir franchi la haie de ronces). */
-const APPROACH_BRIDGES = { b_sanct: 'Le pont du Sanctuaire se déploie', b_temple: 'Le pont du Temple se déploie', b_temple_d: 'Le pont du Temple enseveli se déploie' /* ACTE III */, b_moulins: 'Le pont du Moulin se déploie', b_so2: 'Le pont de la Dalle se déploie', b_so4: 'Le pont du Souffle court se déploie' /* ACTE V */ };
+const APPROACH_BRIDGES = { b_sanct: 'Le pont du Sanctuaire se déploie', b_temple: 'Le pont du Temple se déploie', b_temple_d: 'Le pont du Temple enseveli se déploie' /* ACTE III */, b_moulins: 'Le pont du Moulin se déploie', b_so2: 'Le pont de la Dalle se déploie', b_so4: 'Le pont du Souffle court se déploie' /* ACTE V */, b_salle: 'Le grand escalier de la Grande Salle se déploie' /* ACTE VI */ };
 function approachBridges() {
   Object.keys(APPROACH_BRIDGES).forEach((id) => {
     const g = isl.gates[id]; if (!g || g.open) return;
@@ -375,7 +395,7 @@ function onGateOpened(id) {
   const g = isl.gates[id];
   world.setGateView(g, true, false);
   st.world.gates[id] = 1;
-  if (id === 'end') { S.restoreT = 1; startFinale(); quests.check(); return; }
+  if (id === 'end') { S.restoreT = 1; if (fin) startEnding(false); else startFinale(); quests.check(); return; }   /* ACTE VI : séquence de fin du jeu */
   if (id === 'sd_light') { audio.chord([523, 659, 784]); hud.toast('✦', 'La barrière de cristal se dissout', 'Le Sanctuaire révèle un passage.'); reward('g:sanct:light', 80, 25); quests.check(); return; }
   if ((DEF.stageGates || []).includes(id)) {   // portes d'étape (Branches basses, Phare de Verre)
     audio.chord([523, 659, 784], 0.1); audio.sfx('barrier');
@@ -502,7 +522,7 @@ function payCost(cost, disc) {
   if (st.player.ecus < e || !Object.entries(cost.mats).every(([id, n]) => (st.inv[id] || 0) >= n)) { audio.sfx('deny'); return false; }
   st.player.ecus -= e; Object.entries(cost.mats).forEach(([id, n]) => takeItem(st, id, n)); return true;
 }
-G.upgrade = (id, disc) => { const it = ITEMS[id], lvl = st.gear[id] || 0, next = UPGRADES[it.cat][lvl]; if (!next || !payCost(next, disc)) return; st.gear[id] = lvl + 1; audio.sfx('break'); setTimeout(() => audio.sfx('level'), 250); hud.toast(icon(it.icon), `${it.name} +${lvl + 1}`, `${META.smith || (IID === 'foret' ? 'Silex' : 'Bran')} a fait du beau travail.`, 'reward'); autosave(); };
+G.upgrade = (id, disc) => { const it = ITEMS[id], lvl = st.gear[id] || 0, next = UPGRADES[it.cat][lvl]; if (!next || (next.island && next.island !== IID) /* ACTE VI : niveau 4 / 3 réservés à la forge du Zénith */ || !payCost(next, disc)) return; st.gear[id] = lvl + 1; audio.sfx('break'); setTimeout(() => audio.sfx('level'), 250); hud.toast(icon(it.icon), `${it.name} +${lvl + 1}`, `${META.smith || (IID === 'foret' ? 'Silex' : 'Bran')} a fait du beau travail.`, 'reward'); autosave(); };
 G.craft = (id, disc) => { if (st.inv[id] || !payCost(RECIPES[id], disc)) return; addItem(st, id, 1); audio.sfx('level'); hud.toast(icon(ITEMS[id].icon), ITEMS[id].name, 'Fabriqué à la forge.', 'reward'); autosave(); };
 
 /* ---------- Effets des dialogues ---------- */
@@ -526,9 +546,10 @@ G.runEffects = (list) => {
     if (e.ability) {   /* ACTE IV : capacités sauvegardées (orbe, planer) */
       const had = !!st.player.abilities[e.ability];
       st.player.abilities[e.ability] = true;
-      const nm = { orbe: ['Orbe de Fia', 'Fia se pose sur un socle de lumière et éclaire tout droit. E pour la poser ou la tourner.'], planer: ['Planer', 'Sur une corniche ou près d’une pierre de vent, tourne-toi vers l’autre rive et appuie sur E : Lyra plane de l’autre côté du vide.'] }[e.ability] || [e.ability, ''];
+      const nm = { orbe: ['Orbe de Fia', 'Fia se pose sur un socle de lumière et éclaire tout droit. E pour la poser ou la tourner.'], portails: ['Portails', input.touch ? 'Bouton ◎ : pose un portail ; deux portails se relient. Au Zénith, ils renvoient aussi la lumière.' : 'Touche V : pose un portail ; deux portails se relient. Au Zénith, ils renvoient aussi la lumière.'], planer: ['Planer', 'Sur une corniche ou près d’une pierre de vent, tourne-toi vers l’autre rive et appuie sur E : Lyra plane de l’autre côté du vide.'] }[e.ability] || [e.ability, ''];
       if (!had) hud.toast('✦', 'Nouvelle capacité : ' + nm[0], nm[1], 'reward');
     }
+    if ((e.ability === 'portails' || e.teach === 'portails') && isl.portalsOff) { isl.portalsOff = false; reEvaluate(); }   /* ACTE VI : une seule capacité « portails » (Borée, Acte V) allume aussi les portails de lumière du Zénith */
     if (e.teach) {
       st.player.abilities[e.teach] = true;
       const tn = A3.teachNote(e.teach);   /* ACTE III : porter, orbe */
@@ -537,6 +558,7 @@ G.runEffects = (list) => {
         portails: ['Portails', input.touch ? 'Bouton ◎ : pose un portail ; deux portails se relient.' : 'Touche V : pose un portail ; deux portails se relient.'] }[e.teach] || [e.teach, ''];
       if (tn) hud.toast('✦', tn[0], tn[1], 'reward'); else hud.toast('✦', 'Nouvelle capacité : ' + T5[0], T5[1], 'reward');
     }
+    if (e.replay === 'fin' && fin) setTimeout(() => startEnding(true), 400);   /* ACTE VI */
     if (e.travel) { const tv = e.travel; setTimeout(() => G.travelTo(tv.to, tv.zone, tv.cell), 100); res.travel = true; }
     if (e.unlock) unlock(e.unlock);
     if (e.heal) { const s = calcStats(st); st.player.hp = s.maxHp; st.player.en = s.maxEn; }
@@ -640,6 +662,7 @@ G.startFrom = async (state, s = 'auto', legacy = false, noIntro = false) => {
   if (META.first && !st.quests[META.first]) quests.start(META.first);
   A3.arrive();   /* ACTE III : Porter / Orbe rattrapés à l'arrivée dans le Désert */
   quests.check(); npcMarkers(); hud.refresh();
+  if (fin && isl.gates.end && isl.gates.end.open && !st.flags.fin_jeu) setTimeout(() => startEnding(false), 1800);   /* ACTE VI : sauvegarde juste avant la fin → la scène finale se rejoue */
   if (fresh) opening.wake(() => intro(), true);
   else if (legacy) setTimeout(() => hud.toast('✦', 'Bienvenue dans la nouvelle aventure', 'Tes énigmes et tes objets sont conservés. Séléné t’attend à Havre-Aube.'), 800);
   if (!fresh) opening.wake(null, false);
@@ -739,7 +762,7 @@ function fade(cb) { const f = $('#fade'); f.classList.add('on'); setTimeout(() =
    Interactions
    ========================================================= */
 function cellCenter(z, c) { return [W(z.ox + c[0]), W(z.oy + c[1])]; }
-function findTarget(all) {   /* all = true : renvoie tous les candidats triés (outil d'audit tools/audit.py) */
+function findTarget(all) {   /* ACTE VI : all → renvoie tous les candidats (audit) */
   const cands = [];
   const d = (x, z) => Math.hypot(x - P.x, z - P.z);
   const push = (dist, max, o) => { if (dist < max) cands.push(Object.assign({ dist }, o)); };
@@ -767,7 +790,7 @@ function findTarget(all) {   /* all = true : renvoie tous les candidats triés (
     if (p.t === 'house' && p.door) { const [x, zz] = cellCenter(pr.z, p.door); push(d(x, zz), 2.0, { kind: 'door', pr, x, z: zz, label: p.interior ? (p.lock && !st.inv[p.lock] && !st.flags['ouvert_' + p.id] ? `${p.name} (fermée à clé)` : `Entrer · ${p.name}`) : p.name }); }
     const [cx, cz] = [pr.g.position.x, pr.g.position.z];
     if (p.t === 'sign') push(d(cx, cz), 2.3, { kind: 'sign', pr, x: cx, z: cz, label: 'Lire le panneau' });
-    if (p.t === 'lamp' && !pr.g.userData.lit && (quests.state('s_lampions') === 'active' || quests.state('s_lampions_f') === 'active' || quests.state('s_lampions_d') === 'active' /* ACTE III */ || quests.state('s_lampions_a') === 'active' /* ACTE IV */)) push(d(cx, cz), 2.4, { kind: 'lamp', pr, x: cx, z: cz, label: 'Rallumer le lampion avec Fia' });
+    if (p.t === 'lamp' && !pr.g.userData.lit && (quests.state('s_lampions') === 'active' || quests.state('s_lampions_f') === 'active' || quests.state('s_lampions_d') === 'active' /* ACTE III */ || quests.state('s_lampions_a') === 'active' /* ACTE IV */ || quests.state('s_lampions_z') === 'active' /* ACTE VI */)) push(d(cx, cz), 2.4, { kind: 'lamp', pr, x: cx, z: cz, label: 'Rallumer le lampion avec Fia' });
     if (p.t === 'lamp' && String(p.id || '').startsWith('fanion') && !pr.g.userData.lit) push(d(cx, cz), 2.4, { kind: 'fanion', pr, x: cx, z: cz, label: 'Hisser le fanion avec Fia' });   /* ACTE V */
     if (p.t === 'bed') push(d(cx, cz), 3.4, { kind: 'bed', pr, x: cx, z: cz, label: 'Se reposer' });
     if (p.t === 'desk') push(d(cx, cz), 3.0, { kind: 'desk', pr, x: cx, z: cz, label: 'Étudier les cartes d’Orin' });
@@ -775,13 +798,15 @@ function findTarget(all) {   /* all = true : renvoie tous les candidats triés (
   });
   // cristaux de voyage
   WARPS.forEach((w) => { if (zoneIndex[w.zone] !== zi || (w.needs && !w.needs(st))) return; const [x, zz] = cellCenter(z, w.cell); push(d(x, zz), w.r, { kind: 'warp', w, x, z: zz, label: 'Cristal de voyage' }); });
+  // ACTE VI : contempler le Prisme reforgé (revoir la scène finale), depuis le phare
+  if (zscene && z.id === 'phare_z' && isl.gates.end && isl.gates.end.open && st.flags.fin_jeu) push(d(zscene.top.x, zscene.top.z), 6.2, { kind: 'prisme', x: zscene.top.x, z: zscene.top.z, label: 'Contempler le Prisme' });
   // portes verrouillées et sceau du phare
   Object.values(isl.gates).forEach((g) => {
     if (g.open || !(g.key || g.id === 'lens')) return;
     g.cells.forEach(([x, y]) => { if (g.id !== 'lens' && isl.zoneAt[y][x] !== zi && isl.zoneAt[y][x] !== -1) return; const wx = W(x), wz = W(y); push(d(wx, wz), 2.6, { kind: 'lock', g, x: wx, z: wz, label: g.id === 'lens' ? (st.inv.lentille ? 'Poser la Lentille d’Aube' : 'Un sceau de brume') : st.inv[g.key] ? 'Déverrouiller la porte' : 'Porte verrouillée' }); });
   });
   A3.targets(zi, push, d);   /* ACTE III : objets portés, socles, vasques, abris, stèles */
-  const PRIO = { socle: -0.5, orbsocle: -0.3 /* ACTE IV */, ledge: -0.2 /* ACTE IV */, carry: -0.35, vasque: -0.4, shelter: 0.3, stele: 0.5, npc: -1.2, chest: -0.6, post: -0.2, device: -0.3, lock: -0.3, warp: 1.6, door: 0.2, sign: 0.4, lamp: -1.5, bed: 0.5, desk: 0, well: 0.6, vent: -0.2, fanion: -1.5 /* ACTE V */ };
+  const PRIO = { socle: -0.5, orbsocle: -0.3 /* ACTE IV */, ledge: -0.2 /* ACTE IV */, carry: -0.35, vasque: -0.4, shelter: 0.3, stele: 0.5, npc: -1.2, chest: -0.6, post: -0.2, device: -0.3, lock: -0.3, warp: 1.6, door: 0.2, sign: 0.4, lamp: -1.5, bed: 0.5, desk: 0, well: 0.6, vent: -0.2, fanion: -1.5 /* ACTE V */, prisme: 0.8 /* ACTE VI */ };
   cands.sort((a, b) => (a.dist + (PRIO[a.kind] || 0)) - (b.dist + (PRIO[b.kind] || 0)));
   A3.decorate(cands);
   return all ? cands : (cands[0] || null);
@@ -920,6 +945,7 @@ function interact(back) {
       break;
     }
     case 'sign': screens.message('Panneau', t.pr.p.text); break;
+    case 'prisme': startEnding(true); break;   /* ACTE VI */
     case 'lamp': { const pr = t.pr; st.world.lamps[pr.p.id] = 1; setLamp(pr, true); audio.sfx('lamp'); sparks.burst(new THREE.Vector3(pr.g.position.x, 2.4, pr.g.position.z), '#ffb35a', 30, 2, 1); hud.toast('✦', `Lampion rallumé (${G.counts('lampions')} / 7)`); quests.check(); autosave(); break; }
     case 'bed': rest(); break;
     case 'desk': {
@@ -1067,6 +1093,15 @@ function startFinale() {
   autosave();
 }
 
+/* ACTE VI : fin du jeu (voir game/fin.js). replay : revoir la scène sans reprendre les récompenses. */
+function startEnding(replay) {
+  if (!fin || fin.active) return;
+  packPosition(); S.boss = null; hud.bossBar(null);
+  if (!replay) { gainXp(300); updateChestVisibility(); }
+  fin.start({ replay });
+  autosave();
+}
+
 /* =========================================================
    Carte
    ========================================================= */
@@ -1082,12 +1117,12 @@ G.drawMap = (cv) => {
     const t = isl.terrain[y] && isl.terrain[y][x]; if (!t || t === ' ') continue;
     const zi = isl.zoneAt[y][x];
     if (t === '=') { const gt = isl.gates[isl.gateCell[x + ',' + y]]; if (!gt.open) continue; g.fillStyle = '#e8b65a'; }
-    else { if (zi < 0 || !seen(zi) || zones[zi].interior) continue; const th = themeOf(zones[zi]); g.fillStyle = t === '#' || t === 'T' ? 'rgba(255,255,255,.18)' : t === '~' ? '#5fa8e8' : t === 'H' ? 'rgba(240,198,107,.55)' : t === ',' ? 'rgba(232,214,180,.6)' : t === 'r' ? '#3f5a32' : t === 'x' ? '#9fe9ff' : th === 'sanctuaire' ? 'rgba(160,140,220,.5)' : th === 'temple' ? 'rgba(120,190,220,.5)' : th === 'foret' || th === 'canopee' || th === 'phare_verre' ? 'rgba(110,210,180,.55)' : th === 'lande' ? 'rgba(180,200,120,.5)' : zones[zi].secret ? 'rgba(216,180,254,.5)' : 'rgba(150,220,140,.55)'; }
+    else { if (zi < 0 || !seen(zi) || zones[zi].interior) continue; const th = themeOf(zones[zi]); g.fillStyle = t === '#' || t === 'T' ? 'rgba(255,255,255,.18)' : t === '~' ? '#5fa8e8' : t === 'H' ? 'rgba(240,198,107,.55)' : t === ',' ? 'rgba(232,214,180,.6)' : t === 'r' ? '#3f5a32' : t === 'x' ? '#9fe9ff' : th === 'sanctuaire' ? 'rgba(160,140,220,.5)' : th === 'temple' ? 'rgba(120,190,220,.5)' : th === 'foret' || th === 'canopee' || th === 'phare_verre' ? 'rgba(110,210,180,.55)' : th === 'zenith' || th === 'jardins' || th === 'salle' || th === 'phare_zenith' ? 'rgba(240,214,150,.6)' : th === 'lande' ? 'rgba(180,200,120,.5)' : zones[zi].secret ? 'rgba(216,180,254,.5)' : 'rgba(150,220,140,.55)'; }
     g.fillRect(ox + x * s, oy + y * s, s + 0.5, s + 0.5);
     if (t === 'c' && st.player.abilities.vision && seen(zi)) { g.fillStyle = '#ffe2a0'; g.fillRect(ox + x * s + s * 0.25, oy + y * s + s * 0.25, s * 0.5, s * 0.5); }
   }
   g.font = '600 13px Inter, sans-serif'; g.textAlign = 'center';
-  outdoor.forEach((z, i) => { const zi = zoneIndex[z.id]; if (!seen(zi) || (!z.area && z.id !== 'z1' && z.id !== 'z4' && z.id !== 'z7' && z.id !== 'phare' && z.id !== 'can2' && z.id !== 'phare_f' && z.id !== 'f2')) return; const name = z.area ? z.title : DEF.regions[z.region].name; g.fillStyle = 'rgba(0,0,0,.55)'; g.fillText(name, ox + (z.ox + z.map[0].length / 2) * s + 1, oy + (z.oy + 1.4) * s + 1); g.fillStyle = '#fff'; g.fillText(name, ox + (z.ox + z.map[0].length / 2) * s, oy + (z.oy + 1.4) * s); });
+  outdoor.forEach((z, i) => { const zi = zoneIndex[z.id]; if (!seen(zi) || (!z.area && z.id !== 'z1' && z.id !== 'z4' && z.id !== 'z7' && z.id !== 'phare' && z.id !== 'can2' && z.id !== 'phare_f' && z.id !== 'f2' && z.id !== 'jz2' && z.id !== 'phare_z')) return; const name = z.area ? z.title : DEF.regions[z.region].name; g.fillStyle = 'rgba(0,0,0,.55)'; g.fillText(name, ox + (z.ox + z.map[0].length / 2) * s + 1, oy + (z.oy + 1.4) * s + 1); g.fillStyle = '#fff'; g.fillText(name, ox + (z.ox + z.map[0].length / 2) * s, oy + (z.oy + 1.4) * s); });
   // coffres (vision), cristaux de voyage, objectif
   if (st.player.abilities.vision) Object.values(world.chestViews).forEach((c) => { if (c.open || !c.g.visible || !seen(c.zi) || zones[c.zi].interior) return; g.fillStyle = '#ffe2a0'; g.font = '700 14px Inter'; g.fillText('✧', ox + (c.x + 0.5) * s, oy + (c.y + 0.9) * s); });
   WARPS.forEach((w) => { if (!st.world.warps[w.id]) return; const z = zones[zoneIndex[w.zone]]; g.fillStyle = '#9fe9ff'; g.font = '700 16px Inter'; g.fillText('✦', ox + (z.ox + w.cell[0] + 0.5) * s, oy + (z.oy + w.cell[1] + 0.9) * s); });
@@ -1121,6 +1156,7 @@ function completion() {
   return Math.floor(parts.reduce((a, [n, t, w]) => a + (t ? (n / t) * w : w), 0));
 }
 G.completion = completion;
+G.completionAll = () => globalCompletion(ISLANDS, ISLAND_META, st, QUESTS, { id: IID, pct: completion() });   /* ACTE VI */
 
 /* =========================================================
    Événements de jeu
@@ -1148,16 +1184,17 @@ function bossDefeated(k) {
     setTimeout(() => hud.toast('✦', 'Un cristal de voyage s’est réveillé', 'Il te ramène au Hall des Grottes quand tu veux. Le pont vers le Phare des Abysses se déploie.'), 2500);
     return;
   }
-  const flag = def.bossFlag || 'boss_colosse', verre = flag === 'boss_verre', meunier = flag === 'boss_meunier' /* ACTE V */, win = def.win || null;   /* ACTE III : win = fin de boss propre à l'île */
+  const flag = def.bossFlag || 'boss_colosse', verre = flag === 'boss_verre', meunier = flag === 'boss_meunier' /* ACTE V */, zen = flag === 'boss_zenith' /* ACTE VI */, win = def.win || null;   /* ACTE III : win = fin de boss propre à l'île */
   st.flags[flag] = 1; S.boss = null; hud.bossBar(null);
   audio.chord([392, 523, 659, 784, 1047], 0.15); S.victoryUntil = performance.now() + 20000; music('victoire', 1);
-  if (win) A3.bossWon(def); else hud.banner('Victoire', verre ? 'Le Gardien de Verre est brisé' : meunier ? 'Le Grand Meunier est délivré' : 'Le Colosse de Brume est dissipé');
-  if (!verre && !meunier && !win) giveItem('lentille', 1);
-  reward('b:' + IID + ':' + (win ? win.key : verre ? 'gardien' : meunier ? 'meunier' : 'colosse'), win ? win.xp : meunier ? 360 : verre ? 300 : 250, win ? win.coins : meunier ? 120 : verre ? 100 : 80);
+  if (win) A3.bossWon(def); else hud.banner('Victoire', zen ? 'L’Ombre du Prisme est dissipée' : verre ? 'Le Gardien de Verre est brisé' : meunier ? 'Le Grand Meunier est délivré' : 'Le Colosse de Brume est dissipé');
+  if (!verre && !meunier && !zen && !win) giveItem('lentille', 1);
+  reward('b:' + IID + ':' + (win ? win.key : zen ? 'ombre' : verre ? 'gardien' : meunier ? 'meunier' : 'colosse'), win ? win.xp : zen ? 600 : meunier ? 360 : verre ? 300 : 250, win ? win.coins : zen ? 200 : meunier ? 120 : verre ? 100 : 80);
+  if (zen) { openGate('b_zenith'); S.restoreT = restoreLevel(); }   /* ACTE VI : le pont du Zénith se déploie */
   updateChestVisibility();
-  if (!win) st.world.warps[verre ? 'temple' : meunier ? 'moulins' : 'sanctuaire'] = 1;
+  if (!win) st.world.warps[zen ? 'salle' : verre ? 'temple' : meunier ? 'moulins' : 'sanctuaire'] = 1;
   quests.check(); autosave();
-  if (!win) setTimeout(() => hud.toast('✦', 'Un cristal de voyage s’est réveillé', meunier ? 'Il te ramène au Moulin quand tu veux. Le cœur du Grand Meunier t’attend dans le coffre de l’arène.' : verre ? 'Il te ramène au Temple de Verre quand tu veux. Le fragment vert t’attend dans le coffre de l’arène.' : 'Il te ramène à Havre-Aube quand tu veux.'), 2500);
+  if (!win) setTimeout(() => hud.toast('✦', 'Un cristal de voyage s’est réveillé', zen ? 'Il te ramène à la Grande Salle quand tu veux. Le dernier fragment t’attend dans le coffre de l’arène, et le pont du Zénith est ouvert.' : meunier ? 'Il te ramène au Moulin quand tu veux. Le cœur du Grand Meunier t’attend dans le coffre de l’arène.' : verre ? 'Il te ramène au Temple de Verre quand tu veux. Le fragment vert t’attend dans le coffre de l’arène.' : 'Il te ramène à Havre-Aube quand tu veux.'), 2500);
 }
 
 /* =========================================================
@@ -1256,7 +1293,7 @@ function update(dt) {
     input.clear();
   } else if (S.mode === 'dialog') {
     if (input.take('interact') || input.take('dodge') || input.take('attack')) screens.nextLine();
-    ['1', '2', '3', '4', '5'].forEach((k, i) => { if (input.keyDown(k) && !S['_k' + k]) { S['_k' + k] = true; screens.choose(i); } if (!input.keyDown(k)) S['_k' + k] = false; });
+    ['1', '2', '3', '4', '5', '6', '7', '8', '9'].forEach((k, i) => { if (input.keyDown(k) && !S['_k' + k]) { S['_k' + k] = true; screens.choose(i); } if (!input.keyDown(k)) S['_k' + k] = false; });
     if (input.take('pause')) screens.nextLine();
     input.clear();
   }
@@ -1378,6 +1415,8 @@ function update(dt) {
     camera.lookAt(S.camT.x, S.camT.y + 2 * e, S.camT.z);
     S.restoreT = 1;
     if (F.t > 6.5) { S.finale = null; S.mode = 'play'; setTouch(true); hud.banner(META.finale.title, META.finale.sub); quests.check(); npcMarkers(); }
+  } else if (S.mode === 'ending' && fin) {
+    fin.update(dt);   /* ACTE VI : la caméra appartient à la séquence de fin */
   } else if (S.wardrobe) {
     tmpV.set(P.x, 1.0, P.z); S.camT.lerp(tmpV, damp(6, dt));
     const yaw = P.face + 0.35, d = 5.2, pitch = 0.22;
@@ -1416,10 +1455,11 @@ function update(dt) {
   world.M.grass.color.copy(tint); world.M.foliage.color.copy(tint); world.M.tuft.color.copy(tint);
   ambient.mat.opacity = th === 'interieur' ? 0 : 0.35 + r * 0.6;
   ambient.mat.color.set(A.amb || (th === 'pics' || th === 'phare_vents' ? '#eef4ff' : th === 'moulins' ? '#d8ccff' : th === 'sanctuaire' || th === 'lande' ? '#c9b6ff' : th === 'foret' || th === 'canopee' || th === 'phare_verre' || th === 'temple' || th === 'greve' || th === 'recifs' || th === 'grotte' || th === 'lac' || th === 'phare_abysses' /* ACTE IV */ ? '#bff3ff' : '#ffc4dc')).multiplyScalar(1.4);
-  if (!opening.musicLock && Math.floor(t) !== Math.floor(t - dt)) music(S.mode === 'title' ? 'title' : S.victoryUntil > performance.now() ? 'victoire' : S.boss && S.boss.state !== 'dead' ? (S.boss.phase === 2 ? 'boss2' : 'boss') : (zones[S.zone] && zones[S.zone].music) || th, S.mode === 'title' ? 0.6 : r);
+  if (!opening.musicLock && Math.floor(t) !== Math.floor(t - dt)) music(S.mode === 'title' ? 'title' : S.victoryUntil > performance.now() ? 'victoire' : S.mode === 'ending' && S.endMusic ? S.endMusic /* ACTE VI */ : S.boss && S.boss.state !== 'dead' ? (S.boss.phase === 3 ? 'boss3' : S.boss.phase === 2 ? 'boss2' : 'boss') : (zones[S.zone] && zones[S.zone].music) || th, S.mode === 'title' ? 0.6 : r);
 
   /* -------- monde -------- */
   world.animate(dt, t);
+  if (zscene) zscene.update(dt, t);   /* ACTE VI */
   Object.values(warpMeshes).forEach((g) => { if (g.visible) { g.userData.cr.rotation.y += dt; g.userData.cr.position.y = 1.3 + Math.sin(t * 2) * 0.12; } });
   const wv = Object.values(world.views).find((v) => v.e.t === 'wisp');
   if (wv && st.world.picked[wv.e.id] && S.mode !== 'title') { wv.g.visible = true; if (wv.g.parent !== scene) scene.add(wv.g); wv.g.position.set(P.x - Math.sin(P.face) * 1.1 + Math.sin(t * 1.3) * 0.3, 0.6 + Math.sin(t * 2.1) * 0.15, P.z - Math.cos(P.face) * 1.1); }
@@ -1484,4 +1524,5 @@ window.__lumen = {
   tpZone(id, c) { const z = zones[zoneIndex[id]]; const cc = c || z.spawn; teleport(W(z.ox + cc[0]), W(z.oy + cc[1])); },
   give: (id, n) => giveItem(id, n),
   findTarget, WARPS, canStand: (x, z) => canStand(x, z), completion, interact: () => interact(false), interactBack: () => interact(true), target: () => S.target, saveTo, openGate, a3: A3,
+  fin, zscene, startEnding,   /* ACTE VI : audit de ciblage et tests */
 };

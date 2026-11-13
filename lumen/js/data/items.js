@@ -112,6 +112,12 @@ Object.entries(DESERT_RECIPES).forEach(([id, r]) => (RECIPES[id] = Object.assign
 export const item = (id) => ITEMS[id] || null;
 export const isStackable = (id) => ['conso', 'materiau'].includes((ITEMS[id] || {}).cat) || id === 'fragment_coeur' || !!(ITEMS[id] || {}).stack;
 
+/* ACTE VI : la Citadelle du Zénith */
+import { ZENITH_ITEMS, ZENITH_RECIPES, ZENITH_UPGRADES } from './zenith.js';
+Object.assign(ITEMS, ZENITH_ITEMS);
+Object.assign(RECIPES, ZENITH_RECIPES);
+UPGRADES.arme.push(ZENITH_UPGRADES.arme);
+UPGRADES.armure.push(ZENITH_UPGRADES.armure);
 /* ACTE V : Les Pics du Vent */
 import { ITEMS_PICS, RECIPES_PICS } from './pics-data.js';
 Object.assign(ITEMS, ITEMS_PICS); Object.assign(RECIPES, RECIPES_PICS);

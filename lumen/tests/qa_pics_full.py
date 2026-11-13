@@ -76,5 +76,5 @@ J('Phare : la lumière finale', "(async()=>{const L=__lumen;const r=T.solve('end
 J('Phare : fin de la cinématique', "(async()=>{const L=__lumen;for(let i=0;i<80&&L.S.mode==='cutscene';i++)await T.tick(250);return L.S.mode+' '+T.q('q_phare_vents')})()", "active:retour")
 J('Borée : fin d’acte', "(async()=>{const L=__lumen;const b=T.pre();L.tpZone('col');await T.tick(700);await T.talkTo('boree');await T.tick(1200);return T.q('q_phare_vents')+' portails='+L.st.player.abilities.portails+' acte5='+L.st.flags.acte5_fini+' écran='+L.G.screens.current+' prisme='+(L.st.inv.prisme_violet||0)+' '+await T.rewardCheck('q_phare_vents',b)})()", "acte5=1")
 J('Écran de fin d’acte', "document.querySelector('#screen').textContent.slice(0,400)", "Acte 5 terminé")
-J('Écran : île 6 « bientôt »', "document.querySelector('#screen .next').textContent", "bientôt")
+J('Écran : île 6 disponible (plus de « bientôt »)', "document.querySelector('#screen .next').textContent", lambda r: 'disponible' in r and 'Zénith' in r and 'bientôt' not in r)
 q.done()

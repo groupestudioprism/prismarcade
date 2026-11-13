@@ -1,6 +1,6 @@
 # LUMEN : les Îles Brisées — document de conception
 
-*Prism Game · Studio Prism · version 0.7, Actes I à V (novembre 2026)*
+*Prism Game · Studio Prism · version 1.0, les 6 actes : jeu complet (novembre 2026)*
 
 ---
 
@@ -173,12 +173,12 @@ Une île centrale en ruines, avec un autel pour les fragments, l'autel des capac
 - **Récompense** : fragment violet. Les portails s'activent.
 
 **Réalisation (Acte V, branche `acte5-pics`)** :
-- *Route* : on arrive aux Pics **depuis la fin de l’Acte IV** (`acte4_fini`) : Lagon (Abysses), Calixte (Havre-Aube), Yaël (Désert) proposent « Partir pour les Pics du Vent » (`travel { to: 'pics', zone: 'col', cell: [12, 7] }`) ; Zéphyr (Col) ramène aux Abysses, au Désert, à la Forêt ou à Havre-Aube. Tessel ne propose plus rien. La fin d’acte des Pics annonce l’île 6 « bientôt ».
+- *Route* : on arrive aux Pics **depuis la fin de l’Acte IV** (`acte4_fini`) : Lagon (Abysses), Calixte (Havre-Aube), Yaël (Désert) proposent « Partir pour les Pics du Vent » (`travel { to: 'pics', zone: 'col', cell: [12, 7] }`) ; Zéphyr (Col) ramène aux Abysses, au Désert, à la Forêt ou à Havre-Aube. Tessel ne propose plus rien. La fin d’acte des Pics annonce l’île 6 comme disponible (« parle au passeur ») et Zéphyr propose la Citadelle du Zénith quand les cinq fragments sont réunis.
 - *Géographie* (13 zones, 11 ponts) : le Col (village, 10 habitants, forge de Frimas, auberge du Chamois endormi, boutiques) ; les Courants (3 salles, `cr1`..`cr3`) ; la Terrasse des Girouettes ; les Pentes ; le Moulin du Grand Meunier (donjon : salle de combat, clé, relais à ressort, boss) ; les Sommets (Névé `so1`, Dalle `so2`, Crêtes `so3`, Souffle court `so4`) ; le Phare des Vents (3 étapes, faisceaux rouge, bleu, magenta).
 - *Planer* : entité `vent` (pierre de vent), reliée en ligne droite à une jumelle de l'autre côté d'un vide (`ventLinks`, portée 14, comme le grappin mais plus long). Capacité `abilities.planer` : **clé unique avec l’Acte IV** (corniches des Abysses, donnée au Phare des Abysses) ; Alizée (`teach: 'planer'`) enseigne ici les pierres de vent et re-signale la capacité. Les deux mécaniques coexistent sous la même clé (entités `ledge` et `vent` distinctes, cibles d’interaction distinctes, `reachCells` gère les deux) ; mode de jeu `glide` (arc + voile) dans `js/game/pics-mech.js`. Rejouable à l'infini : on ne tombe jamais.
 - *Relais temporisés* : un relais avec `hold` (secondes) garde sa couleur après avoir été touché par un faisceau (`heldC`, `heldT`, `live`), puis s'éteint. `tools/timed.mjs` (`analyseTimed`) simule le temps (marche × 1,5, 0,6 s par action) et prouve : état initial non résolu, aucune fuite de faisceau, solution existante, **aucune solution statique**, marge ×0,75. Salles concernées : `cr3`, `so4`, salle des relais du Moulin.
 - *Plateformes qui montent* : ponts `look: 'lift'` (`lf1`, `lf3`), dalles dont les piliers se dressent quand le récepteur est éclairé ; une fois levées elles restent levées (comme les autres ponts : aucun piège possible).
-- *Portails* (récompense) : `abilities.portails`, touche V (bouton tactile ◎) ; deux portails reliés par île (`st.player.portals = { island, list: [{x, z}] }`), pose en plein air seulement, recharge anti-aller-retour. À réutiliser tel quel à l'Acte VI.
+- *Portails* (récompense) : `abilities.portails`, touche V (bouton tactile ◎) ; deux portails reliés par île (`st.player.portals = { island, list: [{x, z}] }`), pose en plein air seulement, recharge anti-aller-retour. À l’Acte VI, la même capacité (`abilities.portails`, une seule clé) allume aussi les portails de lumière des salles du Zénith (entités `portal`, `isl.portalsOff` tant que la capacité manque).
 - *Ennemis* : givrelin, bourrasque, bouquetin (charge rectiligne), veilleur de givre, boss Grand Meunier (IA générique : coup au sol, balayage, pierres, invocation de givrelins ; pas d'IA sur mesure).
 - *Quêtes* : principales `q_pics`, `q_moulins`, `q_phare_vents` ; secondaires `s_cerfvolant`, `s_moulin`, `s_fleurs`, `s_chasse_pics`, `s_fanions`, `s_courrier`, `s_corne`.
 - *Vérifications* : `node tools/build-pics.mjs` (génération + simulation), `verify.mjs`, `reach.mjs` (pierres de vent incluses), `coherence.mjs`, `tests/qa_pics_full.py` (parcours complet en navigateur).
@@ -189,6 +189,7 @@ Une île centrale en ruines, avec un autel pour les fragments, l'autel des capac
 - **Régions** : la Porte, les Jardins célestes, la Grande Salle, le Zénith.
 - **Phare final** : six faisceaux de six couleurs à envoyer vers les six phares de l'archipel, visibles au loin.
 - **Fin** : le Prisme est reforgé en lumière partagée et l'archipel se rassemble.
+- **Réalisé (Acte VI)** : 5 zones jouables + 3 salles à portails + auberge ; boss « Ombre du Prisme » (3 phases : dalles et lances, spirale et téléportation, éclipse bouclier) ; phare à deux balises (rouge-vert-bleu et jaune-magenta-cyan) et deux portes d’étape ; cinématique de fin d’environ 50 s, bilan sur les six îles, générique, jeu libre. **Voyage** : le Zénith s’atteint depuis la fin de l’Acte V avec les cinq fragments (rouge `acte1_fini`, vert `verre_fini`/`acte2_fini`, doré `dore_fini`/`acte3_fini`, bleu `acte4_fini`, violet `acte5_fini`) : Zéphyr, Calixte, Yaël et Lagon proposent « Partir pour la Citadelle du Zénith » seulement quand ils sont réunis ; Calixte (Zénith) ramène vers les cinq autres îles. **Forge** : améliorations arme niveau 4 et armure niveau 3 réservées à la forge du Zénith (`island: 'zenith'`), recettes filtrées par île. **Bilan** : `game/completion.js` recalcule la complétion des îles quittées (mêmes parts que `completion()` de main.js). Détails : HANDOFF.md, annexe ACTE VI.
 
 ---
 

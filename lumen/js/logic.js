@@ -4,6 +4,8 @@
    Repère : x vers la droite, y vers le bas (en 3D, y de la grille = z).
    ========================================================= */
 
+import { portalTwin, portalsOn } from './mech/portails.js';   /* ACTE VI */
+
 import { poolUp, poolDir, orbSource, glideLinks } from './mech/eau.js';   /* ACTE IV */
 export const DIRS = { N: [0, -1], E: [1, 0], S: [0, 1], W: [-1, 0] };
 export const ORDER = ['N', 'E', 'S', 'W'];
@@ -35,7 +37,7 @@ export function filterColor(beam, glass) {
 /* Terrain : '.' herbe · ',' chemin · '#' roche / mur · 'T' arbre · 'H' bâtiment ou décor · '~' eau
    'r' ronces (coupées par une lame) · 'c' roche fissurée (brisée au marteau) · 'x' porte · '=' pont */
 export const BLOCK_TERRAIN = new Set(['#', 'T', 'H', '~', 'r', 'c']);
-const BLOCKING_ENTS = new Set(['lantern', 'mirror', 'prism', 'receiver', 'beacon', 'relay', 'vitrail', 'post', 'splitter', 'valve', 'socle' /* ACTE IV : socle d’orbe */, 'vent' /* ACTE V */]);
+const BLOCKING_ENTS = new Set(['lantern', 'mirror', 'prism', 'receiver', 'beacon', 'relay', 'vitrail', 'post', 'splitter', 'valve', 'socle' /* ACTE IV : socle d’orbe */, 'vent' /* ACTE V */, 'portal' /* ACTE VI */]);
 /* ACTE III — Objets orientables à deux états « / » et « \\ » (miroir, lame semi-réfléchissante) */
 export const isMirrorLike = (e) => e.t === 'mirror' || e.t === 'splitter';
 const PICKUPS = new Set(['shard', 'page', 'wisp', 'start', 'ledge' /* ACTE IV */]);
@@ -215,6 +217,13 @@ export function trace(isl, active = {}) {
         segs.push({ x0: sx, y0: sy, x1: x, y1: y, c: b.c });
         const f = filterColor(b.c, e.color);
         if (f) stack.push({ x, y, d: b.d, c: f, from: 0.3, left });
+        break;
+      }
+      /* ACTE VI : portail de lumière — le faisceau ressort par le jumeau, même direction, même couleur */
+      if (e.t === 'portal' && portalsOn(isl)) {
+        segs.push({ x0: sx, y0: sy, x1: x, y1: y, c: b.c, end: 'portal' });
+        const tw = portalTwin(isl, e);
+        if (tw) stack.push({ x: tw.x, y: tw.y, d: b.d, c: b.c, from: 0.3 });
         break;
       }
       if (e.t === 'prism') {

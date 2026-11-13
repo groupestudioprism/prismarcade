@@ -110,7 +110,40 @@ const TH = {
 import { TH_PICS } from './themes-pics.js';
 Object.assign(TH, TH_PICS);
 /* ACTE III */ Object.assign(SC, DESERT_SCALE); Object.assign(TH, DESERT_TH);
-const ALIAS = { grotte: 'abysses', lac: 'abysses', recifs: 'greve', phare_abysses: 'phare', /* ACTE IV */ canopy: 'canopee', lighthouse: 'phare', phare_de_verre: 'phare', menu: 'title', aube: 'village', havre: 'village', sanctuary: 'sanctuaire', forest: 'foret', foretdeverre: 'foret', interior: 'interieur', auberge: 'interieur', boss1: 'boss', boss_phase2: 'boss2', victory: 'victoire', energie: 'puzzle', enigme: 'puzzle', salle: 'puzzle' };
+const ALIAS = { grotte: 'abysses', lac: 'abysses', recifs: 'greve', phare_abysses: 'phare', /* ACTE IV */ canopy: 'canopee', lighthouse: 'phare', phare_de_verre: 'phare', menu: 'title', aube: 'village', havre: 'village', sanctuary: 'sanctuaire', forest: 'foret', foretdeverre: 'foret', interior: 'interieur', auberge: 'interieur', boss1: 'boss', boss_phase2: 'boss2', victory: 'victoire', energie: 'puzzle', enigme: 'puzzle', /* ACTE VI */ phare_zenith: 'zenith', zenith_phare: 'zenith' };
+/* ACTE VI : la Citadelle du Zénith */
+Object.assign(TH, {
+  zenith: { bpm: 84, root: 52, sc: 'lyd', floor: 0.5, bpc: 2, prog: [[0, 'M9'], [4, 'm7'], [7, 'M'], [5, 'M7']],
+    pad: { wave: 'triangle', vol: 0.034, cut: 1600, cutTo: 2600, oct: 0 }, bass: { pat: '0...5...0...7...', wave: 'triangle', vol: 0.12, cut: 800, min: 0.1 },
+    arp: { pat: '01243210', every: 2, wave: 'sine', vol: 0.045, dec: 0.5, oct: 1, rev: 0.6, min: 0 },
+    mel: { wave: 'sine', vol: 0.07, cut: 3200, vib: 5, rev: 0.6, density: 0.8, rest: 0.3, lo: 8, hi: 17, min: 0.1 },
+    perc: { shaker: '.o.o.o.o.o.o.o.x', kick: 'x.......x.......', kmin: 0.6, hmin: 0.3 }, bell: { p: 0.2, vol: 0.04, min: 0.1 } },
+  jardins: { bpm: 76, root: 55, sc: 'maj', floor: 0.4, bpc: 2, swing: 0.08, prog: [[0, 'M'], [9, 'm7'], [5, 'M9'], [7, 's4']],
+    pad: { wave: 'sine', vol: 0.035, cut: 1400, oct: 0 }, bass: { pat: '0.......5.......', wave: 'sine', vol: 0.11, min: 0.2 },
+    arp: { pat: '0132', every: 2, wave: 'triangle', vol: 0.045, dec: 0.4, oct: 1, rev: 0.7, min: 0 },
+    mel: { wave: 'triangle', vol: 0.06, cut: 2800, vib: 4, rev: 0.7, density: 0.7, rest: 0.35, lo: 9, hi: 16, min: 0 },
+    perc: { wood: 'x...........o...', wmin: 0.6 }, bell: { p: 0.15, vol: 0.035, min: 0 } },
+  salle: { bpm: 68, root: 47, sc: 'dor', floor: 0.55, bpc: 2, prog: [[0, 'm9'], [5, 'M7'], [3, 'M9'], [7, 's2']],
+    pad: { wave: 'sawtooth', vol: 0.018, cut: 800, cutTo: 1500, oct: 0 }, bass: { pat: '0...............', wave: 'sine', vol: 0.13, min: 0.1 },
+    arp: { pat: '01232103', every: 3, wave: 'sine', vol: 0.045, dec: 0.6, oct: 1, rev: 0.7, min: 0.2 },
+    mel: { wave: 'sine', vol: 0.045, cut: 2000, vib: 4, rev: 0.8, density: 0.5, rest: 0.5, lo: 7, hi: 14, min: 0.4 },
+    perc: { wood: 'x...........o...', wmin: 0.8 }, bell: { p: 0.12, vol: 0.035, min: 0.3 } },
+  boss3: { bpm: 168, root: 50, sc: 'phr', floor: 1, bpc: 1, prog: [[0, 'm'], [1, 'M'], [6, 'd'], [0, 'm'], [8, 'M'], [7, 'M']],
+    pad: { wave: 'sawtooth', vol: 0.026, cut: 1200, oct: 0, sub: true }, bass: { pat: '0.0.0.00.0.0.0.0', wave: 'sawtooth', vol: 0.13, cut: 700, min: 0 },
+    arp: { pat: '01232103', every: 1, wave: 'sawtooth', vol: 0.022, dec: 0.1, oct: 1, cut: 3000, rev: 0.1, min: 0 },
+    mel: { wave: 'sawtooth', vol: 0.05, cut: 3000, vib: 6, rev: 0.3, density: 0.95, rest: 0.05, lo: 9, hi: 18, min: 0 },
+    perc: { kick: 'x..xx.x.x..xx.x.', snare: '....x.......x..x', tom: '..x..x..x..x..x.', shaker: 'xxxxxxxxxxxxxxxx', kmin: 0, smin: 0, tmin: 0, hmin: 0 }, bell: { p: 0.2, vol: 0.03, min: 0 } },
+  epilogue: { bpm: 72, root: 50, sc: 'maj', floor: 0.9, bpc: 2, prog: [[0, 'M9'], [5, 'M7'], [9, 'm7'], [7, 's4'], [0, 'M9'], [4, 'm7'], [5, 'M9'], [7, 'M']],
+    pad: { wave: 'triangle', vol: 0.04, cut: 2600, oct: 0 }, bass: { pat: '0...5...0...7...', wave: 'triangle', vol: 0.12, cut: 900, min: 0 },
+    arp: { pat: '0123432101', every: 2, wave: 'sine', vol: 0.05, dec: 0.6, oct: 1, rev: 0.7, min: 0 },
+    mel: { wave: 'triangle', vol: 0.075, cut: 3600, vib: 5, rev: 0.7, density: 0.9, rest: 0.15, lo: 8, hi: 18, min: 0 },
+    perc: { kick: 'x.......x.......', shaker: 'x.o.x.o.x.o.x.o.', kmin: 0.5, hmin: 0.3 }, bell: { p: 0.35, vol: 0.05, min: 0 } },
+  generique: { bpm: 80, root: 55, sc: 'lyd', floor: 0.7, bpc: 2, swing: 0.05, prog: [[0, 'M9'], [7, 'M'], [9, 'm7'], [5, 'M7']],
+    pad: { wave: 'triangle', vol: 0.036, cut: 2200, oct: 0 }, bass: { pat: '0.......5.......', wave: 'sine', vol: 0.11, min: 0 },
+    arp: { pat: '01243', every: 2, wave: 'sine', vol: 0.045, dec: 0.5, oct: 1, rev: 0.7, min: 0 },
+    mel: { wave: 'sine', vol: 0.065, cut: 3200, vib: 5, rev: 0.7, density: 0.7, rest: 0.3, lo: 8, hi: 16, min: 0 },
+    perc: { wood: 'x...x...x...x...', wmin: 0.2 }, bell: { p: 0.3, vol: 0.04, min: 0 } },
+});
 
 /* Instance de thème --------------------------------------------------- */
 let lastNow = 0, cur = null, fading = [], want = null, timer = null, level = 0.5;
@@ -269,7 +302,7 @@ export function setMusic(theme, lvl) {
   if (name && !TH[name]) name = 'puzzle';
   if (cur && cur.name === name) return;
   if (!cur && name === null) return;
-  const fast = name === 'combat' || name === 'boss' || name === 'boss2' || (cur && (cur.name === 'boss' || cur.name === 'boss2'));
+  const fast = name === 'combat' || name === 'boss' || name === 'boss2' || name === 'boss3' || (cur && (cur.name === 'boss' || cur.name === 'boss2' || cur.name === 'boss3'));
   const secs = name === 'victoire' ? 1.2 : fast ? 1.2 : 2.8;
   if (cur) { cur.fadeOut(secs); fading.push(cur); while (fading.length > 2) fading.shift().kill(); }
   cur = null;

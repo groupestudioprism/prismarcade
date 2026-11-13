@@ -5,7 +5,7 @@ import { ITEMS, UPGRADES, isStackable } from '../data/items.js';
 import { QUESTS } from '../data/quests.js';
 import { DEFAULT_LOOK, HAIR_COLORS, SKIN, EYES, CLOAK_COLORS, TRIMS, HEIGHTS, byId } from '../data/looks.js';
 
-export const SAVE_VERSION = 6;   /* ACTE III : v6 = world.moved (objets portés) */
+export const SAVE_VERSION = 6;   /* v6 : ACTE III world.moved (objets portés) ; ACTE VI capacité portails, drapeaux de fin, amélioration d’arme niveau 4 (normalize reste compatible v1 à v5) */
 
 /* Monde d'une île : tout ce qui change quand on joue (une île = un monde, voir otherWorlds) */
 export const newWorld = (firstWarp) => ({ dev: {}, gates: {}, picked: {}, cut: {}, broken: {}, chests: {}, lamps: {}, warps: firstWarp ? { [firstWarp]: 1 } : {}, killed: {}, moved: {} /* ACTE III : id → [x, y] ou null (en main) */ });
@@ -74,7 +74,7 @@ function sanitize(st) {
   Object.keys(st.inv).forEach((id) => { const n = Math.floor(Number(st.inv[id])); if (!ITEMS[id] || !(n > 0)) delete st.inv[id]; else st.inv[id] = Math.min(n, 9999); });
   ['weapon', 'armor', 'acc1', 'acc2'].forEach((k) => { if (st.equip[k] && !st.inv[st.equip[k]]) st.equip[k] = null; });
   if (st.equip.quick && !ITEMS[st.equip.quick]) st.equip.quick = 'potion';
-  Object.keys(st.gear).forEach((id) => { st.gear[id] = Math.floor(num(st.gear[id], 0, 0, 3)); if (!ITEMS[id]) delete st.gear[id]; });
+  Object.keys(st.gear).forEach((id) => { st.gear[id] = Math.floor(num(st.gear[id], 0, 0, 4)); if (!ITEMS[id]) delete st.gear[id]; });
   // quêtes : inconnues supprimées, étape dans les limites
   Object.keys(st.quests).forEach((id) => {
     const r = st.quests[id], q = QUESTS[id];

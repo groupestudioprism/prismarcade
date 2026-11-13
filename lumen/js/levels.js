@@ -9,8 +9,9 @@ import foret from './islands/foret.js';
 import desert from './islands/desert.js';   /* ACTE III */
 import abysses from './islands/abysses.js';   /* ACTE IV */
 import pics from './islands/pics.js';   /* ACTE V */
+import zenith from './islands/zenith.js';   /* ACTE VI */
 
-export const ISLANDS = [aube, foret, desert /* ACTE III */, abysses /* ACTE IV */, pics /* ACTE V */];
+export const ISLANDS = [aube, foret, desert /* ACTE III */, abysses /* ACTE IV */, pics /* ACTE V */, zenith /* ACTE VI */];
 
 /* Données propres à chaque île, utilisées par le moteur (point de repos, ville, voyage).
    home : lit où l'on se repose et où l'on réapparaît · town : zone du village · title : nom affiché
@@ -28,11 +29,12 @@ export const ISLAND_META = {
   /* ACTE V : arrivée normale depuis les Abysses : travel { to: 'pics', zone: 'col', cell: [12, 7] } */
   pics: { home: { zone: 'auberge_p', cell: [9, 3] }, town: 'col', title: 'Les Pics du Vent', inn: 'au Chamois endormi', warp: 'col', boss: 'boss_meunier', first: 'q_pics', restoreBoss: true, smith: 'Frimas',
     finale: { title: 'Le Phare des Vents brille', sub: 'Retourne voir Borée au Col' }, actEndFlag: 'acte5_fini', finaleGive: 'prisme_violet' },
+  /* ACTE VI */
+  zenith: { home: { zone: 'auberge_z', cell: [9, 3] }, town: 'porte', title: 'La Citadelle du Zénith', inn: 'à l’Aurore', warp: 'porte', boss: 'boss_zenith', first: 'q_porte', restoreBoss: true,
+    finale: { title: 'Le Phare du Zénith brille', sub: 'La lumière est partagée' }, actEndFlag: 'fin_jeu' },
   aube: { home: { zone: 'auberge_in', cell: [9, 3] }, town: 'havre', title: 'L’Île de l’Aube', inn: 'au Lampion', warp: 'havre', boss: 'boss_colosse',
     finale: { title: 'Le phare de l’Aube brille', sub: 'Retourne voir Séléné' }, actEndFlag: 'acte1_fini' },
 };
 
-/* Îles prévues (voir DESIGN.md) */
-export const UPCOMING = [
-  { num: 6, name: 'La Citadelle du Zénith', what: 'portails et phare final' },
-];
+/* Îles prévues (voir DESIGN.md) : il n'en reste aucune, le dernier acte est jouable */
+export const UPCOMING = [];

@@ -1,8 +1,8 @@
-"""QA-GAMEPLAY — bibliothèque commune (port 8776). Rendu neutralisé : on teste la logique, pas le GPU."""
+"""QA-GAMEPLAY — bibliothèque commune (port 8873 par défaut, racine = le dépôt qui contient ce fichier). Rendu neutralisé : on teste la logique, pas le GPU."""
 import sys, json, time, subprocess, os
 from playwright.sync_api import sync_playwright
 
-PORT = int(os.environ.get("QA_PORT", "8870"))
+PORT = int(os.environ.get("QA_PORT", "8873"))
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))   # racine du dépôt (worktree), plus de chemin absolu
 SOL = open(os.path.join(os.path.dirname(__file__), "qa_solutions.json")).read()
 

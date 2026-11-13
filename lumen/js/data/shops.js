@@ -75,6 +75,9 @@ export const SHOPS = {
   },
 };
 
+/* ACTE VI : la Citadelle du Zénith */
+import { ZENITH_SHOPS } from './zenith.js';
+Object.assign(SHOPS, ZENITH_SHOPS);
 /* ACTE IV : Les Abysses Miroirs (js/data/abysses.js) */
 import { SHOPS_A4 } from './abysses.js';
 Object.assign(SHOPS, SHOPS_A4);

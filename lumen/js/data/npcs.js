@@ -605,3 +605,10 @@ Object.assign(NPCS, NPCS_PICS);
 /* ACTE V : route Abysses -> Pics (acte4_fini), proposée par les passeurs */
 const _ins = (id, before) => { const ch = NPCS[id].talk.filter((t) => t.choices).map((t) => t.choices); ch.forEach((c) => { const k = c.findIndex((x) => x.t === before); if (k >= 0 && !c.includes(PICS_TRAVEL_CHOICE)) c.splice(k, 0, PICS_TRAVEL_CHOICE); }); };
 _ins('calixte', 'Pas maintenant'); _ins('yael', 'Pas maintenant'); _ins('lagon', 'Tu as besoin d’aide ?');
+/* ACTE VI : la Citadelle du Zénith */
+import { ZENITH_NPCS, ZENITH_TRAVEL_CHOICE } from './zenith.js';
+Object.assign(NPCS, ZENITH_NPCS);
+/* ACTE VI : route Pics → Zénith (cinq fragments : Aube, Forêt, Désert, Abysses, Pics), proposée par les passeurs.
+   La condition `if` de ZENITH_TRAVEL_CHOICE masque le choix tant que les cinq fragments manquent. */
+const _insZ = (id, before) => { const ch = NPCS[id].talk.filter((t) => t.choices).map((t) => t.choices); ch.forEach((c) => { const k = c.findIndex((x) => x.t === before); if (k >= 0 && !c.includes(ZENITH_TRAVEL_CHOICE)) c.splice(k, 0, ZENITH_TRAVEL_CHOICE); }); };
+_insZ('calixte', 'Pas maintenant'); _insZ('yael', 'Pas maintenant'); _insZ('lagon', 'Tu as besoin d’aide ?'); _insZ('zephyr', 'Au revoir');

@@ -94,7 +94,7 @@ J('après finale', "__lumen.S.mode+' '+T.q('q_phare_sable')+' restore='+__lumen.
 q.tick(6000)
 J('Oumi : fin', "(async()=>{const L=__lumen;L.G.screens.close();L.S.mode='play';L.tpZone('cite');await T.tick(600);await T.talkTo('oumi');return T.q('q_phare_sable')+' acte3_fini='+L.st.flags.acte3_fini+' écran='+L.G.screens.current})()", "acte3_fini=1")
 q.tick(1500)
-J('écran de fin d’acte : suite en « bientôt »', "(document.querySelector('#screen .end-card')||{}).innerText||'pas d’écran'", "bientôt")
+J('écran de fin d’acte : suite disponible (Abysses, plus de « bientôt »)', "(document.querySelector('#screen .end-card')||{}).innerText||'pas d’écran'", "disponible")
 J('récompenses q_phare_sable', "T.rewardCheck('q_phare_sable',{inv:{},unl:{},ecus:0})")
 # ---------- annexes ----------
 def side(giver, qid, pre, post):

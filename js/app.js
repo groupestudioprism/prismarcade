@@ -135,14 +135,14 @@
     const solved = Object.keys(ex).filter((k) => k.startsWith('g:aube:')).length;
     const shards = Object.keys(ex).filter((k) => k.startsWith('s:aube:')).length;
     const done = !!ex['done:aube'];
-    const prog = st && st.plays ? `Île de l’Aube : ${done ? 'rallumée ✦ · ' : ''}${solved} énigme${solved > 1 ? 's' : ''} · ${shards} / 10 éclats` : '5 îles jouables (Actes I à V) · 1 île à venir';
+    const prog = st && st.plays ? `Île de l’Aube : ${done ? 'rallumée ✦ · ' : ''}${solved} énigme${solved > 1 ? 's' : ''} · ${shards} / 10 éclats` : '6 îles jouables (Actes I à VI) · le jeu complet';
     return `<div class="section-head"><div><h2>Grands jeux</h2><p>Des aventures plus longues, avec le même compte et la même progression.</p></div></div>
       <a class="big-game" href="lumen/">
         <img src="lumen/assets/cover.webp" alt="Lumen : une île flottante traversée de faisceaux de lumière" loading="lazy" width="1280" height="720">
         <div class="big-body">
-          <span class="badge">${done ? 'Actes I à IV jouables' : 'Nouveau · Actes I à IV jouables'}</span>
+          <span class="badge">${done ? 'Jeu complet · 6 actes' : 'Nouveau · jeu complet (6 actes)'}</span>
           <h3>Lumen <span>: les Îles Brisées</span></h3>
-          <p>Aventure, combats et énigmes de lumière en 3D. Explore l’Île de l’Aube, la Forêt de Verre, le Désert des Échos, les Abysses Miroirs puis les Pics du Vent (plane sur les courants d’air, relais à retardement), parle aux habitants, affronte le Colosse, les Gardiens de Verre, des Échos et des Marées et le Grand Meunier, et rallume les phares d’un archipel éteint.</p>
+          <p>Aventure, combats et énigmes de lumière en 3D. Explore l’Île de l’Aube, la Forêt de Verre, le Désert des Échos, les Abysses Miroirs, les Pics du Vent (plane sur les courants d’air) puis la Citadelle du Zénith (portails de lumière), parle aux habitants, affronte le Colosse, les Gardiens de Verre, des Échos et des Marées, le Grand Meunier et l’Ombre du Prisme, et rallume les six phares d’un archipel éteint.</p>
           <p class="big-meta">${esc(prog)}</p>
           <span class="btn primary">${st && st.plays ? 'Continuer' : 'Jouer'}</span>
         </div>

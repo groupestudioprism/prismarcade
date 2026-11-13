@@ -48,7 +48,7 @@ case('niveau énorme / xp négatif', mk(player__lvl=9999, player__xp=-5, player_
 case('portes inconnues', mk(world__gates={'porte_fantome':1,'g1':1}, world__picked={'x':1}, world__chests={'ch_fantome':1}))
 case('suivi inconnu', mk(tracked='q_fantome'))
 case('apparence inconnue', mk(look={'hair':'zzz','skin':'zzz','outfit':'zzz','acc':'zzz','cloak':'zzz'}))
-case('île inconnue', mk(player__island='desert'))
+case('île inconnue', mk(player__island='atlantide'))
 case('respawn invalide', mk(player__respawn={'zone':'nulle','cell':[999,999]}))
 case('respawn absent', mk(player__respawn=None))
 case('flags/unlocks tordus', mk(flags=[1,2,3], unlocks='oui'))
