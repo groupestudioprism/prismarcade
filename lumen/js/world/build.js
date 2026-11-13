@@ -9,6 +9,7 @@ import { COLORS, DIRS } from '../logic.js';
 import { hash, T, W, BEAM_Y } from '../engine/util.js';
 import { U, tickGfx, patchSway, patchWater, glassTexture, shaftTexture, haloSprite, merge, mx, bakeStatic } from './gfx.js';
 import { createLife } from './life.js';
+import { DESERT_THEMES, buildSplitter, buildSocle, desertTrees, desertProp, tickDesert } from './desert-props.js';   /* ACTE III */
 
 const C = (hex) => new THREE.Color(hex);
 const mat = (hex, o = {}) => new THREE.MeshStandardMaterial(Object.assign({ color: hex, flatShading: true, roughness: 0.9 }, o));
@@ -26,6 +27,7 @@ const THEMES = {
   sanctuaire: { grass: '#8a84ae', edge: '#7a74a0', path: '#938db6', dirt: '#3f3a55', under: '#2e2840', rock: '#615a86', tuft: '#8f7ad6', leaves: [['#5a4a8a', '#6a5a9a', '#4a3a7a'], ['#5a4a8a', '#6a5a9a', '#4a3a7a']], blossom: 0, floor: true },
   interieur: { grass: '#a0714f', edge: '#8f6446', path: '#a0714f', dirt: '#5a3f2f', under: '#3a2a22', rock: '#e9dcc2', tuft: '#a0714f', leaves: [['#5fae76', '#4f9a6a', '#468a5f'], ['#5fae76', '#4f9a6a', '#468a5f']], blossom: 0, floor: true, wood: true },
 };
+Object.assign(THEMES, DESERT_THEMES);   /* ACTE III */
 const GLASS_COLS = ['#3fc8bc', '#4fc8f0', '#3fc8bc', '#7fe0a8', '#a890f0', '#f08cc4', '#f0cc6a', '#4fc8f0'];
 export const themeOf = (z) => (z && z.theme) || 'puzzle';
 
@@ -176,7 +178,8 @@ export function buildWorld(scene, isl, def, opts = {}) {
         return C(th.rock).offsetHSL(0, 0, (hash(x, y, 17) - 0.5) * 0.12);
       }, { cast: true });
     }
-    const trees = cells.filter(([x, y]) => terr(x, y) === 'T');
+    const trees = th.desert ? [] : cells.filter(([x, y]) => terr(x, y) === 'T');   /* ACTE III : palmiers et cactus */
+    if (th.desert) desertTrees({ THREE, G, instanced, C, hash, W, cells: cells.filter(([x, y]) => terr(x, y) === 'T'), M, mat });
     const glassy = !!th.glass;
     const tk = (x, y) => 0.88 + hash(x, y, 18) * 0.34;                       // taille de l'arbre
     instanced(G, trunkGeo, glassy ? M.glassTrunk : M.trunk, trees, (o, [x, y]) => { const k = tk(x, y); o.position.set(W(x), 0.65 * k, W(y)); o.scale.set(k, k, k); o.rotation.y = hash(x, y, 19) * 6; }, { cast: !glassy });
@@ -237,7 +240,7 @@ export function buildWorld(scene, isl, def, opts = {}) {
         const sc = 0.75 + hash(x, y, 61 + k) * 0.7; o.scale.set(sc, themeOf(z) === 'lande' ? sc * 1.5 : sc, sc);
         return C(th.tuft).offsetHSL(0, 0.05, (hash(x, y, 70 + k) - 0.5) * 0.12 + 0.03);
       }, { receive: false });
-      const flowers = grassCells.filter(([x, y]) => hash(x, y, 80) < (themeOf(z) === 'village' ? 0.4 : 0.3));
+      const flowers = th.desert ? [] : grassCells.filter(([x, y]) => hash(x, y, 80) < (themeOf(z) === 'village' ? 0.4 : 0.3));
       const fl2 = flowers.flatMap(([x, y]) => [[x, y, 0], [x, y, 1], ...(hash(x, y, 88) < 0.5 ? [[x, y, 2]] : [])]);
       const fpos = (x, y, k) => [W(x) + (hash(x, y, 81 + k * 7) - 0.5) * 1.6, W(y) + (hash(x, y, 82 + k * 7) - 0.5) * 1.6];
       instanced(G, flowerGeo, M.tuft, fl2, (o, [x, y, k]) => {
@@ -393,6 +396,9 @@ export function buildWorld(scene, isl, def, opts = {}) {
       const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.45, 6), M.metal); stand.position.y = -0.62; frame.add(stand);
       frame.rotation.y = e.state ? -Math.PI / 4 : Math.PI / 4;
       v.head = frame; v.target = () => (e.state ? -Math.PI / 4 : Math.PI / 4);
+    } else if (e.t === 'splitter') {   /* ACTE III : lame semi-réfléchissante */
+      pedestal(g, true);
+      const s = buildSplitter(g, e, { THREE, M, glow, BEAM_Y }); v.head = s.head; v.target = s.target;
     } else if (e.t === 'vitrail') {
       // vitrail : deux vitres croisées dans un cadre doré (se lit bien de toutes les directions)
       pedestal(g, false);
@@ -481,6 +487,10 @@ export function buildWorld(scene, isl, def, opts = {}) {
     views[e.id] = v;
   });
 
+  /* ACTE III : socles (objets portés) */
+  const socleViews = [];
+  (isl.socles || []).forEach((so) => { const sv = buildSocle(so, { THREE, M, glow, haloSprite, W }); detail(so.zone, W(so.x), W(so.y)).add(sv.g); socleViews.push(sv); });
+
   /* ---------- Bâtiments et décor des zones d'aventure ---------- */
   const props = [];   // { p, zi, g, kind, light? }
   const roofs = { auberge: M.roofRed, pierre: M.roofSlate, forge: M.roofBrown, bois: M.roofBlue, phare: M.roofBlue };
@@ -551,6 +561,7 @@ export function buildWorld(scene, isl, def, opts = {}) {
     return g;
   }
   function propMesh(p, z) {
+    { const dp = desertProp(p, z, { THREE, M, mat, glow, haloSprite, T, W }); if (dp) return dp; }   /* ACTE III */
     const g = new THREE.Group();
     const cx = W(z.ox + p.x) + (p.w - 1) * T / 2, cz = W(z.oy + p.y) + (p.h - 1) * T / 2;
     g.position.set(cx, 0, cz);
@@ -841,7 +852,7 @@ export function buildWorld(scene, isl, def, opts = {}) {
   const grappleHide = () => { grap.visible = false; };
   /* ---------- Animations du décor ---------- */
   function animate(dt, t, ctx) {
-    tickGfx(t); life.update(dt, t); updateVitrailLights(dt);
+    tickGfx(t); life.update(dt, t); updateVitrailLights(dt); tickDesert(t, dt, { props, socleViews, isl });   /* ACTE III */
     if (camPos.x < 1e5) { sky.position.copy(camPos); sunSp.position.set(150, 95 + skyK * 10, 240); }
     if (starPts) { starPts.material.uniforms.uK.value = skyOn ? Math.max(0, 1 - skyK * 1.3) * 0.85 : 0; sunSp.material.opacity = skyOn ? 0.22 + skyK * 0.45 : 0; sunSp.material.color.set('#ff9ec7').lerp(new THREE.Color('#ffe2a0'), skyK); sky.visible = skyOn; }
     cullAcc += dt; if (cullAcc > 0.2) { cullAcc = 0; cullers.forEach((c) => { c.g.visible = Math.hypot(c.x - camPos.x, c.z - camPos.z) < (LOW ? 40 : 50) + c.r; }); }
@@ -913,5 +924,5 @@ export function buildWorld(scene, isl, def, opts = {}) {
     if (current >= 0 && current !== life.cur) { life.cur = current; life.setZone(current, props); }
   }
 
-  return { setSky, grappleLine, grappleHide, root, M, views, gateViews, setGateView, drawBeams, animate, props, chestViews, pickupViews, removeCell, showZones, zoneGroups, decor };
+  return { socleViews, setSky, grappleLine, grappleHide, root, M, views, gateViews, setGateView, drawBeams, animate, props, chestViews, pickupViews, removeCell, showZones, zoneGroups, decor };
 }

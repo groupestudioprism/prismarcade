@@ -119,6 +119,7 @@ export function stats(st) {
     speed: 1 + (a && a.speed ? a.speed : 0) + accs.reduce((n, x) => n + (x.speed || 0), 0),
     regen: 6 + accs.reduce((n, x) => n + (x.regen || 0) * 8, 0),
     resBrume: accs.reduce((n, x) => n + (x.resBrume || 0), 0),
+    resSable: accs.reduce((n, x) => n + (x.resSable || 0), 0),   /* ACTE III */
     weapon: w || null, weaponId: st.equip.weapon, weaponLvl: wl,
   };
   return s;

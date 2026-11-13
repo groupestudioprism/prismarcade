@@ -227,7 +227,7 @@ export function createCombat(G) {
   }
   function touchPlayer(e, radius, dmg, opts) {
     const P = G.P;
-    if (Math.hypot(P.x - e.x, P.z - e.z) < radius + 0.35) G.hurtPlayer(dmg, e.x, e.z, Object.assign({ brume: e.def.family === 'brume' }, opts));
+    if (Math.hypot(P.x - e.x, P.z - e.z) < radius + 0.35) G.hurtPlayer(dmg, e.x, e.z, Object.assign({ brume: e.def.family === 'brume', sable: e.def.family === 'sable' /* ACTE III */ }, opts));
   }
   function updateEnemy(e, dt) {
     const P = G.P, d = e.def;

@@ -8,6 +8,33 @@
    ctx = { THREE, M, mat, glow, haloSprite, T, W, BEAM_Y, hash }
    ========================================================= */
 
+/* Couleurs par thème (fusionnées dans THEMES de build.js) */
+export const DESERT_THEMES = {
+  desert: { grass: '#e9c77c', edge: '#f3d78f', path: '#d6b06a', dirt: '#9a6a3e', under: '#74503a', rock: '#c99a5c', tuft: '#d9bb62', leaves: [['#6f9a4a', '#7fae52', '#5f8a42'], ['#6f9a4a', '#7fae52', '#5f8a42']], blossom: 0, desert: true },
+  cite: { grass: '#edcd86', edge: '#f6dc9a', path: '#e6cf9c', dirt: '#9a6a3e', under: '#74503a', rock: '#d1a566', tuft: '#dcbf6a', leaves: [['#6f9a4a', '#7fae52', '#5f8a42'], ['#6f9a4a', '#7fae52', '#5f8a42']], blossom: 0, desert: true },
+  ruines: { grass: '#e2bd72', edge: '#ecce86', path: '#d0a862', dirt: '#8a5e38', under: '#6a4a3a', rock: '#b98c52', tuft: '#d2b25a', leaves: [['#6f9a4a', '#7fae52', '#5f8a42'], ['#6f9a4a', '#7fae52', '#5f8a42']], blossom: 0, desert: true },
+  temple_sable: { grass: '#d9b878', edge: '#cba868', path: '#e3c68a', dirt: '#5a4430', under: '#3e2f26', rock: '#b58b4e', tuft: '#e8c878', leaves: [['#6f9a4a', '#7fae52', '#5f8a42'], ['#6f9a4a', '#7fae52', '#5f8a42']], blossom: 0, floor: true },
+  phare_sable: { grass: '#e8cf94', edge: '#dcc07a', path: '#f0dca8', dirt: '#5a4430', under: '#3e2f26', rock: '#c9a05a', tuft: '#f0d890', leaves: [['#6f9a4a', '#7fae52', '#5f8a42'], ['#6f9a4a', '#7fae52', '#5f8a42']], blossom: 0, floor: true },
+};
+
+/* Animation : vasques allumées (flamme + halo) et anneaux des socles */
+export function tickDesert(t, dt, { props, socleViews, isl }) {
+  (props || []).forEach((pr) => {
+    const u = pr.g.userData;
+    if (pr.p.t !== 'vasque' || !u.flame) return;
+    const lit = !!u.lit;
+    u.flame.visible = lit;
+    if (lit) { u.flame.scale.set(1 + Math.sin(t * 9 + pr.p.x) * 0.08, 1 + Math.sin(t * 7 + pr.p.y) * 0.12, 1); }
+    if (u.vasqueHalo) u.vasqueHalo.material.opacity += ((lit ? 0.55 + Math.sin(t * 6) * 0.08 : 0) - u.vasqueHalo.material.opacity) * (1 - Math.exp(-5 * dt));
+    if (u.vasqueGem) u.vasqueGem.rotation.y += dt * (lit ? 2 : 0.4);
+  });
+  (socleViews || []).forEach((sv) => {
+    const busy = !!(isl && isl.entAt[sv.so.x + ',' + sv.so.y]);
+    sv.ringMat.opacity += ((busy ? 0.35 : 0.55 + Math.sin(t * 3 + sv.so.x) * 0.3) - sv.ringMat.opacity) * (1 - Math.exp(-6 * dt));
+    sv.halo.material.opacity += ((busy ? 0 : 0.3) - sv.halo.material.opacity) * (1 - Math.exp(-4 * dt));
+  });
+}
+
 export function buildSplitter(g, e, ctx) {
   const { THREE, M, glow, BEAM_Y } = ctx;
   const frame = new THREE.Group(); frame.position.y = BEAM_Y; g.add(frame);
@@ -82,7 +109,7 @@ export function desertProp(p, z, ctx) {
       const flame = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.9, 6), new THREE.MeshBasicMaterial({ color: new THREE.Color('#ffc861').multiplyScalar(2.2), transparent: true, opacity: 0.95 })); flame.position.y = 1.7; flame.visible = false; g.add(flame);
       const halo = haloSprite('#ffc861', 3.6, 0.0); halo.position.y = 1.7; g.add(halo);
       const gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.14, 0), glow('#9fe9ff', 1.2)); gem.position.y = 1.55; gem.scale.y = 1.5; g.add(gem);
-      u.flame = flame; u.vasqueHalo = halo; u.vasqueGem = gem;
+      u.flame = flame; u.vasqueHalo = halo; u.vasqueGem = gem; u.spin = gem;
       break;
     }
     case 'stele': {   // stèle d'écho : pierre haute gravée de runes

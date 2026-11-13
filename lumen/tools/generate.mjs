@@ -230,8 +230,8 @@ export function analyse(rows, ents, gates, opts = {}) {
 }
 
 /* Accessibilité à pied depuis l'entrée (toutes portes ouvertes ; poteaux de grappin compris) */
-export function reach(rows, ents, from, barrier) {
-  const isl = buildIsland({ zones: [{ ox: 0, oy: 0, map: rows, ents, barrier }], bridges: [] });
+export function reach(rows, ents, from, barrier, socles) {
+  const isl = buildIsland({ zones: [{ ox: 0, oy: 0, map: rows, ents, barrier, socles }], bridges: [] });
   Object.values(isl.gates).forEach((g) => (g.open = true));
   return reachCells(isl, [from]);
 }
