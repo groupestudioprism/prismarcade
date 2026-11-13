@@ -3,7 +3,7 @@ import sys, os, json
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from qa_lib import *
 q = QA("abysses-voyage", query="?low&nobloom")
-q.load()
+q.load("&ile=foret")
 J = q.js
 J("état Forêt terminée (Acte II fini)", """(async()=>{const m=await import('/lumen/js/game/state.js');const s=m.newState();s.player.island='foret';s.player.zone='vitrebourg';s.world=m.newWorld('vitrebourg');s.flags.acte2_fini=1;
  for(const [id,st] of [['q_reveil',3],['q_verre',6],['q_phare_verre',9]]) s.quests[id]={state:'done',step:st,base:{}};
@@ -18,7 +18,7 @@ except Exception as e:
 J("arrivée aux Abysses", "T.info()+' '+__lumen.st.player.island", "abysses")
 J("quête principale démarrée", "T.q('q_abysses')", "active")
 J("Marée présente", "String(!!T.npc('maree'))", "true")
-J("sauvegarde et rechargement", "T.roundtrip('s6')", "identique")
+J("sauvegarde et rechargement", "T.roundtrip('s2')", "identique")
 J("retour par Lagon vers la Forêt", "(async()=>{window.__old=1;const r=await T.talkTo('lagon',(n,l)=>l[l.length-1].findIndex(t=>t.includes('Vitrebourg')));return r.slice(0,60)})()")
 try:
     q.reloaded()

@@ -102,3 +102,11 @@ Object.assign(window.T, {
   /* rejoue la solution d'une porte par de vraies interactions */
   async realSolve(gate){ const L=__lumen; const s=SOL.abysses[gate]; const out=[]; for(const [id,v] of Object.entries(s)){ out.push(id==='@orb'? await T.operateOrb(v.at,v.dir) : await T.operate(id,v)); } return JSON.stringify({gate,open:!!L.isl.gates[gate].open,steps:out}); },
 });
+/* ACTE IV : allume les lampions en essayant chaque case voisine jusqu'à ce que la CIBLE réelle soit le lampion */
+Object.assign(window.T, {
+  async lightLampsAll(){ const L=__lumen; let n=0, miss=[]; for (const pr of L.world.props.filter(p=>p.p.t==='lamp'&&p.zi===L.S.zone)) { const x=pr.g.position.x, z=pr.g.position.z; let done=false;
+      for (const [dx,dz] of [[0,1.4],[0,-1.4],[1.4,0],[-1.4,0]]) { if(!L.G.canStand(x+dx,z+dz)) continue; L.P.x=x+dx; L.P.z=z+dz; L.P.vx=L.P.vz=0;
+        for(let i=0;i<10;i++){ await T.tick(60); const t=L.target(); if(t&&t.kind==='lamp'&&t.pr===pr){ L.interact(); n++; await T.tick(100); done=true; break; } } if(done) break; }
+      if(!done) miss.push(pr.p.id); }
+    return n+' lampions, manqués='+miss.join('+')+' compte='+L.G.counts('lampions'); },
+});
