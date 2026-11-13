@@ -248,7 +248,7 @@ export const NPCS_A4 = {
           'Et puisque tu as appris à te fier à Fia, apprends à te fier à l’air. Ce que tu vas sentir sur les corniches des Îlots du Reflet, au sud des Récifs, s’appelle planer. Sur une corniche, tourne-toi vers l’autre îlot et laisse-toi porter.',
           'Les Pics du Vent, là-bas, auront besoin de quelqu’un qui sache voler un peu. Mais pas ce soir. Repose-toi au Coquillage.',
         ],
-        do: [{ give: 'prisme_bleu' }, { ability: 'planer' }, { step: 'q_phare_abysses' }, { flag: 'acte4_fini' }],
+        do: [{ give: 'prisme_bleu' }, { ability: 'planer' }, { open: 'b_ilots' }, { step: 'q_phare_abysses' }, { flag: 'acte4_fini' }],
       },
       {
         if: (q) => q.quest('q_phare_abysses') === 'active',

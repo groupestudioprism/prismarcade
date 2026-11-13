@@ -75,3 +75,30 @@ Object.assign(window.T, {
     s.quests.q_reveil={state:'done',step:3,base:{}}; s.quests.q_verre={state:'done',step:6,base:{}}; s.quests.q_phare_verre={state:'done',step:9,base:{}};
     s.inv.epee_courte=1; s.equip.weapon='epee_courte'; s.inv.potion=3; s.player.lvl=6; await __lumen.G.startFrom(s,'auto',false,true); await T.tick(800); T.pump(); return __lumen.S.mode; },
 });
+Object.assign(window.T, {
+  /* ACTE IV : pour chaque objet manœuvrable (lanterne, miroir, relais, vanne, socle, corniche), depuis chaque case voisine marchable,
+     la cible d'interaction doit être CET objet. Renvoie la liste des échecs. */
+  async auditDevices(zoneId){ const L=__lumen, lg=await import('/lumen/js/logic.js'); const zi=L.G.zones.findIndex(z=>z.id===zoneId); const bad=[]; let n=0;
+    const list=L.isl.ents.filter(e=>e.zone===zi && ((e.rot&&['lantern','mirror','relay','valve','socle'].includes(e.t))||e.t==='ledge'));
+    for (const e of list) { for (const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]) { const cx=e.x+dx, cy=e.y+dy; if(!lg.walkable(L.isl,cx,cy)) continue;
+        L.P.x=cx*2; L.P.z=cy*2; L.P.vx=L.P.vz=0; L.S.zone=zi; let ok=false, t=null;
+        for(let i=0;i<14;i++){ await T.tick(50); t=L.target(); if(t&&t.e===e){ ok=true; break; } }
+        n++; if(!ok) bad.push(e.id+' depuis ('+cx+','+cy+') : cible='+(t?(t.kind+':'+(t.e?t.e.id:t.label)):'aucune')); } }
+    return JSON.stringify({testes:n, ko:bad}); },
+  /* amène l'objet à la valeur voulue en passant par la vraie interaction, depuis une case voisine */
+  async operate(id, want){ const L=__lumen, lg=await import('/lumen/js/logic.js'); const e=L.isl.ents.find(x=>x.id===id); if(!e) return 'noent:'+id;
+    const cur=()=>e.t==='mirror'||e.t==='valve'?e.state:e.t==='lantern'?e.dir:e.t==='relay'?e.out:null;
+    let spot=null; for (const [dx,dy] of [[0,1],[0,-1],[1,0],[-1,0]]) if(lg.walkable(L.isl,e.x+dx,e.y+dy)){ spot=[e.x+dx,e.y+dy]; break; } if(!spot) return 'nospot:'+id;
+    L.G.screens.close(); L.S.mode==='play'||0; L.P.x=spot[0]*2; L.P.z=spot[1]*2; L.P.vx=L.P.vz=0; L.S.zone=e.zone;
+    for(let k=0;k<10;k++){ if(cur()===want) return 'ok'; let t=null; for(let i=0;i<14;i++){ await T.tick(50); t=L.target(); if(t&&t.e===e) break; }
+      if(!t||t.e!==e) return 'cible:'+(t?t.kind:'aucune')+' pour '+id; L.interact(); await T.tick(120); }
+    return cur()===want?'ok':'pas atteint '+id+'='+cur(); },
+  async operateOrb(at, dir){ const L=__lumen, lg=await import('/lumen/js/logic.js'); const e=L.isl.ents.find(x=>x.id===at); if(!e) return 'nosocle:'+at;
+    let spot=null; for (const [dx,dy] of [[0,1],[0,-1],[1,0],[-1,0]]) if(lg.walkable(L.isl,e.x+dx,e.y+dy)){ spot=[e.x+dx,e.y+dy]; break; } if(!spot) return 'nospot:'+at;
+    L.G.screens.close(); L.P.x=spot[0]*2; L.P.z=spot[1]*2; L.P.vx=L.P.vz=0; L.S.zone=e.zone;
+    for(let k=0;k<8;k++){ if(L.isl.orb.at===at && L.isl.orb.dir===dir) return 'ok'; let t=null; for(let i=0;i<14;i++){ await T.tick(50); t=L.target(); if(t&&t.e===e) break; }
+      if(!t||t.e!==e) return 'cible:'+(t?t.kind:'aucune')+' pour '+at; L.interact(); await T.tick(120); }
+    return L.isl.orb.at===at && L.isl.orb.dir===dir?'ok':'orbe '+L.isl.orb.at+' '+L.isl.orb.dir; },
+  /* rejoue la solution d'une porte par de vraies interactions */
+  async realSolve(gate){ const L=__lumen; const s=SOL.abysses[gate]; const out=[]; for(const [id,v] of Object.entries(s)){ out.push(id==='@orb'? await T.operateOrb(v.at,v.dir) : await T.operate(id,v)); } return JSON.stringify({gate,open:!!L.isl.gates[gate].open,steps:out}); },
+});

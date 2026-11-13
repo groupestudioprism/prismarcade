@@ -388,3 +388,14 @@ Le vérificateur essaie toutes les combinaisons d'orientations de chaque zone et
 
 ## Acte II partie 2 (implémenté)
 Canopée (can1..can4) : vides franchis par paires de poteaux de grappin (portée 9 cases, objet `grappin` obtenu chez Silex avec 5 éclats). Phare de Verre : balise y+m+c, trois salles, deux portes d'étape, solution unique vérifiée par force brute ; fin d'acte II générique. Quêtes : q_phare_verre, s_lampions_f, s_colis, s_graines.
+
+## Acte IV (implémenté) : Les Abysses Miroirs
+
+**Idée :** la lumière rebondit sur l’eau. Les bassins d’eau miroir renvoient tout faisceau dans le sens de leur flèche ; une vanne règle leur niveau (haut : on ne peut pas marcher dessus et ils renvoient ; bas : on marche, la lumière passe). Fia, détachée de Lyra, devient l’**orbe** : posée sur un socle, elle émet un faisceau dans la direction qu’on lui donne.
+
+- **Moteur (`js/mech/eau.js`, `js/logic.js`) :** objets `pool` (bassin, champs `o` flèche, `valve` vanne liée, `inv` inversé), `valve` (état 0/1), `socle` (couleur optionnelle), `ledge` (corniche de plané). L’orbe est un état de l’île (`isl.orb = { at, dir }`) sauvegardé dans `world.dev['@orb']` ; les vannes dans `world.dev[id]`. **Le format de sauvegarde ne change pas** (SAVE_VERSION reste 5) : capacités libres (`abilities.orbe`, `abilities.planer`), drapeaux `boss_marees`, `acte4_fini`.
+- **Île :** la Grève (village de pêcheurs, 9 PNJ + 1 à l’auberge, 4 boutiques, forge, auberge), les Récifs (exploration, 2 cachettes à roches fissurées), le lac souterrain (3 salles : miroir, vanne, orbe), les Grottes Miroirs (salle des Écumes, clé de corail, salle des Marées, arène du *Gardien des Marées*), le Phare des Abysses (3 salles à la suite, balise blanc + cyan), les Îlots du Reflet (après le phare : plané).
+- **Capacités :** `orbe` (donnée par Marée au début de l’acte ; version minimale locale, l’Acte III pourra la donner avant) et **`planer`** (récompense du phare : sur une corniche gravée, tourné vers l’autre îlot, Interagir fait planer jusqu’à la corniche d’en face, vide de 7 cases au plus).
+- **Quêtes :** principales *Le lac qui ne reflète plus*, *Les Grottes Miroirs*, *Le Phare des Abysses* ; secondaires *Tisane de corail*, *Les colliers de Nacre*, *Le filet déchiré*, *Les crabes de Pétoncle*, *La perle de Murène*, *Les lampions du Coquillage*, *Étoiles de mer* (après le phare, demande de planer).
+- **Créatures :** crabe-lanterne (chargeur, faible aux coups lourds), méduse-reflet (à distance, résiste à la lumière), anguille d’ombre (rapide, faible à la lumière), sentinelle de corail (bouclier), boss Gardien des Marées (deux phases).
+- **Vérification :** `tools/analyse-abysses.mjs` explore l’espace des états (réglage de tous les objets × zone de marche de Lyra) : solution, aucune impasse, aucun faisceau qui sort, objets tous manœuvrables. `tools/build-abysses.mjs` assemble l’île et écrit `js/islands/abysses.js`.
