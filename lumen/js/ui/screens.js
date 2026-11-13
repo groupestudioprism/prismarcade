@@ -32,10 +32,60 @@ export function createScreens(G) {
   function open(html, cls = '') { if (scr.hidden && !/title/.test(cls) && cur !== 'title') G.audio.sfx('uiOpen'); scr.className = 'overlay ' + cls; scr.innerHTML = html; scr.hidden = false; }
   function close() { if (!scr.hidden && cur === 'menu') G.audio.sfx('uiClose'); scr.hidden = true; scr.innerHTML = ''; cur = null; G.onScreenClosed(); }
 
+  /* ================= Compte Studio Prism (connexion dans le jeu) ================= */
+  const PAc = () => (window.PA && window.PA.cloud) || null;
+  function accountHtml() {
+    const C = PAc(), st = C ? C.status : 'out';
+    if (!C) return '';
+    if (st === 'in') return `<div class="acct in"><span>${icon('user')}<span>Connectée : <b>${esc(C.user.email || '')}</b></span></span><button class="btn small" type="button" data-acc="out">Se déconnecter</button></div>`;
+    if (st === 'loading') return '<div class="acct"><span class="muted small">Connexion au compte…</span></div>';
+    return `<form class="acct-form" data-acc-form autocomplete="on">
+      <p class="small"><b>Compte Studio Prism</b> · retrouve tes sauvegardes et tes récompenses sur tous tes appareils.</p>
+      <div class="acct-fields"><input type="email" name="email" placeholder="Adresse e-mail" autocomplete="email" inputmode="email" required><input type="password" name="pass" placeholder="Mot de passe" autocomplete="current-password" required></div>
+      <div class="row-actions"><button class="btn primary small" type="submit">Se connecter</button><button class="btn small" type="button" data-acc="reset">Mot de passe oublié</button></div>
+      <p class="small muted">Pas encore de compte ? <a href="https://studio-prism.com/#/compte/inscription" target="_blank" rel="noopener">Crée-le sur studio-prism.com</a>.</p>
+      <p class="small acc-msg" hidden></p></form>`;
+  }
+  function bindAccount(host, done) {
+    const form = host.querySelector('[data-acc-form]');
+    const say = (t, ok) => { const m = host.querySelector('.acc-msg'); if (m) { m.hidden = false; m.textContent = t; m.classList.toggle('gold', !ok); } };
+    if (form) form.addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      const email = form.email.value.trim(), pass = form.pass.value;
+      const btn = form.querySelector('[type=submit]'); btn.disabled = true; btn.textContent = 'Connexion…';
+      try { await PAc().signIn(email, pass, true); G.audio.sfx('ui'); done && done(true); }
+      catch (e) { say(window.PA.errText ? window.PA.errText(e) : 'Connexion impossible.'); btn.disabled = false; btn.textContent = 'Se connecter'; }
+    });
+    host.querySelectorAll('[data-acc]').forEach((b) => b.addEventListener('click', async () => {
+      if (b.dataset.acc === 'out') { b.disabled = true; try { await PAc().signOut(); } catch (e) { /* rien */ } done && done(false); }
+      if (b.dataset.acc === 'reset') {
+        const email = form && form.email.value.trim();
+        if (!email) { say('Saisis d’abord ton adresse e-mail, puis touche « Mot de passe oublié ».'); return; }
+        try { await PAc().resetPassword(email); say('Si un compte existe pour cette adresse, un e-mail de réinitialisation vient d’être envoyé.', true); }
+        catch (e) { say(window.PA.errText ? window.PA.errText(e) : 'Envoi impossible.'); }
+      }
+    }));
+  }
+  function importScreen(back) {
+    cur = cur || 'title';
+    const host = document.createElement('div');
+    open(`<div class="panel menu-card"><div class="j-head"><h2>Importer une partie</h2><button class="icon-btn" data-a="back">${icon('close')}</button></div>
+      <p class="muted small">Colle ici le code de transfert copié depuis un autre appareil (Options → Partie → « Copier le code de ma partie »).</p>
+      <textarea id="imp-code" rows="5" placeholder="LUMEN1:…" spellcheck="false"></textarea>
+      <div class="row-actions"><button class="btn primary" data-a="go">Importer et jouer</button></div><p class="small gold" id="imp-msg" hidden></p></div>`, 'menu');
+    scr.onclick = async (ev) => {
+      const b = ev.target.closest('[data-a]'); if (!b) return;
+      if (b.dataset.a === 'back') { back(); return; }
+      const st = G.saves.importCode($('#imp-code').value);
+      if (!st) { const m = $('#imp-msg'); m.hidden = false; m.textContent = 'Ce code n’est pas valide. Vérifie qu’il est complet (il commence par LUMEN1:).'; return; }
+      G.startFrom(st, 'auto');
+    };
+  }
+
   /* ================= Écran titre ================= */
   async function title() {
     cur = 'title';
-    open(`<div class="title-wrap"><div class="title"><h1>LUMEN</h1><p>Les Îles Brisées</p></div><div class="panel title-card" id="t-card"><p class="muted">Recherche de tes sauvegardes…</p></div><a class="back-link" href="../#/">← Prism Arcade</a></div>`, 'menu');
+    open(`<div class="title-wrap"><div class="title"><h1>LUMEN</h1><p>Les Îles Brisées</p></div><div class="panel title-card" id="t-card"><p class="muted">Recherche de tes sauvegardes…</p></div>${window.Capacitor ? '' : '<a class="back-link" href="../#/">← Prism Arcade</a>'}</div>`, 'menu');
     const list = await G.saves.list();
     const latest = Object.entries(list).sort((a, b) => (b[1].updated || 0) - (a[1].updated || 0))[0];
     const legacy = !latest && G.legacyRun();
@@ -46,8 +96,11 @@ export function createScreens(G) {
         ${latest ? `<button class="btn primary" data-a="continue" data-slot="${latest[0]}">Continuer</button>` : legacy ? '<button class="btn primary" data-a="legacy">Continuer l’aventure</button>' : ''}
         <button class="btn ${latest || legacy ? '' : 'primary'}" data-a="new">Nouvelle partie</button>
         ${Object.keys(list).length ? '<button class="btn" data-a="slots">Charger une partie</button>' : ''}
+        <button class="btn" data-a="import">Importer une partie</button>
       </div>
-      <p class="small muted acc">${acc === 'in' ? icon('save') + ' Sauvegardes enregistrées sur ton compte Studio Prism et sur cet appareil.' : 'Sauvegardes enregistrées sur cet appareil. Connecte-toi sur Prism Arcade pour les retrouver partout.'}</p>`;
+      <p class="small muted acc">${acc === 'in' ? icon('save') + ' Sauvegardes enregistrées sur ton compte Studio Prism et sur cet appareil.' : 'Sans compte, les sauvegardes restent sur cet appareil.'}</p>
+      <div id="t-acc">${accountHtml()}</div>`;
+    bindAccount($('#t-acc'), () => title());
     scr.onclick = async (ev) => {
       const b = ev.target.closest('[data-a]'); if (!b) return;
       G.audio.sfx('ui');
@@ -55,6 +108,7 @@ export function createScreens(G) {
       else if (b.dataset.a === 'legacy') G.startFrom(null, 'auto', true);
       else if (b.dataset.a === 'new') { if (latest && !confirm('Commencer une nouvelle partie ? Ta sauvegarde automatique sera remplacée (les emplacements 1 à 3 sont conservés).')) return; G.startFrom(null, 'auto'); }
       else if (b.dataset.a === 'slots') slotsScreen('load', list);
+      else if (b.dataset.a === 'import') importScreen(() => title());
     };
   }
   async function slotsScreen(mode, list) {
@@ -204,7 +258,8 @@ export function createScreens(G) {
   function options() {
     const body = $('#m-body'), a = G.audio.get();
     body.innerHTML = `<div class="opts">
-      <div class="opt-group"><h4>Partie</h4><div class="row-actions"><button class="btn primary" data-a="save">Sauvegarder…</button><button class="btn" data-a="load">Charger…</button></div><p class="small muted">${G.account() === 'in' ? 'Tes sauvegardes sont aussi envoyées sur ton compte Studio Prism.' : 'Sauvegardes sur cet appareil (connecte-toi sur Prism Arcade pour les garder en ligne).'} Sauvegarde automatique toutes les minutes et à chaque étape importante.</p></div>
+      <div class="opt-group"><h4>Compte</h4><div id="o-acc">${accountHtml() || '<p class="small muted">Comptes indisponibles.</p>'}</div></div>
+      <div class="opt-group"><h4>Partie</h4><div class="row-actions"><button class="btn primary" data-a="save">Sauvegarder…</button><button class="btn" data-a="load">Charger…</button><button class="btn" data-a="export">Copier le code de ma partie</button></div><p class="small muted">${G.account() === 'in' ? 'Tes sauvegardes sont aussi envoyées sur ton compte Studio Prism.' : 'Sauvegardes sur cet appareil (connecte-toi ci-dessus pour les garder en ligne).'} Sauvegarde automatique toutes les minutes et à chaque étape importante.</p></div>
       <div class="opt-group"><h4>Son</h4>
         <label>Général <input type="range" min="0" max="1" step="0.05" value="${a.master}" data-vol="master"></label>
         <label>Effets <input type="range" min="0" max="1" step="0.05" value="${a.sfx}" data-vol="sfx"></label>
@@ -214,12 +269,20 @@ export function createScreens(G) {
         <label class="chk"><input type="checkbox" ${a.muted ? 'checked' : ''} data-a="mute"> Couper le son</label></div>
       <div class="opt-group"><h4>Affichage</h4><div class="seg small-seg">${[['auto', 'Automatique'], ['high', 'Haute'], ['low', 'Économie']].map(([k, l]) => `<button class="${G.quality() === k ? 'on' : ''}" data-q="${k}">${l}</button>`).join('')}</div></div>
       <div class="opt-group"><h4>Commandes</h4><div class="help">${G.helpHtml()}</div></div>
-      <div class="opt-group"><a class="btn" href="../#/">Quitter vers Prism Arcade</a></div>
+      ${window.Capacitor ? '' : '<div class="opt-group"><a class="btn" href="../#/">Quitter vers Prism Arcade</a></div>'}
     </div>`;
+    bindAccount($('#o-acc'), () => options());
     body.oninput = (ev) => { const v = ev.target.dataset.vol; if (v) { G.audio.set({ [v]: +ev.target.value }); G.saveSettings(); } };
     body.onclick = (ev) => {
       const b = ev.target.closest('[data-a]');
       if (b && b.dataset.a === 'save') { slotsScreen('save'); return; }
+      if (b && b.dataset.a === 'export') {
+        const code = G.saves.exportCode(G.packState ? G.packState() : G.st);
+        const done = () => G.hud.toast('📋', 'Code de ta partie copié', 'Colle-le dans « Importer une partie » sur l’autre appareil.');
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(done).catch(() => prompt('Copie ce code :', code));
+        else prompt('Copie ce code :', code);
+        return;
+      }
       if (b && b.dataset.a === 'load') { slotsScreen('load'); return; }
       if (b && b.dataset.a === 'mute') { G.audio.set({ muted: ev.target.checked }); G.saveSettings(); return; }
       const q = ev.target.closest('[data-q]'); if (q) { G.setQuality(q.dataset.q); options(); }
@@ -385,7 +448,7 @@ export function createScreens(G) {
       <div class="stats"><div><b>${fmtTime(G.st.playTime)}</b><small>temps de jeu</small></div><div><b>${G.completion()} %</b><small>île complétée</small></div>${G.completionAll ? `<div><b>${G.completionAll().total} %</b><small>archipel complété</small></div>` : ''}<div><b>${G.st.player.lvl}</b><small>niveau</small></div><div><b>${G.st.stats.kills}</b><small>créatures vaincues</small></div><div><b>${G.quests.done('side').length}</b><small>quêtes secondaires</small></div></div>
       ${info && info.xp ? `<p class="gain">🎁 +${fmt(info.xp)} XP · +${fmt(info.coins)} pièces sur Prism Arcade</p>` : ''}
       <div class="next"><h3>La suite du voyage</h3>${(G.islands || []).filter((i) => i.num === (G.def.num || 1) + 1).map((u) => `<div class="up"><span>Île ${u.num}</span><b>${esc(u.name)}</b><small>disponible : parle au passeur</small></div>`).join('')}${G.upcoming.map((u) => `<div class="up"><span>Île ${u.num}</span><b>${esc(u.name)}</b><small>${esc(u.what)} · bientôt</small></div>`).join('')}</div>
-      <div class="actions"><button class="btn primary" data-a="close">Continuer à explorer</button><a class="btn" href="../#/">Retour à Prism Arcade</a></div></div>`, 'end');
+      <div class="actions"><button class="btn primary" data-a="close">Continuer à explorer</button>${window.Capacitor ? '' : '<a class="btn" href="../#/">Retour à Prism Arcade</a>'}</div></div>`, 'end');
     scr.onclick = (ev) => { if (ev.target.closest('[data-a="close"]')) close(); };
   }
 
