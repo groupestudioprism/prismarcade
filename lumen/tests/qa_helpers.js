@@ -71,8 +71,8 @@ Object.assign(window.T, {
 });
 Object.assign(window.T, {
   /* ACTE IV : arrivée sur l'île des Abysses comme après un voyage (état neuf, Forêt terminée) */
-  async arrive(opts){ const m=await import('/lumen/js/game/state.js'); const s=m.newState(); s.player.island='abysses'; s.player.zone='greve'; s.world=m.newWorld('greve'); s.flags.acte2_fini=1; s.player.respawn={zone:'auberge_a',cell:[6,7]}; s.player.ecus=(opts&&opts.ecus)||200;
-    s.quests.q_reveil={state:'done',step:3,base:{}}; s.quests.q_verre={state:'done',step:6,base:{}}; s.quests.q_phare_verre={state:'done',step:9,base:{}};
+  async arrive(opts){ const m=await import('/lumen/js/game/state.js'); const s=m.newState(); s.player.island='abysses'; s.player.zone='greve'; s.world=m.newWorld('greve'); s.flags.acte2_fini=1; s.flags.acte3_fini=1; s.flags.dore_fini=1; s.player.abilities={porter:true,orbe:true}; s.player.respawn={zone:'auberge_a',cell:[6,7]};   /* arrivée réelle : Acte III (Désert) terminé, Orbe et Porter acquis */ s.player.ecus=(opts&&opts.ecus)||200;
+    s.quests.q_reveil={state:'done',step:3,base:{}}; s.quests.q_verre={state:'done',step:6,base:{}}; s.quests.q_phare_verre={state:'done',step:9,base:{}}; for(const [id,n] of [['q_echos',3],['q_temple',3],['q_phare_sable',3]]) s.quests[id]={state:'done',step:n+6,base:{}};
     s.inv.epee_courte=1; s.equip.weapon='epee_courte'; s.inv.potion=3; s.player.lvl=6; await __lumen.G.startFrom(s,'auto',false,true); await T.tick(800); T.pump(); return __lumen.S.mode; },
 });
 Object.assign(window.T, {

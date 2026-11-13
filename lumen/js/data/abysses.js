@@ -470,9 +470,11 @@ export const NPCS_A4 = {
       },
       {
         if: () => true,
-        say: ['Lagon, passeur. Je relie la Grève à la Forêt de Verre depuis que le phare de verre brille. Tu veux rentrer, ou tu restes un peu ?'],
+        say: ['Lagon, passeur. Je relie la Grève aux autres îles depuis que les phares brillent. Tu veux rentrer, ou tu restes un peu ?'],
         choices: [
+          { t: 'Retourner au Désert des Échos', do: [{ travel: { to: 'desert', zone: 'cite', cell: [12, 7] } }] },   /* ACTE III */
           { t: 'Retourner à Vitrebourg', do: [{ travel: { to: 'foret', zone: 'vitrebourg', cell: [12, 7] } }] },
+          { t: 'Retourner à Havre-Aube', do: [{ travel: { to: 'aube', zone: 'havre', cell: [27, 7] } }] },
           { t: 'Tu as besoin d’aide ?', if: (q) => q.quest('s_etoiles') === 'none' && q.quest('q_phare_abysses') === 'done', say: ['Tu sais planer, maintenant : alors rapporte-moi trois étoiles de mer des Îlots du Reflet. Les îlots sont au sud des Récifs.'], do: [{ start: 's_etoiles' }] },
           { t: 'Acheter et vendre', do: [{ shop: 'lagon', sell: true }] },
           { t: 'Pas maintenant' },

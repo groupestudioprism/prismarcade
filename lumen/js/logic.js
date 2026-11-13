@@ -35,7 +35,9 @@ export function filterColor(beam, glass) {
 /* Terrain : '.' herbe · ',' chemin · '#' roche / mur · 'T' arbre · 'H' bâtiment ou décor · '~' eau
    'r' ronces (coupées par une lame) · 'c' roche fissurée (brisée au marteau) · 'x' porte · '=' pont */
 export const BLOCK_TERRAIN = new Set(['#', 'T', 'H', '~', 'r', 'c']);
-const BLOCKING_ENTS = new Set(['lantern', 'mirror', 'prism', 'receiver', 'beacon', 'relay', 'vitrail', 'post', 'valve', 'socle' /* ACTE IV */]);
+const BLOCKING_ENTS = new Set(['lantern', 'mirror', 'prism', 'receiver', 'beacon', 'relay', 'vitrail', 'post', 'splitter', 'valve', 'socle' /* ACTE IV : socle d’orbe */]);
+/* ACTE III — Objets orientables à deux états « / » et « \\ » (miroir, lame semi-réfléchissante) */
+export const isMirrorLike = (e) => e.t === 'mirror' || e.t === 'splitter';
 const PICKUPS = new Set(['shard', 'page', 'wisp', 'start', 'ledge' /* ACTE IV */]);
 
 /* Assemble les zones d'une île en une seule grille. */
@@ -52,6 +54,7 @@ export function buildIsland(def) {
   const gateCell = {};
   const gate = (id, kind, look) => (gates[id] = gates[id] || { id, kind, look: look || kind, cells: [], receivers: [], open: false });
   const ents = [];
+  const socles = [], socleAt = {};
   const counters = {};
   def.zones.forEach((z, zi) => {
     z.map.forEach((row, ly) => {
@@ -74,9 +77,12 @@ export function buildIsland(def) {
     (z.ents || []).forEach((e) => {
       counters[e.t] = (counters[e.t] || 0) + 1;
       const ent = Object.assign({}, e, { id: e.id || `${e.t}${zi}_${counters[e.t]}`, x: z.ox + e.x, y: z.oy + e.y, zone: zi });
-      if (ent.t === 'mirror') ent.state = ent.state || 0;
+      if (isMirrorLike(ent)) ent.state = ent.state || 0;
+      if (ent.carry) { ent.carried = false; ent.home = [ent.x, ent.y]; }
       ents.push(ent);
     });
+    /* ACTE III — socles : emplacements où l'on peut poser les objets portés (capacité « Porter ») */
+    (z.socles || []).forEach(([sx, sy], k) => { const so = { id: `socle${zi}_${k + 1}`, x: z.ox + sx, y: z.oy + sy, zone: zi }; socles.push(so); socleAt[so.x + ',' + so.y] = so; });
   });
   (def.bridges || []).forEach((b) => {
     const g = gate(b.gate, 'bridge');
@@ -85,34 +91,45 @@ export function buildIsland(def) {
   ents.forEach((e) => { if ((e.t === 'receiver' || e.t === 'beacon' || e.t === 'relay') && e.gate) gate(e.gate, e.t === 'beacon' ? 'end' : 'bridge').receivers.push(e.id); });
   const entAt = {};
   ents.forEach((e) => { if (e.t !== 'start') entAt[e.x + ',' + e.y] = e; });
-  /* ACTE IV : vannes, socles d’orbe et orbe (état de l’île, voir js/mech/eau.js) */
-  const valves = {}, socles = {}, orb = { at: null, dir: 'E' };
-  ents.forEach((e) => { if (e.t === 'valve') { e.state = e.state ? 1 : 0; valves[e.id] = e; } if (e.t === 'socle') socles[e.id] = e; });
+  /* ACTE IV : vannes, socles d’orbe et orbe (état de l’île, voir js/mech/eau.js). Le registre des socles d’orbe s’appelle « orbSocles » (« socles » est réservé aux socles de l’objet porté de l’Acte III). */
+  const valves = {}, orbSocles = {}, orb = { at: null, dir: 'E' };
+  ents.forEach((e) => { if (e.t === 'valve') { e.state = e.state ? 1 : 0; valves[e.id] = e; } if (e.t === 'socle') orbSocles[e.id] = e; });
+  ents.forEach((e) => { if (e.carry && socleAt[e.x + ',' + e.y] === undefined) throw new Error(`Objet porté ${e.id} hors d’un socle (${e.x}, ${e.y})`); });
   // limites de chaque zone (pour vérifier qu'aucun faisceau n'en sort)
   const zoneRects = def.zones.map((z) => ({ x0: z.ox, y0: z.oy, x1: z.ox + Math.max(...z.map.map((r) => r.length)) - 1, y1: z.oy + z.map.length - 1 }));
   // solid : cases bloquées par des objets posés en jeu (coffres, PNJ immobiles…)
-  return { def, w, h, terrain, zoneAt, zoneRects, ents, entAt, gates, gateCell, solid: new Set(), valves, socles, orb, initial: snapshot({ ents, gates, orb }) };
+  /* ACTE III */ // tempête de sable : portée maximale des faisceaux (null = aucune tempête) dans les zones marquées « storm »
+  const stormZone = def.zones.map((z) => !!z.storm);
+  return { def, w, h, terrain, zoneAt, zoneRects, ents, entAt, gates, gateCell, socles, socleAt, stormZone, range: null, solid: new Set(), valves, orbSocles, orb, initial: snapshot({ ents, gates, orb }) };
 }
 
 /* Copie de l'état modifiable (orientations, portes) */
 export function snapshot(isl) {
-  const dev = {};
-  isl.ents.forEach((e) => { if (e.t === 'lantern') dev[e.id] = e.dir; if (e.t === 'relay') dev[e.id] = e.out; if (e.t === 'mirror') dev[e.id] = e.state; if (e.t === 'valve') dev[e.id] = e.state; /* ACTE IV */ });
+  const dev = {}, pos = {};
+  isl.ents.forEach((e) => { if (e.t === 'lantern') dev[e.id] = e.dir; if (e.t === 'relay') dev[e.id] = e.out; if (isMirrorLike(e)) dev[e.id] = e.state; if (e.t === 'valve') dev[e.id] = e.state; /* ACTE IV */ if (e.carry) pos[e.id] = e.carried ? null : [e.x, e.y]; });
   if (isl.orb && isl.orb.at) dev['@orb'] = { at: isl.orb.at, dir: isl.orb.dir };   /* ACTE IV : l’orbe de Fia */
   const gates = {};
   Object.values(isl.gates).forEach((g) => (gates[g.id] = g.open ? 1 : 0));
-  return { dev, gates };
+  return { dev, gates, pos };
 }
 export function restore(isl, snap) {
   if (isl.orb) {   /* ACTE IV */
     const o = (snap.dev || {})['@orb'];
-    isl.orb.at = o && isl.socles[o.at] ? o.at : null; isl.orb.dir = o && DIRS[o.dir] ? o.dir : 'E';
+    isl.orb.at = o && isl.orbSocles[o.at] ? o.at : null; isl.orb.dir = o && DIRS[o.dir] ? o.dir : 'E';
   }
+  // ACTE III : objets portés : position (sur un socle de leur zone) ou « en main » (null). On les range tous d'abord, puis on les repose.
+  const moved = isl.ents.filter((e) => e.carry && snap.pos && e.id in snap.pos);
+  moved.forEach((e) => liftEnt(isl, e));
+  moved.forEach((e) => {
+    const p = snap.pos[e.id], so = Array.isArray(p) && isl.socleAt[p[0] + ',' + p[1]];
+    if (so && so.zone === e.zone && !isl.entAt[p[0] + ',' + p[1]]) placeEnt(isl, e, p[0], p[1]);
+    else if (p !== null && p !== 0) { const f = isl.socles.find((q) => q.zone === e.zone && q.x === e.home[0] && q.y === e.home[1] && !isl.entAt[q.x + ',' + q.y]) || freeSocles(isl, e.zone)[0]; if (f) placeEnt(isl, e, f.x, f.y); }
+  });
   isl.ents.forEach((e) => {
     if (!(e.id in (snap.dev || {}))) return;
     if (e.t === 'lantern' && DIRS[snap.dev[e.id]]) e.dir = snap.dev[e.id];
     if (e.t === 'relay' && DIRS[snap.dev[e.id]]) e.out = snap.dev[e.id];
-    if (e.t === 'mirror') e.state = snap.dev[e.id] ? 1 : 0;
+    if (isMirrorLike(e)) e.state = snap.dev[e.id] ? 1 : 0;
     if (e.t === 'valve') e.state = snap.dev[e.id] ? 1 : 0;   /* ACTE IV */
   });
   Object.values(isl.gates).forEach((g) => (g.open = !!(snap.gates || {})[g.id]));
@@ -122,11 +139,23 @@ export function rotate(ent) {
   if (!ent || !ent.rot) return false;
   if (ent.t === 'lantern') ent.dir = ORDER[(ORDER.indexOf(ent.dir) + 1) % 4];
   else if (ent.t === 'relay') ent.out = ORDER[(ORDER.indexOf(ent.out) + 1) % 4];
-  else if (ent.t === 'mirror') ent.state = 1 - ent.state;
+  else if (isMirrorLike(ent)) ent.state = 1 - ent.state;
   else if (ent.t === 'valve') ent.state = 1 - ent.state;   /* ACTE IV */
   else return false;
   return true;
 }
+
+/* ACTE III ---------- Objets portés (capacité « Porter ») : miroirs, lames, prismes et vitraux posés sur des socles ---------- */
+export function liftEnt(isl, e) {
+  if (isl.entAt[e.x + ',' + e.y] === e) delete isl.entAt[e.x + ',' + e.y];
+  e.carried = true;
+}
+export function placeEnt(isl, e, x, y) {
+  if (isl.entAt[e.x + ',' + e.y] === e) delete isl.entAt[e.x + ',' + e.y];
+  e.x = x; e.y = y; e.carried = false; isl.entAt[x + ',' + y] = e;
+}
+/* socles libres de la zone d'un objet porté */
+export const freeSocles = (isl, zone) => isl.socles.filter((so) => so.zone === zone && !isl.entAt[so.x + ',' + so.y]);
 
 export function walkable(isl, x, y) {
   if (x < 0 || y < 0 || x >= isl.w || y >= isl.h) return false;
@@ -142,49 +171,59 @@ export function walkable(isl, x, y) {
 export function trace(isl, active = {}) {
   const segs = [], hits = {}, seen = new Set();
   const stack = [];
+  /* ACTE III */ // tempête de sable : un faisceau né dans une zone exposée ne porte que « isl.range » cases (le reste de la zone n'est pas touché)
+  const reach = (e) => (isl.range && isl.stormZone && isl.stormZone[e.zone] ? isl.range : Infinity);
   isl.ents.forEach((e) => {
-    if (e.t === 'lantern') stack.push({ x: e.x, y: e.y, d: e.dir, c: 'w', from: 0.32 });
-    if (e.t === 'relay' && active[e.id]) stack.push({ x: e.x, y: e.y, d: e.out, c: active[e.id], from: 0.32 });
+    if (e.carried) return;
+    if (e.t === 'lantern') stack.push({ x: e.x, y: e.y, d: e.dir, c: 'w', from: 0.32, left: reach(e) });
+    if (e.t === 'relay' && active[e.id]) stack.push({ x: e.x, y: e.y, d: e.out, c: active[e.id], from: 0.32, left: reach(e) });
   });
   { const os = orbSource(isl); if (os) stack.push(os); }   /* ACTE IV : l’orbe de Fia est une source de lumière */
   let guard = 0;
-  while (stack.length && guard++ < 500) {
+  while (stack.length && guard++ < 800) {
     const b = stack.pop();
     const key = `${b.x},${b.y},${b.d},${b.c}`;
     if (seen.has(key)) continue;
     seen.add(key);
     const [dx, dy] = DIRS[b.d];
     const sx = b.x + dx * (b.from || 0), sy = b.y + dy * (b.from || 0);
-    let x = b.x, y = b.y;
+    let x = b.x, y = b.y, left = b.left === undefined ? Infinity : b.left;
     for (;;) {
-      x += dx; y += dy;
+      if (left <= 0) { segs.push({ x0: sx, y0: sy, x1: x + dx * 0.35, y1: y + dy * 0.35, c: b.c, end: 'fade' }); break; }   // la tempête a éteint le faisceau
+      x += dx; y += dy; left--;
       if (x < 0 || y < 0 || x >= isl.w || y >= isl.h) { segs.push({ x0: sx, y0: sy, x1: x, y1: y, c: b.c, open: true }); break; }
       const t = isl.terrain[y][x];
       const blockedGate = t === 'x' && !(isl.gates[isl.gateCell[x + ',' + y]] || {}).open;
       if (BLOCK_TERRAIN.has(t) || blockedGate) { segs.push({ x0: sx, y0: sy, x1: x - dx * 0.5, y1: y - dy * 0.5, c: b.c, end: 'wall' }); break; }
       const e = isl.entAt[x + ',' + y];
-      if (!e || PICKUPS.has(e.t)) continue;
+      if (!e || PICKUPS.has(e.t) || e.carried) continue;
       /* ACTE IV : eau miroir (bassin en eau : renvoie la lumière dans le sens de sa flèche ; à sec : la lumière passe) et socle vide (la lumière passe) */
       if (e.t === 'pool') { if (!poolUp(isl, e)) continue; segs.push({ x0: sx, y0: sy, x1: x, y1: y, c: b.c }); stack.push({ x, y, d: poolDir(e), c: b.c }); break; }
       if (e.t === 'socle' && !(isl.orb && isl.orb.at === e.id)) continue;
       if (e.t === 'mirror') {
         segs.push({ x0: sx, y0: sy, x1: x, y1: y, c: b.c });
-        stack.push({ x, y, d: MIRROR[e.state][b.d], c: b.c });
+        stack.push({ x, y, d: MIRROR[e.state][b.d], c: b.c, left });
+        break;
+      }
+      if (e.t === 'splitter') {   /* ACTE III */ // lame semi-réfléchissante : la lumière passe tout droit ET se réfléchit à 90°
+        segs.push({ x0: sx, y0: sy, x1: x, y1: y, c: b.c });
+        stack.push({ x, y, d: b.d, c: b.c, from: 0.3, left });
+        stack.push({ x, y, d: MIRROR[e.state][b.d], c: b.c, from: 0.3, left });
         break;
       }
       if (e.t === 'vitrail') {   // vitrail : ne laisse passer que sa couleur
         segs.push({ x0: sx, y0: sy, x1: x, y1: y, c: b.c });
         const f = filterColor(b.c, e.color);
-        if (f) stack.push({ x, y, d: b.d, c: f, from: 0.3 });
+        if (f) stack.push({ x, y, d: b.d, c: f, from: 0.3, left });
         break;
       }
       if (e.t === 'prism') {
         segs.push({ x0: sx, y0: sy, x1: x, y1: y, c: b.c });
         if (b.c === 'w') {
-          stack.push({ x, y, d: LEFT[b.d], c: 'r', from: 0.3 });
-          stack.push({ x, y, d: b.d, c: 'g', from: 0.3 });
-          stack.push({ x, y, d: RIGHT[b.d], c: 'b', from: 0.3 });
-        } else stack.push({ x, y, d: b.d, c: b.c, from: 0.3 });
+          stack.push({ x, y, d: LEFT[b.d], c: 'r', from: 0.3, left });
+          stack.push({ x, y, d: b.d, c: 'g', from: 0.3, left });
+          stack.push({ x, y, d: RIGHT[b.d], c: 'b', from: 0.3, left });
+        } else stack.push({ x, y, d: b.d, c: b.c, from: 0.3, left });
         break;
       }
       if (e.t === 'receiver' || e.t === 'beacon' || e.t === 'relay') {

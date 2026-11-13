@@ -27,7 +27,7 @@ export const poolDir = (e) => (DIR[e.o] ? e.o : 'N');
 /* Source de lumière de l’orbe : { x, y, d, c } ou null */
 export function orbSource(isl) {
   if (!isl.orb || !isl.orb.at) return null;
-  const s = isl.socles && isl.socles[isl.orb.at];
+  const s = isl.orbSocles && isl.orbSocles[isl.orb.at];
   return s ? { x: s.x, y: s.y, d: DIR[isl.orb.dir] ? isl.orb.dir : 'E', c: s.color || 'w', from: 0.32 } : null;
 }
 

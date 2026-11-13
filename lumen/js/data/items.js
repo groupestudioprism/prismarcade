@@ -104,9 +104,14 @@ export const RECIPES = {
   plastron_ecailles: { ecus: 250, mats: { pierre: 4, fibre: 3 } },
 };
 
+/* ACTE III : objets du Désert des Échos */
+import { DESERT_ITEMS, DESERT_RECIPES } from './desert-items.js';
+Object.assign(ITEMS, DESERT_ITEMS);
+Object.entries(DESERT_RECIPES).forEach(([id, r]) => (RECIPES[id] = Object.assign({ island: 'desert' }, r)));
+
 export const item = (id) => ITEMS[id] || null;
 export const isStackable = (id) => ['conso', 'materiau'].includes((ITEMS[id] || {}).cat) || id === 'fragment_coeur' || !!(ITEMS[id] || {}).stack;
 
 /* ACTE IV : Les Abysses Miroirs (js/data/abysses.js) */
 import { ITEMS_A4, RECIPES_A4 } from './abysses.js';
-Object.assign(ITEMS, ITEMS_A4); Object.assign(RECIPES, RECIPES_A4);
+Object.assign(ITEMS, ITEMS_A4); Object.entries(RECIPES_A4).forEach(([id, r]) => (RECIPES[id] = Object.assign({ island: 'abysses' }, r)));   /* recette propre à la forge de Varech */
