@@ -60,7 +60,7 @@ export const ENEMIES_PICS = {
     desc: 'Un bloc de glace taillé en soldat. Son bouclier arrête les coups de face : contourne-le, ou brise-le au marteau.',
   },
   grand_meunier: {
-    name: 'Le Grand Meunier', family: 'givre', model: 'grand_meunier', tint: '#b59cf0', spark: '#e6dcff', hp: 620, atk: 24, def: 3, speed: 1.9, behavior: 'boss', aggro: 12, leash: 40, radius: 1.5, boss: true,
+    name: 'Le Grand Meunier', family: 'givre', model: 'grand_meunier', spark: '#e6dcff', hp: 620, atk: 24, def: 3, speed: 1.9, behavior: 'boss', aggro: 12, leash: 40, radius: 1.5, boss: true,
     bossFlag: 'boss_meunier', place: 'Le Moulin du Grand Meunier', adds: 'givrelin',
     xp: 360, ecus: [240, 240], drops: [['larme_meunier', 1]], weak: { lumiere: 1.3 }, resist: { percant: 0.7 },
     desc: 'Un meunier de pierre et de bois dont les pales tournent encore au-dessus des épaules. Son cœur de meule brille quand il reprend son souffle : c’est le moment de frapper.',

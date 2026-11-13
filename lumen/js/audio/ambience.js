@@ -21,6 +21,9 @@ const PRE = {
   interieur: { fire: 0.6, wind: 0.04 },
   combat: { wind: 0.15 }, boss: { hum: 0.3 }, boss2: { hum: 0.4 }, victoire: { birds: 0.4, wind: 0.1 },
 };
+/* ACTE V */
+import { PRE_PICS } from './themes-pics.js';
+Object.assign(PRE, PRE_PICS);
 const KEYS = ['wind', 'water', 'mist', 'hum', 'fire', 'insects', 'birds', 'glassrain', 'distant'];
 let base = {}, over = {}, manual = false, lay = null, timer = null, restore = 0.5, pending = null;
 

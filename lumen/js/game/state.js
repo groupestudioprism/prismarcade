@@ -64,6 +64,7 @@ function sanitize(st) {
   p.x = p.x === null || p.x === undefined ? null : (Number.isFinite(Number(p.x)) ? Number(p.x) : null); p.z = p.z === null || p.z === undefined ? null : (Number.isFinite(Number(p.z)) ? Number(p.z) : null);
   if (p.x === null || p.z === null) { p.x = null; p.z = null; }
   if (!plain(p.abilities)) p.abilities = {};
+  if (p.portals && !(plain(p.portals) && Array.isArray(p.portals.list))) delete p.portals;   /* ACTE V */
   if (!plain(p.respawn) || typeof p.respawn.zone !== 'string' || !Array.isArray(p.respawn.cell) || p.respawn.cell.length < 2) p.respawn = { zone: p.zone || 'havre', cell: [6, 6] };
   st.playTime = num(st.playTime, 0, 0);
   // inventaire : objets connus, quantités entières positives

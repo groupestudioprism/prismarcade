@@ -4,7 +4,7 @@
    Vérifie : quêtes ↔ PNJ ↔ objets ↔ boutiques ↔ ennemis ↔ îles ↔ icônes ↔ déblocages.
    ========================================================= */
 import fs from 'node:fs';
-import { ISLANDS } from '../js/levels.js';
+import { ISLANDS, ISLAND_META } from '../js/levels.js';
 import { ITEMS, UPGRADES, RECIPES } from '../js/data/items.js';
 import { QUESTS } from '../js/data/quests.js';
 import { NPCS } from '../js/data/npcs.js';
@@ -203,6 +203,7 @@ for (const d of Object.keys(dropsFrom)) obtainable.add(d);
 for (const k of Object.keys(RECIPES)) obtainable.add(k);
 for (const I of ISLANDS) for (const z of I.zones) for (const d of z.doors || []) if (d.key) 0;
 for (const e of Object.values(ENEMIES)) if (e.boss && e.reward) obtainable.add(e.reward);
+for (const m of Object.values(ISLAND_META)) if (m.finaleGive) obtainable.add(m.finaleGive);   /* ACTE V */
 const srcAll = mainSrc + fs.readFileSync(new URL('../js/game/combat.js', import.meta.url), 'utf8');
 for (const id of Object.keys(ITEMS)) if (!obtainable.has(id) && !new RegExp(`['"]${id}['"]|\\b${id}\\b`).test(srcAll)) Wn(`Objet ${id} jamais obtenable (ni boutique, ni coffre, ni butin, ni quête)`);
 

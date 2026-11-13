@@ -10,7 +10,7 @@ const KEYS = {
   up: ['arrowup', 'z', 'w'], down: ['arrowdown', 's'], left: ['arrowleft', 'q', 'a'], right: ['arrowright', 'd'],
 };
 const PRESS = {
-  attack: ['k'], special: ['l'], dodge: [' ', 'shift'], interact: ['e', 'enter'], reverse: ['r'], potion: ['f'],
+  attack: ['k'], special: ['l'], dodge: [' ', 'shift'], interact: ['e', 'enter'], reverse: ['r'], potion: ['f'], portal: ['v'],   /* ACTE V */
   inventory: ['i', 'tab'], journal: ['j'], map: ['m'], pause: ['escape', 'p'], character: ['c'],
 };
 

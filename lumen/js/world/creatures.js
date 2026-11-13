@@ -336,3 +336,6 @@ function colosse(tint) {
 }
 
 export const CREATURES = { brumelin, ronceux, lanceur, sanglier, gardien, colosse };
+/* ACTE V */
+import { makeGrandMeunier } from './creatures-pics.js';
+CREATURES.grand_meunier = makeGrandMeunier(colosse);

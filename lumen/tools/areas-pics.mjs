@@ -43,7 +43,7 @@ function col() {
   deco('sign', 27, 4, { text: 'À l’est : les Courants. Garde la voile serrée jusqu’au bord, puis laisse le vent faire.' });
   scatter(g, 'T', 0.05, 63, (c, x, y) => c === '.' && !(x > 10 && x < 20 && y > 7 && y < 17));
   return {
-    id: 'col', region: 'col', title: 'Le Col', theme: 'pics', area: true, map: toRows(g),
+    id: 'col', region: 'col', title: 'Le Col', theme: 'pics', music: 'col', area: true, map: toRows(g),
     spawn: [12, 7], entry: [12, 7],
     ents: [{ t: 'start', x: 12, y: 7 }],
     props,

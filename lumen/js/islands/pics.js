@@ -169,6 +169,7 @@ export default {
    ],
    "area": true,
    "theme": "pics",
+   "music": "col",
    "props": [
     {
      "t": "house",
