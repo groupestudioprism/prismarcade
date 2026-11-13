@@ -589,3 +589,8 @@ export const NPCS = {
     ],
   },
 };
+
+/* ACTE V : Les Pics du Vent */
+import { NPCS_PICS, TESSEL_PICS_CHOICE } from './pics-story.js';
+Object.assign(NPCS, NPCS_PICS);
+NPCS.tessel.talk[0].choices.splice(1, 0, TESSEL_PICS_CHOICE);

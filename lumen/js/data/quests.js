@@ -214,3 +214,7 @@ export const QUESTS = {
     rewards: { xp: 140, ecus: 100, items: { grande_potion: 1 }, unlock: ['teinte_turquoise'], pa: [90, 35] },
   },
 };
+
+/* ACTE V : Les Pics du Vent */
+import { QUESTS_PICS } from './pics-story.js';
+Object.assign(QUESTS, QUESTS_PICS);

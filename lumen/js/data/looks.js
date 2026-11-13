@@ -79,3 +79,7 @@ export const UNLOCK_NAMES = {
 };
 
 export const byId = (list, id) => list.find((x) => x.id === id) || list[0];
+
+/* ACTE V : Les Pics du Vent */
+import { LOOKS_PICS } from './pics-data.js';
+CLOAK_COLORS.push(...LOOKS_PICS.cloaks); HAIR_COLORS.push(...LOOKS_PICS.hairColors); Object.assign(UNLOCK_NAMES, LOOKS_PICS.names);

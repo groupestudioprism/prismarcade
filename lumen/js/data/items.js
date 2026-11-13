@@ -106,3 +106,7 @@ export const RECIPES = {
 
 export const item = (id) => ITEMS[id] || null;
 export const isStackable = (id) => ['conso', 'materiau'].includes((ITEMS[id] || {}).cat) || id === 'fragment_coeur' || !!(ITEMS[id] || {}).stack;
+
+/* ACTE V : Les Pics du Vent */
+import { ITEMS_PICS, RECIPES_PICS } from './pics-data.js';
+Object.assign(ITEMS, ITEMS_PICS); Object.assign(RECIPES, RECIPES_PICS);

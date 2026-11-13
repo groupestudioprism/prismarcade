@@ -74,3 +74,7 @@ export const SHOPS = {
     ],
   },
 };
+
+/* ACTE V : Les Pics du Vent */
+import { SHOPS_PICS } from './pics-data.js';
+Object.assign(SHOPS, SHOPS_PICS);

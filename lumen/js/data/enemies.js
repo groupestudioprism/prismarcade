@@ -85,3 +85,7 @@ export const ENEMIES = {
     desc: 'La gardienne de la Passerelle. Son bouclier d’azur arrête tout ce qui vient de face : frappe-la dans le dos, ou brise-le au marteau.',
   },
 };
+
+/* ACTE V : Les Pics du Vent */
+import { ENEMIES_PICS } from './pics-data.js';
+Object.assign(ENEMIES, ENEMIES_PICS);

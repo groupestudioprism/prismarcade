@@ -229,6 +229,7 @@ function moulins() {
       { id: 'ch_cache_m', x: 4, y: 25, item: 'fragment_coeur', n: 1 },
       { id: 'ch_cache2_m', x: 2, y: 25, ecus: 220 },
     ],
+    pickups: [{ t: 'page', id: 'pg_moulin', page: 'orin6', x: 2, y: 24 }],
     combatRooms: [{ gate: 'md_combat', rect: [1, 1, 9, 9] }],
     spawns: [
       { type: 'givrelin', x: 5, y: 5, n: 4, room: 'md_combat' },
@@ -287,7 +288,7 @@ function cretes() {
   road(g, [[0, 5], [9, 5]]); road(g, [[16, 5], [25, 5]]);
   scatter(g, '#', 0.04, 93); scatter(g, 'T', 0.05, 94);
   for (let y = 3; y <= 17; y++) { if (y < 8 || y > 12) { /* rives */ } g[y][9] = g[y][9] === ' ' ? ' ' : '.'; g[y][16] = g[y][16] === ' ' ? ' ' : '.'; }
-  clear(g, [[0, 5], [1, 5], [9, 5], [16, 5], [25, 5], [9, 10], [16, 10], [12, 10], [13, 10], [12, 9], [13, 11], [6, 12], [20, 12], [4, 14], [21, 8], [19, 3], [6, 3], [22, 16]]);
+  clear(g, [[0, 5], [1, 5], [9, 5], [16, 5], [25, 5], [9, 10], [16, 10], [12, 10], [13, 10], [12, 9], [13, 11], [6, 12], [20, 12], [4, 14], [21, 8], [22, 10], [19, 3], [6, 3], [22, 16]]);
   return {
     id: 'so3', region: 'sommets', title: 'Les Crêtes', theme: 'pics', music: 'sommets', area: true, map: toRows(g),
     spawn: [2, 5], entry: [0, 5], entryGate: 'lf1',
@@ -301,7 +302,7 @@ function cretes() {
       { t: 'lamp', id: 'fanion_s1', x: 6, y: 3, w: 1, h: 1 }, { t: 'lamp', id: 'fanion_s2', x: 19, y: 3, w: 1, h: 1 }, { t: 'lamp', id: 'fanion_s3', x: 12, y: 9, w: 1, h: 1 },
     ],
     chests: [{ id: 'ch_cretes1', x: 13, y: 10, item: 'pelisse_cimes', n: 1 }, { id: 'ch_cretes2', x: 6, y: 12, item: 'grande_potion', n: 2 }, { id: 'ch_cretes3', x: 22, y: 16, ecus: 160 }],
-    pickups: [{ t: 'item', id: 'edel6', item: 'edelweiss', x: 4, y: 14 }, { t: 'item', id: 'cerf3', item: 'cerf_volant', x: 12, y: 9 }, { t: 'item', id: 'edel7', item: 'edelweiss', x: 21, y: 8 }],
+    pickups: [{ t: 'item', id: 'edel6', item: 'edelweiss', x: 4, y: 14 }, { t: 'item', id: 'cerf3', item: 'cerf_volant', x: 12, y: 9 }, { t: 'item', id: 'edel7', item: 'edelweiss', x: 21, y: 8 }, { t: 'item', id: 'corne1', item: 'corne_cimes', x: 22, y: 10 }],
     spawns: [
       { type: 'givrelin', x: 6, y: 8, n: 2 },
       { type: 'bourrasque', x: 20, y: 12, n: 1 },

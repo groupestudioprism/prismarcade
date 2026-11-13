@@ -165,7 +165,7 @@ for (const [id, q] of Object.entries(QUESTS)) {
     if (s.type === 'item') { if (!ITEMS[s.item]) E(`${w}.${s.id} : objet inconnu ${s.item}`); }
     if (s.type === 'flag') flagsRead.add(s.flag);
     if (s.type === 'reach' && !zonesAll[s.zone]) E(`${w}.${s.id} : zone ${s.zone} inconnue`);
-    if (s.type === 'count' && !['pages', 'shards', 'lampions', 'kills', 'eclats', 'graines'].includes(s.what)) E(`${w}.${s.id} : compteur inconnu ${s.what}`);
+    if (s.type === 'count' && !['pages', 'shards', 'lampions', 'kills', 'eclats', 'graines', 'fanions'].includes(s.what)) E(`${w}.${s.id} : compteur inconnu ${s.what}`);
     if (s.type === 'kill' && s.enemy && !ENEMIES[s.enemy]) E(`${w}.${s.id} : ennemi inconnu ${s.enemy}`);
     texts.push([`${w}.${s.id}`, s.text]);
   });

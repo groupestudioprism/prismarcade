@@ -55,6 +55,11 @@ const P = {
   dodge: '<path d="M4 16c4 0 6-8 10-8h6"/><path d="M17 5l3 3-3 3"/>',
   hook: '<path d="M5 20l5-5"/><circle cx="12" cy="13" r="2.6"/><path d="M14 11l4-6M16 3l5 2-2 5" /><path d="M10.5 14.5L7 11" stroke-dasharray="1.5 1.8"/>',
   seed: '<path d="M12 21c-4-2-6-6-5-11 4 0 8 2 9 6 1 3-1 5-4 5z" fill="#7fd6b4" fill-opacity=".45"/><path d="M12 21c0-5 1-8 4-11"/>',
+  /* ACTE V : Les Pics du Vent */
+  wing: '<path d="M3 15c3-8 10-11 18-11-1 8-5 14-13 15z" fill="#d8ccff" fill-opacity=".4"/><path d="M3 15l9-3M7 18l6-8"/>',
+  kite: '<path d="M12 2l7 8-7 9-7-9z" fill="#ff8aa8" fill-opacity=".4"/><path d="M12 2v17M5 10h14M12 19c-1 2 1 2 0 4"/>',
+  letter: '<rect x="3" y="6" width="18" height="13" rx="1.5"/><path d="M3 7l9 7 9-7"/>',
+  horn: '<path d="M5 20c0-9 5-15 14-16-1 8-6 13-11 13-1 0-2 1-3 3z" fill="#e8d9b0" fill-opacity=".4"/><path d="M9 17c3-1 6-4 8-9"/>',
   hand: '<path d="M8 12V5a1.5 1.5 0 0 1 3 0v6M11 10V4a1.5 1.5 0 0 1 3 0v6M14 10V5a1.5 1.5 0 0 1 3 0v8c0 4-2 8-6 8-3 0-5-2-6-5l-2-4a1.5 1.5 0 0 1 2.5-1.5L8 13"/>',
 };
 export function icon(name, cls = '') {

@@ -877,6 +877,15 @@ export default {
      "ecus": 220
     }
    ],
+   "pickups": [
+    {
+     "t": "page",
+     "id": "pg_moulin",
+     "page": "orin6",
+     "x": 2,
+     "y": 24
+    }
+   ],
    "spawns": [
     {
      "type": "givrelin",
@@ -1905,6 +1914,13 @@ export default {
      "item": "edelweiss",
      "x": 21,
      "y": 8
+    },
+    {
+     "t": "item",
+     "id": "corne1",
+     "item": "corne_cimes",
+     "x": 22,
+     "y": 10
     }
    ],
    "spawns": [
