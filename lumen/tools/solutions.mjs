@@ -11,6 +11,7 @@ const states = (e) => (isMirrorLike(e) ? [0, 1] : ORDER);
 const getv = (e) => (isMirrorLike(e) ? e.state : e.t === 'lantern' ? e.dir : e.out);
 const setv = (e, v) => { if (isMirrorLike(e)) e.state = v; else if (e.t === 'lantern') e.dir = v; else e.out = v; };
 for (const def of ISLANDS) {
+  if (def.zones.some((z) => z.puzzle)) continue;   /* ACTE IV : énigmes d’eau/orbe → tools/solutions-abysses.mjs (qui complète le même fichier) */
   out[def.id] = {};
   const isl = buildIsland(def);
   const init = Object.fromEntries(isl.ents.filter((e) => e.rot).map((e) => [e.id, getv(e)]));

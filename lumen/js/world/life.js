@@ -58,7 +58,7 @@ export function createLife(scene, isl, zones, opts = {}) {
 
   let cur = -1, theme = 'puzzle', emitters = [], cellsNow = [], waterNow = [], center = [0, 0];
   const B = new Array(NB).fill(0).map(() => ({}));
-  const FIREFLY = { lande: ['#ffe48a', 22], foret: ['#9ffff0', 34], sanctuaire: ['#c9a0ff', 24], temple: ['#8fe3ff', 20], village: ['#ffd88a', 6], puzzle: ['#ffd88a', 8], interieur: ['#ffd88a', 0] };
+  const FIREFLY = { lande: ['#ffe48a', 22], foret: ['#9ffff0', 34], sanctuaire: ['#c9a0ff', 24], temple: ['#8fe3ff', 20], village: ['#ffd88a', 6], puzzle: ['#ffd88a', 8], interieur: ['#ffd88a', 0], greve: ['#9ffff0', 14], recifs: ['#9ffff0', 22], grotte: ['#6fe8ff', 30], lac: ['#6fe8ff', 26], phare_abysses: ['#8ff8e8', 22] /* ACTE IV */ };
 
   function setZone(zi, props) {
     cur = zi; const z = zones[zi]; theme = (z && z.theme) || 'puzzle'; if (theme === 'canopee' || theme === 'phare_verre') theme = 'foret';

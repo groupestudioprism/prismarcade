@@ -83,3 +83,7 @@ export const UNLOCK_NAMES = {
 };
 
 export const byId = (list, id) => list.find((x) => x.id === id) || list[0];
+
+/* ACTE IV : Les Abysses Miroirs (js/data/abysses.js) */
+import { CLOAKS_A4, HAIRS_A4, UNLOCKS_A4 } from './abysses.js';
+CLOAK_COLORS.push(...CLOAKS_A4); HAIR_COLORS.push(...HAIRS_A4); Object.assign(UNLOCK_NAMES, UNLOCKS_A4);

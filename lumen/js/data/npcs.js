@@ -331,6 +331,7 @@ export const NPCS = {
         choices: [
           { t: 'Partir pour la Forêt de Verre', do: [{ travel: { to: 'foret', zone: 'vitrebourg', cell: [12, 7] } }] },
           { t: 'Partir pour le Désert des Échos', if: (q) => q.flag('acte2_fini'), do: [{ travel: { to: 'desert', zone: 'cite', cell: [12, 7] } }] },   /* ACTE III */
+          { t: 'Partir pour les Abysses Miroirs', if: (q) => q.flag('acte3_fini'), do: [{ travel: { to: 'abysses', zone: 'greve', cell: [12, 7] } }] },   /* ACTE IV : route ouverte par la fin de l’Acte III */
           { t: 'Pas maintenant' },
         ],
       },
@@ -592,6 +593,9 @@ export const NPCS = {
   },
 };
 
+/* ACTE IV : Les Abysses Miroirs (js/data/abysses.js) */
+import { NPCS_A4 } from './abysses.js';
+Object.assign(NPCS, NPCS_A4);
 /* ACTE III : habitants de la Cité des Échos */
 import { DESERT_NPCS } from './desert-npcs.js';
 Object.assign(NPCS, DESERT_NPCS);

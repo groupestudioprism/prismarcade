@@ -64,6 +64,9 @@ function sanitize(st) {
   p.x = p.x === null || p.x === undefined ? null : (Number.isFinite(Number(p.x)) ? Number(p.x) : null); p.z = p.z === null || p.z === undefined ? null : (Number.isFinite(Number(p.z)) ? Number(p.z) : null);
   if (p.x === null || p.z === null) { p.x = null; p.z = null; }
   if (!plain(p.abilities)) p.abilities = {};
+  /* Capacités déduites de l’avancement (parties antérieures à la fusion des Actes III et IV) : l’Orbe vient du Temple (Acte III), planer du Phare des Abysses (Acte IV) */
+  if (st.flags && (st.flags.dore_fini || st.flags.acte3_fini)) { p.abilities.porter = true; p.abilities.orbe = true; }
+  if (st.flags && (st.flags.acte4_fini || (st.quests && st.quests.q_phare_abysses && st.quests.q_phare_abysses.state === 'done'))) p.abilities.planer = true;
   if (!plain(p.respawn) || typeof p.respawn.zone !== 'string' || !Array.isArray(p.respawn.cell) || p.respawn.cell.length < 2) p.respawn = { zone: p.zone || 'havre', cell: [6, 6] };
   st.playTime = num(st.playTime, 0, 0);
   // inventaire : objets connus, quantités entières positives

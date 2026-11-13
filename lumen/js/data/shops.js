@@ -75,6 +75,9 @@ export const SHOPS = {
   },
 };
 
+/* ACTE IV : Les Abysses Miroirs (js/data/abysses.js) */
+import { SHOPS_A4 } from './abysses.js';
+Object.assign(SHOPS, SHOPS_A4);
 /* ACTE III : boutiques du Désert des Échos */
 import { DESERT_SHOPS } from './desert-shops.js';
 Object.assign(SHOPS, DESERT_SHOPS);

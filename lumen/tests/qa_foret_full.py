@@ -1,4 +1,4 @@
-import sys; sys.path.insert(0,'/home/claude/prismarcade/lumen/tests')
+import sys; sys.path.insert(0,__import__('os').path.dirname(__import__('os').path.abspath(__file__)))
 from qa_lib import *
 import shutil; shutil.rmtree('/tmp/qa_prof_foret', ignore_errors=True)
 q=QA('foret-complet', profile='/tmp/qa_prof_foret'); q.load()

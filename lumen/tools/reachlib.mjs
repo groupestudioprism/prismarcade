@@ -9,7 +9,9 @@ export function checkIsland(def, town) {
   const townZ = def.zones.find((z) => z.id === town) || def.zones[0];
   const starts = [[townZ.ox + Math.floor(townZ.spawn[0]), townZ.oy + Math.floor(townZ.spawn[1])]];
   def.zones.filter((z) => z.interior).forEach((z) => starts.push([z.ox + z.spawn[0], z.oy + z.spawn[1]]));
-  const free = reachCells(isl, starts, { cut: false }), cut = reachCells(isl, starts, { cut: true });
+  /* ACTE IV : les vannes sont réversibles : on réunit ce qui est accessible avec toutes les vannes basses et toutes hautes */
+  const bothValves = (opts) => { const u = new Set(); [0, 1].forEach((v) => { Object.values(isl.valves || {}).forEach((e) => (e.state = v)); reachCells(isl, starts, opts).forEach((k) => u.add(k)); }); Object.values(isl.valves || {}).forEach((e) => (e.state = 0)); return u; };
+  const free = bothValves({ cut: false }), cut = bothValves({ cut: true });
   const problems = [], notes = [];
   const near = (set, x, y) => [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => set.has((Math.floor(x) + a) + ',' + (Math.floor(y) + b)));
   const check = (label, x, y) => {

@@ -25,7 +25,7 @@ window.T = {
           const so=L.isl.socles.find(q=>q.x===p[0]&&q.y===p[1]); if(!so||L.isl.entAt[p[0]+','+p[1]]){ rest.push([k,p]); continue; }
           A.lift(e); if(!A.carrying()){ rest.push([k,p]); continue; } A.place(so); } todo=rest; }
       if(todo.length) return 'socles:'+JSON.stringify(todo); }
-    ents.filter(([k])=>!k.startsWith('pos:')).forEach(([id,v])=>L.set(id,v)); return L.isl.gates[gate].open; },
+    ents.filter(([k])=>!k.startsWith('pos:')).forEach(([id,v])=>{ if(id==='@orb') L.setOrb(v.at,v.dir); else L.set(id,v); }); return L.isl.gates[gate].open; },
   killAll(){ const c=__lumen.combat; let n=0; c.enemies.filter(e=>e.state!=='dead').forEach(e=>{c.dealDamage(e,99999,'tranchant',{heavy:true});n++}); return n; },
   zone(){ return __lumen.G.zoneId(); },
   info(){ const L=__lumen; return JSON.stringify({mode:L.S.mode,zone:L.G.zoneId(),isl:L.st.player.island,hp:L.st.player.hp,ecus:L.st.player.ecus,x:+(L.P.x/2).toFixed(1),y:+(L.P.z/2).toFixed(1)}); }

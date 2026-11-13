@@ -55,7 +55,7 @@ export const DESERT_NPCS = {
           'Je l’ai entendu avant de le voir : toute la Cité a répété le même mot, très doucement, pendant une minute. Puis la lumière a traversé les dunes. Cent ans que le désert ne nous avait pas parlé.',
           'Orin disait qu’une lumière qu’on porte peut aller plus loin qu’une lumière qu’on garde. Je crois qu’il avait raison.',
           FIA('Et dans la colonne dorée, il y a une route de lumière qui plonge vers le sud. Quelque chose de profond et de bleu, avec des reflets partout.'),
-          'Les Abysses Miroirs… Pas encore, Lyra. Yaël ne connaît pas ce chemin, et la mer n’a pas fini de se refléter. Repose-toi à l’Oasis. Tu l’as bien mérité.',
+          'Les Abysses Miroirs… Yaël connaît la route, maintenant : la colonne dorée la trace pour lui. Mais repose-toi d’abord à l’Oasis, Lyra. Tu l’as bien mérité.',
         ],
         do: [{ step: 'q_phare_sable' }, { flag: 'acte3_fini' }],
       },
@@ -89,10 +89,10 @@ export const DESERT_NPCS = {
       },
       {
         if: () => true,
-        say: ['Le Phare des Sables brille : même mon voilier fredonne. Au sud, d’après la colonne dorée, il y a une mer pleine de reflets. Je ne sais pas encore y mener un voilier.'],
+        say: ['Le Phare des Sables brille : même mon voilier fredonne. Au sud, d’après la colonne dorée, il y a une mer pleine de reflets. La lumière a tracé la route : je t’y emmène quand tu veux.'],
         choices: [
           { t: 'Retourner à Vitrebourg', do: [{ travel: { to: 'foret', zone: 'vitrebourg', cell: [12, 7] } }] },
-          { t: 'Vers les Abysses Miroirs…', say: ['Pas encore, Lyra. La route n’existe pas : la lumière doit d’abord la tracer. Reviens quand le prochain phare sera prêt : « bientôt », comme on dit ici quand on ne sait pas.'] },
+          { t: 'Vers les Abysses Miroirs', do: [{ travel: { to: 'abysses', zone: 'greve', cell: [12, 7] } }] },   /* ACTE IV : route ouverte par la fin de l’Acte III */
           { t: 'Pas maintenant' },
         ],
       },
