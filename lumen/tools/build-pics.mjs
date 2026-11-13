@@ -7,6 +7,7 @@
    ========================================================= */
 import { writeFileSync } from 'node:fs';
 import { analyse, analyseStages, generate } from './generate.mjs';
+import fs from 'node:fs';
 import { analyseTimed } from './timed.mjs';
 import { toRows, grid, rect } from './areas.mjs';
 import { areasPics, courant3, sommet4, phareVents } from './areas-pics.mjs';
@@ -142,9 +143,11 @@ const timed = (z, opts, label) => {
   if (r.staticSols > 0) throw new Error(`${label} : résoluble sans le temps (${r.staticSols} solution(s) statique(s))`);
   return r;
 };
-timed({ map: byId.cr3.map, ents: byId.cr3.ents, entry: byId.cr3.entry }, {}, 'La Mémoire du vent');
-timed({ map: byId.so4.map, ents: byId.so4.ents, entry: byId.so4.entry }, {}, 'Le Souffle court');
-timed({ map: byId.moulins.map, ents: byId.moulins.ents, entry: byId.moulins.entry, gates: ['md_light'], doors: byId.moulins.doors }, {}, 'Salle des relais');
+const TSOL = {};   /* séquences chronométrées (tests de parcours) */
+TSOL.cr3 = timed({ map: byId.cr3.map, ents: byId.cr3.ents, entry: byId.cr3.entry }, {}, 'La Mémoire du vent').seq;
+TSOL.so4 = timed({ map: byId.so4.map, ents: byId.so4.ents, entry: byId.so4.entry }, {}, 'Le Souffle court').seq;
+TSOL.moulins = timed({ map: byId.moulins.map, ents: byId.moulins.ents, entry: byId.moulins.entry, gates: ['md_light'], doors: byId.moulins.doors }, {}, 'Salle des relais').seq;
+fs.writeFileSync(new URL('../tests/qa_solutions_pics_timed.json', import.meta.url), JSON.stringify(TSOL));
 { // Phare des Vents
   const z = byId.phare_v;
   const t0 = Date.now();

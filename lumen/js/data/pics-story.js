@@ -379,7 +379,7 @@ export const QUESTS_PICS = {
       { id: 'phare', type: 'gates', gates: ['end'], text: 'Rallumer le Phare des Vents : rouge, bleu et magenta ensemble', zone: 'phare_v' },
       { id: 'retour', type: 'talk', npc: 'boree', text: 'Annoncer la bonne nouvelle à Borée', zone: 'col' },
     ],
-    rewards: { xp: 850, ecus: 400, items: { grande_potion: 3, pelisse_cimes: 1 }, pa: [600, 220] },
+    rewards: { xp: 850, ecus: 400, items: { grande_potion: 3, elixir: 2 }, pa: [600, 220] },
   },
 
   /* ================= Quêtes secondaires ================= */

@@ -54,12 +54,13 @@ Limite connue : les scores sont calculés dans le navigateur, sans serveur (forf
 
 Fichiers concernés : `js/cloud.js` (connexion, synchronisation, classements), `js/core.js` (`PA.merge`, `PA.useStore`) et `js/prism-presence.js` (présence dans le tableau de bord Studio Prism, copie de `shared/` du site).
 
-## Grand jeu : Lumen (version 0.5, Actes I et II)
+## Grand jeu : Lumen (version 0.5, Actes I, II et V)
 
 `lumen/` contient **Lumen : les Îles Brisées**, une aventure-puzzle en 3D (Three.js r160, fourni dans `lumen/vendor`, sans étape de compilation). On y joue sur `/lumen/` avec le même compte Prism Arcade : XP, pièces et sauvegarde passent par `PA.award` et `gameStats('lumen')`. **La sauvegarde de l'aventure est enregistrée sur l'appareil ; la sauvegarde en ligne demande une règle Firestore, qui n'est pas publiée pour l'instant.**
 
 - **Contenu actuel (Acte I) :** l'Île de l'Aube, avec le village de Havre-Aube (PNJ, 5 boutiques, forge, garde-robe), la Lande des Ronces, le Sanctuaire de Brume et son boss, 3 quêtes principales et 8 quêtes secondaires, un inventaire, des armes et des équipements, des combats et 10 zones d'énigmes. Compter environ 1 h 15 pour la quête principale.
 - **Acte II (0.5, partie 1) :** la Forêt de Verre, atteinte en barque depuis Havre-Aube une fois le phare rallumé : village de Vitrebourg, trois salles de vitraux (mélange des couleurs : vitraux, relais mélangeur), Lisière, Temple de Verre et son Gardien, 1 quête principale et 3 secondaires. La suite (Phare de Verre, canopée) arrive ensuite.
+- **Acte V (branche `acte5-pics`) :** les Pics du Vent, atteints depuis la Forêt de Verre : village du Col (10 habitants, forge, auberge, boutiques), trois salles des Courants à franchir en **planant** entre pierres de vent, Moulin du Grand Meunier (donjon, relais à retardement, boss), Névé, Dalle et Crêtes (dalles qui montent quand on les éclaire), Phare des Vents (fragment violet, capacité **Portails**, touche V). 3 quêtes principales et 7 secondaires. Outils : `node lumen/tools/build-pics.mjs` (génère et vérifie, y compris la simulation du temps des relais), tests `lumen/tests/qa_pics_*.py`.
 - **Tests :** `lumen/tests/` (navigateur, Playwright) et `node lumen/tools/reach.mjs` (accessibilité des coffres et objets).
 - **Conception complète :** `lumen/DESIGN.md` (6 îles, environ 5 h pour la quête principale, environ 8 h 30 à 100 %).
 - **Seul fichier lié à la plateforme :** `lumen/js/platform.js`. Le remplacer suffira pour les futures versions PC et mobile.
