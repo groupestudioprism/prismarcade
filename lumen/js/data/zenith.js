@@ -103,6 +103,10 @@ export const ZENITH_NPCS = {
       {
         if: () => true,
         say: ['Les Jardins célestes sont à l’est. Orin y avait installé ses plus belles chambres de lumière. Fais attention aux ombres dorées : elles imitent la lumière, mais elles n’ont pas sa chaleur.'],
+        choices: [
+          { t: 'Tu as besoin de quelque chose ?', if: (q) => q.quest('s_fleurs_z') === 'none', say: ['Les fleurs du ciel, oui. Il y en a quatre, aux quatre coins des Jardins : elles ne poussent que dans la lumière. Rapporte-m’en quatre et je te prépare un nectar dont on se souviendra.'], do: [{ start: 's_fleurs_z' }] },
+          { t: 'Au revoir' },
+        ],
       },
     ],
   },
@@ -380,6 +384,10 @@ export const ZENITH_NPCS = {
       {
         if: (q) => fini(q),
         say: ['Le Zénith n’a jamais été aussi beau. Les fleurs se tournent vers le phare maintenant, plus vers le soleil. Je n’ai rien fait : elles ont décidé toutes seules.'],
+        choices: [
+          { t: 'Tu as besoin de quelque chose ?', if: (q) => q.quest('s_fleurs_z') === 'none', say: ['Quatre fleurs du ciel, pour un dernier nectar. Elles sont aux quatre coins des Jardins : je n’ai plus les jambes pour y retourner.'], do: [{ start: 's_fleurs_z' }] },
+          { t: 'Au revoir' },
+        ],
       },
       {
         if: () => true,

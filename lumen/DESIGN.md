@@ -178,6 +178,7 @@ Une île centrale en ruines, avec un autel pour les fragments, l'autel des capac
 - **Régions** : la Porte, les Jardins célestes, la Grande Salle, le Zénith.
 - **Phare final** : six faisceaux de six couleurs à envoyer vers les six phares de l'archipel, visibles au loin.
 - **Fin** : le Prisme est reforgé en lumière partagée et l'archipel se rassemble.
+- **Réalisé (Acte VI)** : 5 zones jouables + 3 salles à portails + auberge ; boss « Ombre du Prisme » (3 phases : dalles et lances, spirale et téléportation, éclipse bouclier) ; phare à deux balises (rouge-vert-bleu et jaune-magenta-cyan) et deux portes d’étape ; cinématique de fin d’environ 50 s, bilan sur les six îles, générique, jeu libre. Détails : HANDOFF.md, annexe ACTE VI.
 
 ---
 
