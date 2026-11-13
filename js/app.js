@@ -135,14 +135,14 @@
     const solved = Object.keys(ex).filter((k) => k.startsWith('g:aube:')).length;
     const shards = Object.keys(ex).filter((k) => k.startsWith('s:aube:')).length;
     const done = !!ex['done:aube'];
-    const prog = st && st.plays ? `Île de l’Aube : ${done ? 'rallumée ✦ · ' : ''}${solved} énigme${solved > 1 ? 's' : ''} · ${shards} / 10 éclats` : '≈ 1 h 15 de jeu aujourd’hui (Acte I) · 5 îles à venir';
+    const prog = st && st.plays ? `Île de l’Aube : ${done ? 'rallumée ✦ · ' : ''}${solved} énigme${solved > 1 ? 's' : ''} · ${shards} / 10 éclats` : '3 îles jouables (Actes I-III) · 3 îles à venir';
     return `<div class="section-head"><div><h2>Grands jeux</h2><p>Des aventures plus longues, avec le même compte et la même progression.</p></div></div>
       <a class="big-game" href="lumen/">
         <img src="lumen/assets/cover.webp" alt="Lumen : une île flottante traversée de faisceaux de lumière" loading="lazy" width="1280" height="720">
         <div class="big-body">
-          <span class="badge">${done ? 'Acte I terminé' : 'Nouveau · Acte I jouable'}</span>
+          <span class="badge">${done ? 'Actes I-III jouables' : 'Nouveau · Actes I-III jouables'}</span>
           <h3>Lumen <span>: les Îles Brisées</span></h3>
-          <p>Aventure, combats et énigmes de lumière en 3D. Explore l’Île de l’Aube puis la Forêt de Verre, parle aux habitants, affronte le Colosse et le Gardien de Verre, et rallume le phare d’un archipel éteint.</p>
+          <p>Aventure, combats et énigmes de lumière en 3D. Explore l’Île de l’Aube, la Forêt de Verre puis le Désert des Échos, parle aux habitants, affronte le Colosse et le Gardien de Verre, et rallume le phare d’un archipel éteint.</p>
           <p class="big-meta">${esc(prog)}</p>
           <span class="btn primary">${st && st.plays ? 'Continuer' : 'Jouer'}</span>
         </div>

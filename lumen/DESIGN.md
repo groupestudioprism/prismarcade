@@ -388,3 +388,12 @@ Le vérificateur essaie toutes les combinaisons d'orientations de chaque zone et
 
 ## Acte II partie 2 (implémenté)
 Canopée (can1..can4) : vides franchis par paires de poteaux de grappin (portée 9 cases, objet `grappin` obtenu chez Silex avec 5 éclats). Phare de Verre : balise y+m+c, trois salles, deux portes d'étape, solution unique vérifiée par force brute ; fin d'acte II générique. Quêtes : q_phare_verre, s_lampions_f, s_colis, s_graines.
+
+## Acte III : Le Désert des Échos (implémenté)
+Île 3, générée par `tools/build-desert.mjs` (zones : `tools/areas-desert.mjs`, données : `js/data/desert-*.js`, logique : `js/game/acte3.js`, rendu : `js/world/desert-props.js`, audio : `js/audio/desert-audio.js`).
+- **Régions** : Cité des Échos (village, 11 PNJ, 3 boutiques, forge, auberge), Dunes (salles de sable d1 à d4, esplanade, oasis), Temple enseveli (donjon, boss Gardien des Échos), Phare des Sables (vestibule à trois vasques puis salle de la balise).
+- **Mécaniques** : lames (`splitter`, semi-réfléchissantes : une partie du faisceau passe, l’autre est déviée), objets à porter (`carry`) posés sur des socles (`z.socles`), capacité Porter (donnée par Ambre, rattrapée à l’arrivée), tempêtes de sable par cycles (`isl.range` réduit : le faisceau s’éteint plus tôt ; une porte déjà ouverte ne se referme jamais ; l’abri ou l’attente suffisent).
+- **Vérification** : `analyse()` teste toutes les orientations et placements de socles (solution requise, état initial non résolu, objets à porter nécessaires, aucune fuite de faisceau).
+- **Contenu** : 3 quêtes principales, 7 secondaires, 6 ennemis (scarabée, scorpion, chacal, cactus, momie, écho) avec résistances, boss à 2 phases, fragment doré et capacité Orbe.
+- **Orbe** : Fia devient lanterne portative (lumière plus large, allume les vasques). Ce n’est pas une source de faisceau mobile : limite assumée.
+- **Tests** : `tests/qa_desert_boot.py`, `tests/qa_desert_full.py` (84 vérifications, port 8870), `tools/audit.py` (ciblage réel de chaque porte, coffre, PNJ, socle).

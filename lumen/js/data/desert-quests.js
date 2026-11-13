@@ -59,7 +59,7 @@ export const DESERT_QUESTS = {
     kind: 'side', island: 'desert', title: 'Chasseur de scorpions', giver: 'samir', requires: 'q_echos',
     summary: 'Samir veut débarrasser les pistes des scorpions qui dorment sous les pierres chaudes.',
     steps: [
-      { id: 'chasse', type: 'kill', enemy: 'scorpion', n: 5, text: 'Vaincre 5 scorpions des pierres (Oasis, Dunes)', zone: 'dunes' },
+      { id: 'chasse', type: 'kill', enemy: 'scorpion', n: 5, text: 'Vaincre 5 créatures des sables (Oasis, Dunes)', zone: 'dunes' },
       { id: 'retour', type: 'talk', npc: 'samir', text: 'Faire ton rapport à Samir', zone: 'cite' },
     ],
     rewards: { xp: 120, ecus: 120, items: { grande_potion: 1 }, unlock: ['tenue_chasseur'], pa: [80, 30] },

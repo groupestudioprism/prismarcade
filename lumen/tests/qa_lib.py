@@ -22,7 +22,7 @@ window.T = {
     const ents=Object.entries(s), moves=ents.filter(([k])=>k.startsWith('pos:')), A=L.G.a3;
     if(moves.length){ L.st.player.abilities.porter=true; let todo=moves.slice(), guard=0;   // objets portés : vraie logique de jeu (prendre, puis poser sur un socle libre)
       while(todo.length && guard++<12){ const rest=[]; for(const [k,p] of todo){ const e=L.isl.ents.find(x=>x.id===k.slice(4)); if(e.x===p[0]&&e.y===p[1]) continue;
-          const so=L.isl.socleAt[p[0]+','+p[1]]; if(!so||L.isl.entAt[p[0]+','+p[1]]){ rest.push([k,p]); continue; }
+          const so=L.isl.socles.find(q=>q.x===p[0]&&q.y===p[1]); if(!so||L.isl.entAt[p[0]+','+p[1]]){ rest.push([k,p]); continue; }
           A.lift(e); if(!A.carrying()){ rest.push([k,p]); continue; } A.place(so); } todo=rest; }
       if(todo.length) return 'socles:'+JSON.stringify(todo); }
     ents.filter(([k])=>!k.startsWith('pos:')).forEach(([id,v])=>L.set(id,v)); return L.isl.gates[gate].open; },

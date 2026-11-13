@@ -28,6 +28,8 @@ for (const def of ISLANDS) {
       an.sols.forEach((n) => { an.set(n); let d = 0; const sol = {}; an.isl.ents.filter((e) => e.rot || e.carry).forEach((e) => { const b = base[e.id]; if (e.rot) { sol[e.id] = getv(e); if (getv(e) !== b[0]) d++; } if (e.carry) { sol['pos:' + e.id] = [e.x - z.ox * 0, e.y]; if (e.x !== b[1][0] || e.y !== b[1][1]) d++; } }); if (d < bd) { bd = d; best = sol; } });
       // coordonnées locales → globales (la zone est isolée en (0,0) dans l'analyse)
       if (best) Object.keys(best).forEach((k) => { if (k.startsWith('pos:')) best[k] = [best[k][0] + z.ox, best[k][1] + z.oy]; });
+      if (best) { const A = an.isl.ents.filter((e) => e.rot || e.carry), R = isl.ents.filter((e) => (e.rot || e.carry) && e.zone === zi), mp = Object.fromEntries(A.map((e, i) => [e.id, R[i].id]));   // ids locaux de l'analyse → ids réels
+        best = Object.fromEntries(Object.entries(best).map(([k, v]) => [k.startsWith('pos:') ? 'pos:' + mp[k.slice(4)] : mp[k], v])); }
       const gk = gs[0] || z.final; if (gk) out[def.id][gk] = best;
       continue;
     }

@@ -493,13 +493,13 @@ export function buildWorld(scene, isl, def, opts = {}) {
 
   /* ---------- Bâtiments et décor des zones d'aventure ---------- */
   const props = [];   // { p, zi, g, kind, light? }
-  const roofs = { auberge: M.roofRed, pierre: M.roofSlate, forge: M.roofBrown, bois: M.roofBlue, phare: M.roofBlue };
+  const roofs = { auberge: M.roofRed, pierre: M.roofSlate, forge: M.roofBrown, bois: M.roofBlue, phare: M.roofBlue, sable: mat('#c4703f') /* ACTE III */ };
   function house(p, z) {
     const g = new THREE.Group();
     const w = p.w * T, d = p.h * T, h = p.style === 'forge' ? 2.4 : 2.7;
     const cx = W(z.ox + p.x) + w / 2 - T / 2, cz = W(z.oy + p.y) + d / 2 - T / 2;
     g.position.set(cx, 0, cz);
-    const walls = new THREE.Mesh(new THREE.BoxGeometry(w - 0.3, h, d - 0.3), p.style === 'pierre' || p.style === 'phare' ? mat('#cfc9da') : M.plaster); walls.position.y = h / 2; walls.castShadow = true; walls.receiveShadow = true; g.add(walls);
+    const walls = new THREE.Mesh(new THREE.BoxGeometry(w - 0.3, h, d - 0.3), p.style === 'pierre' || p.style === 'phare' ? mat('#cfc9da') : p.style === 'sable' ? mat('#e6cf9c') /* ACTE III */ : M.plaster); walls.position.y = h / 2; walls.castShadow = true; walls.receiveShadow = true; g.add(walls);
     const base = new THREE.Mesh(new THREE.BoxGeometry(w - 0.1, 0.5, d - 0.1), M.stoneDark); base.position.y = 0.25; g.add(base);
     // colombages
     if (p.style === 'auberge' || p.style === 'bois') {
