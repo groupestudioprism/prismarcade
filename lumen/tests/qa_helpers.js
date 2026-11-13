@@ -69,3 +69,9 @@ Object.assign(window.T, {
     await tryit('frames',async()=>{ await T.tick(500); });
     return o.join(' | ')||'ok'; },
 });
+Object.assign(window.T, {
+  /* ACTE IV : arrivée sur l'île des Abysses comme après un voyage (état neuf, Forêt terminée) */
+  async arrive(opts){ const m=await import('/lumen/js/game/state.js'); const s=m.newState(); s.player.island='abysses'; s.player.zone='greve'; s.world=m.newWorld('greve'); s.flags.acte2_fini=1; s.player.respawn={zone:'auberge_a',cell:[6,7]}; s.player.ecus=(opts&&opts.ecus)||200;
+    s.quests.q_reveil={state:'done',step:3,base:{}}; s.quests.q_verre={state:'done',step:6,base:{}}; s.quests.q_phare_verre={state:'done',step:9,base:{}};
+    s.inv.epee_courte=1; s.equip.weapon='epee_courte'; s.inv.potion=3; s.player.lvl=6; await __lumen.G.startFrom(s,'auto',false,true); await T.tick(800); T.pump(); return __lumen.S.mode; },
+});

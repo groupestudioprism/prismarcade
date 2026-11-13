@@ -2,8 +2,8 @@
 import sys, json, time, subprocess, os
 from playwright.sync_api import sync_playwright
 
-PORT = int(os.environ.get("QA_PORT", "8776"))
-ROOT = "/home/claude/prismarcade"
+PORT = int(os.environ.get("QA_PORT", "8871"))
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))   # racine du dépôt (le worktree courant)
 SOL = open(os.path.join(os.path.dirname(__file__), "qa_solutions.json")).read()
 
 HELP = r"""
@@ -19,7 +19,7 @@ window.T = {
   q(id){ return __lumen.quests.state(id)+':'+__lumen.quests.stepId(id); },
   tick(ms){ return new Promise(r=>setTimeout(r,ms||60)); },
   solve(gate){ const L=__lumen; const s=SOL[L.st.player.island||'aube'][gate]; if(!s) return 'nosol:'+gate;
-    Object.entries(s).forEach(([id,v])=>L.set(id,v)); return L.isl.gates[gate].open; },
+    Object.entries(s).forEach(([id,v])=>{ if(id==='@orb') L.setOrb(v.at,v.dir); else L.set(id,v); }); return L.isl.gates[gate].open; },
   killAll(){ const c=__lumen.combat; let n=0; c.enemies.filter(e=>e.state!=='dead').forEach(e=>{c.dealDamage(e,99999,'tranchant',{heavy:true});n++}); return n; },
   zone(){ return __lumen.G.zoneId(); },
   info(){ const L=__lumen; return JSON.stringify({mode:L.S.mode,zone:L.G.zoneId(),isl:L.st.player.island,hp:L.st.player.hp,ecus:L.st.player.ecus,x:+(L.P.x/2).toFixed(1),y:+(L.P.z/2).toFixed(1)}); }
