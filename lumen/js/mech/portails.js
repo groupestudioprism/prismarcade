@@ -1,7 +1,7 @@
 /* =========================================================
    LUMEN — portails de lumière (Acte VI, la Citadelle du Zénith).
    Un portail est un objet de la grille { t: 'portal', pair: 'a' } : les portails de même « pair »
-   sont jumeaux. Un faisceau qui entre dans l’un ressort par l’autre, dans la MÊME direction et avec
+   et de la même zone sont jumeaux. Un faisceau qui entre dans l’un ressort par l’autre, dans la MÊME direction et avec
    la même couleur (logic.js : trace). Ni Lyra ni les créatures ne les traversent : ce sont des
    portes pour la lumière seulement.
    Capacité : st.player.abilities.portails (donnée avec le 5e fragment ; l’Acte VI l’éveille aussi,
@@ -17,7 +17,7 @@ export const isPortal = (e) => !!e && e.t === 'portal';
 export function portalTwin(isl, e) {
   if (!isPortal(e)) return null;
   const list = isl.portalIndex || (isl.portalIndex = isl.ents.filter(isPortal));
-  return list.find((p) => p !== e && p.pair === e.pair) || null;
+  return list.find((p) => p !== e && p.pair === e.pair && p.zone === e.zone) || null;   /* les paires sont propres à une zone : « a » existe dans chaque salle */
 }
 
 /* Les portails sont-ils actifs ? (vrai par défaut : les outils les supposent éveillés) */

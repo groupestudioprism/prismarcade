@@ -393,6 +393,11 @@ export const NPCS = {
       {
         if: (q) => q.quest('q_phare_verre') === 'done',
         say: ['Regarde-moi ça : les arbres reprennent leurs couleurs. Le Phare de Verre veille de nouveau sur la forêt, et c’est toi qui l’as rallumé.', 'La route vers le sud-est n’est pas encore ouverte, mais Vitrebourg t’attendra toujours. Les graines de la Canopée, la livraison de Galet… il reste de quoi t’occuper, si tu veux.'],
+        /* ACTE VI — liaison PROVISOIRE vers la dernière île (à la fusion : remplacée par le voyage depuis les Pics du Vent) */
+        choices: [
+          { t: 'Embarquer pour la Citadelle du Zénith', do: [{ travel: { to: 'zenith', zone: 'porte', cell: [12, 7] } }] },
+          { t: 'À plus tard' },
+        ],
       },
       {
         if: () => true,

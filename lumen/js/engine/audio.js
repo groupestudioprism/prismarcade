@@ -38,7 +38,7 @@ export const music = SAFE((theme, level) => {
   ensure(); ambInit();
   setMusic(theme, level);
   const name = theme === null || theme === false ? null : String(theme);
-  if (name) { setAmbience(name === 'boss1' ? 'boss' : name, true); if (!/^(combat|boss|boss2|victoire)$/.test(name) && typeof level === 'number') setRestore(level); }
+  if (name) { setAmbience(name === 'boss1' ? 'boss' : name, true); if (!/^(combat|boss|boss2|boss3|victoire|epilogue|generique)$/.test(name) && typeof level === 'number') setRestore(level); }
   else setAmbience('none', true);
 });
 
@@ -57,7 +57,7 @@ export const audio = {
   note(color, opts) { this.sfx('note_' + (color || 'w'), opts); },
   music,
   ambience: SAFE((spec) => { if (A.ctx) { ambInit(); } setAmbience(spec, false); }),
-  bossPhase(n) { music(n >= 2 ? 'boss2' : 'boss', 1); },
+  bossPhase(n) { music(n >= 3 ? 'boss3' : n >= 2 ? 'boss2' : 'boss', 1); },
   listener: (x, z, yaw) => { L.on = true; L.x = x; L.z = z; L.yaw = yaw || 0; },
   /* diagnostic / tests */
   info: () => Object.assign({ state: A.ctx ? A.ctx.state : 'none', voices: A.active, low: A.low }, musicInfo(), { ambience: ambienceInfo() }),

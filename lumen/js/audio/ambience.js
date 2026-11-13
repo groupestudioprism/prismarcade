@@ -21,6 +21,11 @@ const PRE = {
   interieur: { fire: 0.6, wind: 0.04 },
   combat: { wind: 0.15 }, boss: { hum: 0.3 }, boss2: { hum: 0.4 }, victoire: { birds: 0.4, wind: 0.1 },
 };
+/* ACTE VI */
+Object.assign(PRE, {
+  zenith: { wind: 0.5, birds: 0.1, distant: 0.5, hum: 0.15 }, jardins: { wind: 0.3, birds: 0.5, insects: 0.2, water: 0.2, distant: 0.3 }, salle: { hum: 0.6, wind: 0.1, distant: 0.2 },
+  phare_zenith: { wind: 0.5, hum: 0.3, distant: 0.5 }, boss3: { hum: 0.5, wind: 0.2 }, epilogue: { wind: 0.25, birds: 0.35, distant: 0.5 }, generique: { wind: 0.2, birds: 0.2, distant: 0.4 },
+});
 const KEYS = ['wind', 'water', 'mist', 'hum', 'fire', 'insects', 'birds', 'glassrain', 'distant'];
 let base = {}, over = {}, manual = false, lay = null, timer = null, restore = 0.5, pending = null;
 
