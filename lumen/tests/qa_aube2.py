@@ -1,4 +1,4 @@
-import sys; sys.path.insert(0,'/home/claude/prismarcade/lumen/tests')
+import sys; sys.path.insert(0,__import__('os').path.dirname(__import__('os').path.abspath(__file__)))
 from qa_lib import *
 q=QA('aube2'); q.load()
 # état de départ : saute directement après Bran 2 (déjà validé par aube1) en forgeant l'état par les VRAIES API
