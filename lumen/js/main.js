@@ -224,7 +224,7 @@ const ev = bus();
 let st = newState();
 let slot = 'auto';
 const P = { x: 0, y: 0, z: 0, vx: 0, vz: 0, face: 0, alive: true, dodging: false, dodgeT: 0, dodgeCD: 0, iframes: 0, swing: null, swingCD: 0, combo: 0, comboT: 0, chargeT: 0, spinT: 0, hurtT: 0, kbx: 0, kbz: 0, regenT: 0, buffRegen: 0 };
-const S = { mode: 'title', zone: -1, zoneT: 0, time: 0, yaw: 0.35, yawT: 0.35, pitch: 0.92, dist: TOUCH0 ? 15 : 17, camT: new THREE.Vector3(), shake: 0, hitstop: 0, restore: 0, restoreT: 0, wardrobe: false, finale: null, talkTo: null, boss: null, hints: {}, lastSave: 0, ambT: null };
+const S = { mode: 'title', zone: -1, zoneT: 0, time: 0, yaw: 0.35, yawT: 0.35, pitch: 0.92, dist: TOUCH0 ? 12 : 17, camT: new THREE.Vector3(), shake: 0, hitstop: 0, restore: 0, restoreT: 0, wardrobe: false, finale: null, talkTo: null, boss: null, hints: {}, lastSave: 0, ambT: null };
 const G = {
   scene, camera, isl, zones, def: DEF, P, audio, emit: ev.emit, on: ev.on, upcoming: UPCOMING.filter((u) => u.num > DEF.num && !ISLANDS.some((i) => i.num === u.num)), meta: META /* ACTE IV */,   /* ACTE V : filtre des îles à venir */
   get st() { return st; },
@@ -586,6 +586,7 @@ function rest() {
    Sauvegarde
    ========================================================= */
 const regionName = () => { const z = zones[S.zone]; return z ? (DEF.regions[z.region] || {}).name || z.title : ''; };
+G.packState = () => { packPosition(); return st; };
 function packPosition() {
   const z = zones[S.zone];
   if (z) Object.assign(st.player, { zone: z.id, x: (S.grap || S.glide) ? (S.grap || S.glide).to.x : P.x, z: (S.grap || S.glide) ? (S.grap || S.glide).to.z : P.z, face: P.face });

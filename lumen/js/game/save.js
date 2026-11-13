@@ -11,6 +11,8 @@ export const SLOTS = ['auto', 's1', 's2', 's3'];
 const PA = window.PA || null;
 const uid = () => (PA && PA.cloud && PA.cloud.status === 'in' && PA.cloud.user ? PA.cloud.user.uid : null);
 const localKey = (slot) => `lumen.save.${uid() || 'local'}.${slot}`;
+/* sauvegarde de l'appareil : celle du compte connecté, sinon celle jouée sans compte sur cet appareil */
+const localGet = (slot) => store.get(localKey(slot)) || (uid() ? store.get(`lumen.save.local.${slot}`) : null);
 
 function meta(st, regionName) {
   return {
@@ -39,7 +41,7 @@ export const saves = {
   /* résumé des emplacements (le plus récent entre appareil et compte) */
   async list() {
     const out = {};
-    SLOTS.forEach((s) => { const l = store.get(localKey(s)); if (l && l.meta) out[s] = Object.assign({ where: 'local' }, l.meta); });
+    SLOTS.forEach((s) => { const l = localGet(s); if (l && l.meta) out[s] = Object.assign({ where: 'local' }, l.meta); });
     if (this.cloudReady()) {
       try {
         const docs = await PA.cloud.store.list(`lumenSaves/${uid()}/slots`);
@@ -58,7 +60,7 @@ export const saves = {
     if (!m) return null;
     const usable = (d) => !!d && typeof d === 'object' && !Array.isArray(d) && !!d.player && typeof d.player === 'object';   // une sauvegarde sans joueur n'est pas une sauvegarde
     if (m.where === 'cloud' && m._data) { try { const d = JSON.parse(m._data); return usable(d) ? normalize(d) : null; } catch (e) { return null; } }
-    const l = store.get(localKey(slot));
+    const l = localGet(slot);
     return l && usable(l.data) ? normalize(l.data) : null;
   },
   /* la sauvegarde la plus récente, tous emplacements confondus */
@@ -66,6 +68,21 @@ export const saves = {
     const list = await this.list();
     const best = Object.entries(list).sort((a, b) => (b[1].updated || 0) - (a[1].updated || 0))[0];
     return best ? { slot: best[0], meta: best[1] } : null;
+  },
+  /* code de transfert (copier-coller) : utile pour passer d'un appareil à l'autre sans compte */
+  exportCode(st) {
+    const bytes = new TextEncoder().encode(JSON.stringify(st));
+    let bin = ''; bytes.forEach((b) => (bin += String.fromCharCode(b)));
+    return 'LUMEN1:' + btoa(bin);
+  },
+  importCode(code) {
+    const c = String(code || '').trim().replace(/\s+/g, '');
+    if (!c.startsWith('LUMEN1:')) return null;
+    try {
+      const bin = atob(c.slice(7)), bytes = Uint8Array.from(bin, (ch) => ch.charCodeAt(0));
+      const d = JSON.parse(new TextDecoder().decode(bytes));
+      return d && d.player ? normalize(d) : null;
+    } catch (e) { return null; }
   },
   async remove(slot) {
     store.del(localKey(slot));
