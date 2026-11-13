@@ -23,11 +23,13 @@ for (const def of ISLANDS) {
     }
     const gates = [...new Set(z.ents.filter((e) => e.gate && !e.optional).map((e) => e.gate))];
     const opt = z.ents.filter((e) => e.optional).map((e) => e.gate);
-    const an = analyse(z.map, z.ents, gates, { barrier: z.barrier });
+    const an = analyse(z.map, z.ents, gates, { barrier: z.barrier, socles: z.socles, entry: z.entry || z.spawn });
     devices += an.rots.length;
     if (an.escape) bad(`${z.title} : un faisceau sort de la zone`);
     if (!an.sols.length) bad(`${z.title} : aucune solution`);
     if (an.initialSolved) bad(`${z.title} : déjà résolue au départ`);
+    if (an.carryFree) bad(`${z.title} : résoluble sans rien porter (la capacité Porter serait inutile)`);
+    if (!an.connected) bad(`${z.title} : une répartition des objets portés bloque l’accès à ${[...new Set(an.blocked)].slice(0, 3).join(', ')}`);
     opt.forEach((g) => { const o = analyse(z.map, z.ents, [g], { barrier: z.barrier }); if (!o.sols.length || o.initialSolved) bad(`${z.title} : cristal facultatif ${g} invalide`); });
   }
   // île complète : toutes portes ouvertes, tout doit être accessible depuis le départ
