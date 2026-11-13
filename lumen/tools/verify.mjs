@@ -6,6 +6,7 @@ import { ISLANDS } from '../js/levels.js';
 import { buildIsland, evaluate, walkable, reachCells } from '../js/logic.js';
 import { analyse, analyseStages } from './generate.mjs';
 import { analysePuzzles } from './analyse-abysses.mjs';   /* ACTE IV */
+import { analyseTimed } from './timed.mjs';   /* ACTE V */
 
 let fail = 0;
 const bad = (m) => { console.log('  ✗ ' + m); fail++; };
@@ -27,6 +28,16 @@ for (const def of ISLANDS) {
       continue;
     }
     const gates = [...new Set(z.ents.filter((e) => e.gate && !e.optional).map((e) => e.gate))];
+    if (z.ents.some((e) => e.hold)) {   /* ACTE V : relais temporisés → simulation du temps (tools/timed.mjs) */
+      const r = analyseTimed({ map: z.map, ents: z.ents, doors: z.doors, entry: z.spawn, gates }, {});
+      const hard = analyseTimed({ map: z.map, ents: z.ents, doors: z.doors, entry: z.spawn, gates }, { holdScale: 0.75 });
+      devices += r.rots;
+      if (r.escape) bad(`${z.title} : un faisceau sort de la zone`);
+      if (r.initialSolved) bad(`${z.title} : déjà résolue au départ`);
+      if (!r.solvable) bad(`${z.title} : aucune solution temporisée`);
+      if (r.solvable && !hard.solvable) bad(`${z.title} : trop serrée (relais ×0,75 insolubles)`);
+      continue;
+    }
     const opt = z.ents.filter((e) => e.optional).map((e) => e.gate);
     const an = analyse(z.map, z.ents, gates, { barrier: z.barrier, socles: z.socles, entry: z.entry || z.spawn });
     devices += an.rots.length;

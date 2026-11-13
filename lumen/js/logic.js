@@ -35,7 +35,7 @@ export function filterColor(beam, glass) {
 /* Terrain : '.' herbe · ',' chemin · '#' roche / mur · 'T' arbre · 'H' bâtiment ou décor · '~' eau
    'r' ronces (coupées par une lame) · 'c' roche fissurée (brisée au marteau) · 'x' porte · '=' pont */
 export const BLOCK_TERRAIN = new Set(['#', 'T', 'H', '~', 'r', 'c']);
-const BLOCKING_ENTS = new Set(['lantern', 'mirror', 'prism', 'receiver', 'beacon', 'relay', 'vitrail', 'post', 'splitter', 'valve', 'socle' /* ACTE IV : socle d’orbe */]);
+const BLOCKING_ENTS = new Set(['lantern', 'mirror', 'prism', 'receiver', 'beacon', 'relay', 'vitrail', 'post', 'splitter', 'valve', 'socle' /* ACTE IV : socle d’orbe */, 'vent' /* ACTE V */]);
 /* ACTE III — Objets orientables à deux états « / » et « \\ » (miroir, lame semi-réfléchissante) */
 export const isMirrorLike = (e) => e.t === 'mirror' || e.t === 'splitter';
 const PICKUPS = new Set(['shard', 'page', 'wisp', 'start', 'ledge' /* ACTE IV */]);
@@ -85,7 +85,7 @@ export function buildIsland(def) {
     (z.socles || []).forEach(([sx, sy], k) => { const so = { id: `socle${zi}_${k + 1}`, x: z.ox + sx, y: z.oy + sy, zone: zi }; socles.push(so); socleAt[so.x + ',' + so.y] = so; });
   });
   (def.bridges || []).forEach((b) => {
-    const g = gate(b.gate, 'bridge');
+    const g = gate(b.gate, 'bridge', b.look);   /* ACTE V : b.look = 'lift' (plateformes qui s’élèvent) */
     b.cells.forEach(([x, y]) => { terrain[y][x] = '='; gateCell[x + ',' + y] = g.id; g.cells.push([x, y]); });
   });
   ents.forEach((e) => { if ((e.t === 'receiver' || e.t === 'beacon' || e.t === 'relay') && e.gate) gate(e.gate, e.t === 'beacon' ? 'end' : 'bridge').receivers.push(e.id); });
@@ -100,7 +100,7 @@ export function buildIsland(def) {
   // solid : cases bloquées par des objets posés en jeu (coffres, PNJ immobiles…)
   /* ACTE III */ // tempête de sable : portée maximale des faisceaux (null = aucune tempête) dans les zones marquées « storm »
   const stormZone = def.zones.map((z) => !!z.storm);
-  return { def, w, h, terrain, zoneAt, zoneRects, ents, entAt, gates, gateCell, socles, socleAt, stormZone, range: null, solid: new Set(), valves, orbSocles, orb, initial: snapshot({ ents, gates, orb }) };
+  return { def, w, h, terrain, zoneAt, zoneRects, ents, entAt, gates, gateCell, socles, socleAt, stormZone, range: null, solid: new Set(), frozenTimers: true /* ACTE V : vrai pour les outils d’analyse ; le jeu le met à false */, valves, orbSocles, orb, initial: snapshot({ ents, gates, orb }) };
 }
 
 /* Copie de l'état modifiable (orientations, portes) */
@@ -246,9 +246,15 @@ export function traceAll(isl) {
     res = trace(isl, active);
     const next = {};
     isl.ents.forEach((e) => {
-      if (e.t !== 'relay' || !res.hits[e.id]) return;
+      if (e.t !== 'relay') return;
       const h = res.hits[e.id];
-      next[e.id] = e.mix ? mixColors([...h]) : h.has('w') ? 'w' : ['r', 'g', 'b', 'y', 'm', 'c'].find((c) => h.has(c));
+      let col = h ? (e.mix ? mixColors([...h]) : h.has('w') ? 'w' : ['r', 'g', 'b', 'y', 'm', 'c'].find((c) => h.has(c))) : undefined;
+      /* ACTE V : relais temporisé (hold = secondes). Touché, il mémorise sa couleur ; sinon il la rend jusqu’à la fin du délai. */
+      if (e.hold && !isl.frozenTimers) {
+        if (col) { e.heldC = col; e.heldT = e.hold; e.live = true; }
+        else { e.live = false; if (e.heldT > 0 && e.heldC) col = e.heldC; }
+      }
+      if (col) next[e.id] = col;
     });
     const same = Object.keys(next).length === Object.keys(active).length && Object.keys(next).every((k) => active[k] === next[k]);
     active = next;
@@ -337,8 +343,8 @@ export function reachCells(isl, starts, opts = {}) {
   const ok = (x, y) => walkable(isl, x, y) || (opts.cut && ['r', 'c'].includes((isl.terrain[y] || [])[x]));
   const seen = new Set(), q = [];
   starts.forEach(([x, y]) => { seen.add(x + ',' + y); q.push([x, y]); });
-  const posts = isl.ents.filter((e) => e.t === 'post');
-  const linksOf = new Map(posts.map((p) => [p, opts.posts === false ? [] : postLinks(isl, p)]));
+  const posts = isl.ents.filter((e) => e.t === 'post' || e.t === 'vent');   /* ACTE V : les pierres de vent se comptent comme des poteaux */
+  const linksOf = new Map(posts.map((p) => [p, opts.posts === false ? [] : p.t === 'vent' ? ventLinks(isl, p) : postLinks(isl, p)]));
   const ledges = new Map(isl.ents.filter((e) => e.t === 'ledge').map((e) => [e.x + ',' + e.y, opts.glide === false ? [] : glideLinks(isl, e, walkable)]));   /* ACTE IV : plané */
   while (q.length) {
     const [x, y] = q.shift();
@@ -347,11 +353,54 @@ export function reachCells(isl, starts, opts = {}) {
       const nx = x + dx, ny = y + dy, k = nx + ',' + ny;
       if (!seen.has(k) && ok(nx, ny)) { seen.add(k); q.push([nx, ny]); }
       const p = isl.entAt[k];
-      if (p && p.t === 'post') for (const l of linksOf.get(p) || []) { const lk = l.land.join(','); if (!seen.has(lk)) { seen.add(lk); q.push(l.land); } }
+      if (p && (p.t === 'post' || p.t === 'vent')) for (const l of linksOf.get(p) || []) { const lk = l.land.join(','); if (!seen.has(lk)) { seen.add(lk); q.push(l.land); } }
     }
   }
   return seen;
 }
 
+
+/* ==================================================   ACTE V — Pics du Vent : relais temporisés, courants d'air (planer)
+   ========================================================= */
+/* Fait s'écouler le délai des relais temporisés qui ne sont plus touchés. Renvoie true si l'un d'eux vient de s'éteindre
+   (il faut alors recalculer les faisceaux : evaluate). */
+export function tickTimers(isl, dt) {
+  let expired = false;
+  isl.ents.forEach((e) => {
+    if (e.t !== 'relay' || !e.hold || e.live || !(e.heldT > 0)) return;
+    e.heldT -= dt;
+    if (e.heldT <= 0) { e.heldT = 0; e.heldC = null; expired = true; }
+  });
+  return expired;
+}
+/* Efface la mémoire des relais temporisés (rechargement, outils de vérification). */
+export function clearTimers(isl) { isl.ents.forEach((e) => { if (e.t === 'relay' && e.hold) { e.heldT = 0; e.heldC = null; e.live = false; } }); }
+
+/* Courant d'air : une « pierre de vent » se relie en ligne droite à une autre, de l'autre côté d'un vide (jusqu'à VENT_RANGE cases).
+   Lyra, voile déployée, plane de l'une à l'autre et se pose juste derrière la pierre d'arrivée. Mêmes règles que les poteaux du grappin, portée plus longue. */
+export const VENT_RANGE = 14;
+export function ventLinks(isl, vent) {
+  const out = [];
+  for (const d of ORDER) {
+    const [dx, dy] = DIRS[d];
+    let gap = 0;
+    for (let k = 1; k <= VENT_RANGE; k++) {
+      const x = vent.x + dx * k, y = vent.y + dy * k;
+      if (x < 0 || y < 0 || x >= isl.w || y >= isl.h) break;
+      const t = isl.terrain[y][x];
+      if (WALLS_FOR_ROPE.has(t)) break;
+      if (t === 'x' && !(isl.gates[isl.gateCell[x + ',' + y]] || {}).open) break;
+      const e = isl.entAt[x + ',' + y];
+      if (e && e.t === 'vent') {
+        const land = [x + dx, y + dy];
+        if (gap > 0 && walkable(isl, land[0], land[1])) out.push({ dir: d, to: e, land, gap, from: vent });
+        break;
+      }
+      if (e && BLOCKING_ENTS.has(e.t)) break;
+      if (t === ' ' || t === '~' || (t === '=' && !(isl.gates[isl.gateCell[x + ',' + y]] || {}).open)) gap++;
+    }
+  }
+  return out;
+}
 /* ACTE IV : liaisons de plané (voir js/mech/eau.js) */
 export const glideFrom = (isl, ledge) => glideLinks(isl, ledge, walkable);

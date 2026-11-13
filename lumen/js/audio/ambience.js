@@ -28,6 +28,9 @@ const PRE = {
   phare_abysses: { water: 0.6, hum: 0.35, glassrain: 0.25, distant: 0.3 },
   combat: { wind: 0.15 }, boss: { hum: 0.3 }, boss2: { hum: 0.4 }, victoire: { birds: 0.4, wind: 0.1 },
 };
+/* ACTE V */
+import { PRE_PICS } from './themes-pics.js';
+Object.assign(PRE, PRE_PICS);
 Object.assign(PRE, DESERT_AMBIENCE);   /* ACTE III */
 const KEYS = ['wind', 'water', 'mist', 'hum', 'fire', 'insects', 'birds', 'glassrain', 'distant'];
 let base = {}, over = {}, manual = false, lay = null, timer = null, restore = 0.5, pending = null;

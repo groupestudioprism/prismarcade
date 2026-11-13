@@ -221,3 +221,6 @@ Object.assign(QUESTS, QUESTS_A4);
 /* ACTE III : quêtes du Désert des Échos */
 import { DESERT_QUESTS } from './desert-quests.js';
 Object.assign(QUESTS, DESERT_QUESTS);
+/* ACTE V : Les Pics du Vent */
+import { QUESTS_PICS } from './pics-story.js';
+Object.assign(QUESTS, QUESTS_PICS);

@@ -84,6 +84,9 @@ export const UNLOCK_NAMES = {
 
 export const byId = (list, id) => list.find((x) => x.id === id) || list[0];
 
+/* ACTE V : Les Pics du Vent */
+import { LOOKS_PICS } from './pics-data.js';
+CLOAK_COLORS.push(...LOOKS_PICS.cloaks); HAIR_COLORS.push(...LOOKS_PICS.hairColors); Object.assign(UNLOCK_NAMES, LOOKS_PICS.names);
 /* ACTE IV : Les Abysses Miroirs (js/data/abysses.js) */
 import { CLOAKS_A4, HAIRS_A4, UNLOCKS_A4 } from './abysses.js';
 CLOAK_COLORS.push(...CLOAKS_A4); HAIR_COLORS.push(...HAIRS_A4); Object.assign(UNLOCK_NAMES, UNLOCKS_A4);

@@ -81,3 +81,6 @@ Object.assign(SHOPS, SHOPS_A4);
 /* ACTE III : boutiques du Désert des Échos */
 import { DESERT_SHOPS } from './desert-shops.js';
 Object.assign(SHOPS, DESERT_SHOPS);
+/* ACTE V : Les Pics du Vent */
+import { SHOPS_PICS } from './pics-data.js';
+Object.assign(SHOPS, SHOPS_PICS);

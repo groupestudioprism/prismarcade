@@ -599,3 +599,9 @@ Object.assign(NPCS, NPCS_A4);
 /* ACTE III : habitants de la Cité des Échos */
 import { DESERT_NPCS } from './desert-npcs.js';
 Object.assign(NPCS, DESERT_NPCS);
+/* ACTE V : Les Pics du Vent */
+import { NPCS_PICS, PICS_TRAVEL_CHOICE } from './pics-story.js';
+Object.assign(NPCS, NPCS_PICS);
+/* ACTE V : route Abysses -> Pics (acte4_fini), proposée par les passeurs */
+const _ins = (id, before) => { const ch = NPCS[id].talk.filter((t) => t.choices).map((t) => t.choices); ch.forEach((c) => { const k = c.findIndex((x) => x.t === before); if (k >= 0 && !c.includes(PICS_TRAVEL_CHOICE)) c.splice(k, 0, PICS_TRAVEL_CHOICE); }); };
+_ins('calixte', 'Pas maintenant'); _ins('yael', 'Pas maintenant'); _ins('lagon', 'Tu as besoin d’aide ?');

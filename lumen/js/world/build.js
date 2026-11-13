@@ -35,6 +35,9 @@ const THEMES = {
   interieur: { grass: '#a0714f', edge: '#8f6446', path: '#a0714f', dirt: '#5a3f2f', under: '#3a2a22', rock: '#e9dcc2', tuft: '#a0714f', leaves: [['#5fae76', '#4f9a6a', '#468a5f'], ['#5fae76', '#4f9a6a', '#468a5f']], blossom: 0, floor: true, wood: true },
 };
 Object.assign(THEMES, DESERT_THEMES);   /* ACTE III */
+/* ACTE V */
+import { THEMES_PICS } from './pics-themes.js';
+Object.assign(THEMES, THEMES_PICS);
 const GLASS_COLS = ['#3fc8bc', '#4fc8f0', '#3fc8bc', '#7fe0a8', '#a890f0', '#f08cc4', '#f0cc6a', '#4fc8f0'];
 export const themeOf = (z) => (z && z.theme) || 'puzzle';
 
@@ -189,6 +192,14 @@ export function buildWorld(scene, isl, def, opts = {}) {
     if (th.desert) desertTrees({ THREE, G, instanced, C, hash, W, cells: cells.filter(([x, y]) => terr(x, y) === 'T'), M, mat });
     const glassy = !!th.glass;
     const tk = (x, y) => 0.88 + hash(x, y, 18) * 0.34;                       // taille de l'arbre
+    if (th.conifer) {   /* ACTE V : sapins enneigés */
+      instanced(G, trunkGeo, M.trunk, trees, (o, [x, y]) => { const k = tk(x, y); o.position.set(W(x), 0.65 * k, W(y)); o.scale.set(k, k, k); }, { cast: true });
+      const cone = new THREE.ConeGeometry(0.95, 1.5, 7), cap = new THREE.ConeGeometry(0.55, 0.62, 7), snowM = mat('#f4f8ff', { roughness: 1 });
+      const lay = trees.flatMap(([x, y]) => [[x, y, 0], [x, y, 1], [x, y, 2]]);
+      const sc = (k, kk) => [1, 0.78, 0.55][k] * kk, py = (k, kk) => (1.2 + [0, 0.85, 1.6][k]) * kk;
+      instanced(G, cone, M.foliage, lay, (o, [x, y, k]) => { const kk = tk(x, y), s0 = sc(k, kk); o.position.set(W(x), py(k, kk), W(y)); o.scale.set(s0, s0, s0); o.rotation.y = hash(x, y, 21 + k) * 6; return C(th.leaves[0][k % 3]); }, { cast: true });
+      instanced(G, cap, snowM, lay, (o, [x, y, k]) => { const kk = tk(x, y), s0 = sc(k, kk); o.position.set(W(x), py(k, kk) + 0.38 * s0, W(y)); o.scale.set(s0 * 0.9, s0 * 0.8, s0 * 0.9); o.rotation.y = hash(x, y, 21 + k) * 6; }, { receive: false });
+    } else {
     instanced(G, trunkGeo, glassy ? M.glassTrunk : M.trunk, trees, (o, [x, y]) => { const k = tk(x, y); o.position.set(W(x), 0.65 * k, W(y)); o.scale.set(k, k, k); o.rotation.y = hash(x, y, 19) * 6; }, { cast: !glassy });
     const crownList = trees.flatMap(([x, y]) => [[x, y, 0], [x, y, 1], [x, y, 2], [x, y, 3]]);
     instanced(G, crownGeo, glassy ? M.glassLeaf : M.foliage, crownList, (o, [x, y, k]) => {
@@ -198,11 +209,12 @@ export function buildWorld(scene, isl, def, opts = {}) {
       if (glassy) { const gc = GLASS_COLS[Math.floor(hash(x, y, 20) * GLASS_COLS.length)]; return C(gc).offsetHSL((hash(x, y, 25 + k) - 0.5) * 0.04, 0, (k - 1) * 0.03); }
       return C(th.leaves[hash(x, y, 20) < th.blossom ? 1 : 0][k % 3]);
     }, { cast: !glassy });
+    }
     if (glassy) {
       // arbres de verre : cœur lumineux qui pulse + racines translucides
       instanced(G, new THREE.OctahedronGeometry(0.32, 0), M.glassCore, trees, (o, [x, y]) => { const k = tk(x, y); o.position.set(W(x), 1.95 * k, W(y)); o.scale.set(k, k * 1.5, k); o.rotation.y = hash(x, y, 33) * 6; }, { receive: false });
       instanced(G, new THREE.ConeGeometry(0.1, 0.5, 4), M.glassTrunk, trees.flatMap(([x, y]) => [0, 1, 2].map((k) => [x, y, k])), (o, [x, y, k]) => { const a = k * 2.1 + hash(x, y, 34) * 3; o.position.set(W(x) + Math.cos(a) * 0.22, 0.12, W(y) + Math.sin(a) * 0.22); o.rotation.set(Math.sin(a) * 1.2, 0, -Math.cos(a) * 1.2); }, { receive: false });
-    } else if (!th.floor) {
+    } else if (!th.floor && !th.conifer) {
       // pied d'arbre : petit tertre de mousse
       instanced(G, new THREE.DodecahedronGeometry(0.4, 0), M.grass, trees, (o, [x, y]) => { o.position.set(W(x), 0.04, W(y)); o.scale.set(1.5, 0.3, 1.5); o.rotation.y = hash(x, y, 35) * 6; return C(th.grass).offsetHSL(0, 0, -0.04); }, { receive: false });
     }
@@ -252,7 +264,7 @@ export function buildWorld(scene, isl, def, opts = {}) {
       const fpos = (x, y, k) => [W(x) + (hash(x, y, 81 + k * 7) - 0.5) * 1.6, W(y) + (hash(x, y, 82 + k * 7) - 0.5) * 1.6];
       instanced(G, flowerGeo, M.tuft, fl2, (o, [x, y, k]) => {
         const [px, pz] = fpos(x, y, k); o.position.set(px, 0.02, pz); o.rotation.y = hash(x, y, 89 + k) * 6; o.scale.setScalar(0.9 + hash(x, y, 90 + k) * 0.4);
-        return C(th.glass ? ['#bff3ff', '#d8c8ff', '#ffd1f0', '#ffffff'][Math.floor(hash(x, y, 83 + k) * 4)] : ['#ffffff', '#ffd76a', '#ff9ec7', '#c9b6ff', '#ff9ec7'][Math.floor(hash(x, y, 83 + k) * 5)]);
+        return C(th.flowers ? th.flowers[Math.floor(hash(x, y, 83 + k) * th.flowers.length)] : th.glass ? ['#bff3ff', '#d8c8ff', '#ffd1f0', '#ffffff'][Math.floor(hash(x, y, 83 + k) * 4)] : ['#ffffff', '#ffd76a', '#ff9ec7', '#c9b6ff', '#ff9ec7'][Math.floor(hash(x, y, 83 + k) * 5)]);
       }, { receive: false });
       instanced(G, stemGeo, stemM, fl2, (o, [x, y, k]) => { const [px, pz] = fpos(x, y, k); o.position.set(px, 0.02, pz); o.scale.setScalar(0.9 + hash(x, y, 90 + k) * 0.4); }, { receive: false });
     } else if (themeOf(z) === 'sanctuaire') {
@@ -930,7 +942,7 @@ export function buildWorld(scene, isl, def, opts = {}) {
   /* Une zone (et ses voisines) visibles ; les intérieurs seulement quand on y est */
   function showZones(current) {
     zones.forEach((z, zi) => { zoneGroups[zi].visible = current >= 0 && zones[current].interior ? zi === current : !z.interior; });
-    skyOn = !(current >= 0 && ['sanctuaire', 'temple', 'interieur', 'grotte', 'lac', 'phare_abysses' /* ACTE IV */].includes(zones[current].theme));
+    skyOn = !(current >= 0 && ['sanctuaire', 'temple', 'interieur', 'grotte', 'lac', 'phare_abysses' /* ACTE IV */, 'moulins' /* ACTE V */].includes(zones[current].theme));
     if (current >= 0 && current !== life.cur) { life.cur = current; life.setZone(current, props); }
   }
 

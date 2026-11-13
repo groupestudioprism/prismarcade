@@ -126,9 +126,12 @@ const D = {
   grapple_pull: (k) => { k.N(0.5, 0.07, 600, 1, 0, 'bandpass', { cutTo: 2200 }); k.T(160, 0.5, 'triangle', 0.03, 0, 2.5, { cut: 900 }); },
   rope: (k) => { k.N(0.18, 0.05, 1800 + Math.random() * 500, 3, 0, 'bandpass', { cutTo: 1100 }); },
 };
+/* ACTE V */
+import { SFX_PICS } from './themes-pics.js';
+Object.assign(D, SFX_PICS);
 /* variantes : couleurs, armes, sols */
 for (const c of Object.keys(NOTE)) D['note_' + c] = (k) => { const ns = NOTE[c]; ns.forEach((f, i) => k.bell(f, 1.1, ns.length > 1 ? 0.04 : 0.055, i * 0.025, 0.5)); };
-['bois', 'pierre', 'herbe', 'eau', 'verre', 'terre'].forEach((g) => { D['hitground_' + g] = D['step_' + g]; });
+['bois', 'pierre', 'herbe', 'eau', 'verre', 'terre', 'neige'].forEach((g) => { D['hitground_' + g] = D['step_' + g]; });
 D.step = (k) => { const g = GROUND_ALIAS[k.o.ground] || k.o.ground; (D['step_' + g] || D.step_herbe)(k); };
 D.swingWeapon = (k) => (D['swing_' + k.o.weapon] || D.swing)(k);
 D.attack = D.swingWeapon;

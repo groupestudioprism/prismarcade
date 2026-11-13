@@ -4,7 +4,7 @@
    Vérifie : quêtes ↔ PNJ ↔ objets ↔ boutiques ↔ ennemis ↔ îles ↔ icônes ↔ déblocages.
    ========================================================= */
 import fs from 'node:fs';
-import { ISLANDS } from '../js/levels.js';
+import { ISLANDS, ISLAND_META } from '../js/levels.js';
 import { ITEMS, UPGRADES, RECIPES } from '../js/data/items.js';
 import { QUESTS } from '../js/data/quests.js';
 import { NPCS } from '../js/data/npcs.js';
@@ -12,6 +12,7 @@ import { SHOPS } from '../js/data/shops.js';
 import { ENEMIES } from '../js/data/enemies.js';
 import { UNLOCK_NAMES, OUTFITS, ACCESSORIES, HAIR_COLORS, CLOAK_COLORS, TRIMS } from '../js/data/looks.js';
 import { SAVE_VERSION } from '../js/game/state.js';
+import { buildIsland, postLinks, ventLinks } from '../js/logic.js';   /* ACTE V */
 
 const err = [], warn = [];
 const E = (m) => err.push(m), Wn = (m) => warn.push(m);
@@ -165,7 +166,7 @@ for (const [id, q] of Object.entries(QUESTS)) {
     if (s.type === 'item') { if (!ITEMS[s.item]) E(`${w}.${s.id} : objet inconnu ${s.item}`); }
     if (s.type === 'flag') flagsRead.add(s.flag);
     if (s.type === 'reach' && !zonesAll[s.zone]) E(`${w}.${s.id} : zone ${s.zone} inconnue`);
-    if (s.type === 'count' && !['pages', 'shards', 'lampions', 'kills', 'eclats', 'graines'].includes(s.what)) E(`${w}.${s.id} : compteur inconnu ${s.what}`);
+    if (s.type === 'count' && !['pages', 'shards', 'lampions', 'kills', 'eclats', 'graines', 'fanions'].includes(s.what)) E(`${w}.${s.id} : compteur inconnu ${s.what}`);
     if (s.type === 'kill' && s.enemy && !ENEMIES[s.enemy]) E(`${w}.${s.id} : ennemi inconnu ${s.enemy}`);
     texts.push([`${w}.${s.id}`, s.text]);
   });
@@ -193,6 +194,19 @@ for (const f of flagsRead) {
 }
 for (const f of [...flagsSet]) if (!flagsRead.has(f) && !mainSrc.includes(f)) Wn(`Drapeau « ${f} » posé mais jamais lu`);
 
+/* ---------- ACTE V : coffres posés sur une case d'atterrissage ou de départ d'un grappin / d'un courant d'air ----------
+   En jeu, un coffre rend sa case non marchable (isl.solid) : un lien dont l'arrivée est bouchée disparaît. */
+for (const I of ISLANDS) {
+  const isl = buildIsland(I);
+  const key = (l) => `${l.from ? l.from.id : '?'}>${l.dir}`;
+  const links = () => isl.ents.filter((e) => e.t === 'post' || e.t === 'vent').flatMap((e) => (e.t === 'post' ? postLinks : ventLinks)(isl, e).map((l) => key(Object.assign({ from: e }, l)) + `@${l.land}`));
+  const before = new Set(links());
+  I.zones.forEach((z) => (z.chests || []).forEach((c) => isl.solid.add((z.ox + c.x) + ',' + (z.oy + c.y))));
+  const after = new Set(links());
+  for (const k of before) if (!after.has(k)) E(`${I.id} : un coffre bouche l’atterrissage du lien ${k}`);
+  for (const e of isl.ents) if ((e.t === 'post' || e.t === 'vent') && isl.solid.has(e.x + ',' + e.y)) E(`${I.id} : un coffre sur ${e.id}`);
+}
+
 /* ---------- Objets inobtenables ---------- */
 const obtainable = new Set();
 const addAll = (o) => JSON.stringify(o, (k, v) => { if (k === 'item' || k === 'give') obtainable.add(v); return v; });
@@ -203,6 +217,7 @@ for (const d of Object.keys(dropsFrom)) obtainable.add(d);
 for (const k of Object.keys(RECIPES)) obtainable.add(k);
 for (const I of ISLANDS) for (const z of I.zones) for (const d of z.doors || []) if (d.key) 0;
 for (const e of Object.values(ENEMIES)) if (e.boss && e.reward) obtainable.add(e.reward);
+for (const m of Object.values(ISLAND_META)) if (m.finaleGive) obtainable.add(m.finaleGive);   /* ACTE V */
 const srcAll = mainSrc + fs.readFileSync(new URL('../js/game/combat.js', import.meta.url), 'utf8');
 for (const id of Object.keys(ITEMS)) if (!obtainable.has(id) && !new RegExp(`['"]${id}['"]|\\b${id}\\b`).test(srcAll)) Wn(`Objet ${id} jamais obtenable (ni boutique, ni coffre, ni butin, ni quête)`);
 
