@@ -330,6 +330,8 @@ export const NPCS = {
         say: ['Le phare brille ! Pour la première fois depuis longtemps, je vois la route : au sud-est, une île couverte d’arbres de verre. La Forêt de Verre. Je t’y emmène quand tu veux.'],
         choices: [
           { t: 'Partir pour la Forêt de Verre', do: [{ travel: { to: 'foret', zone: 'vitrebourg', cell: [12, 7] } }] },
+          { t: 'Partir pour le Désert des Échos', if: (q) => q.flag('acte2_fini'), do: [{ travel: { to: 'desert', zone: 'cite', cell: [12, 7] } }] },   /* ACTE III */
+          { t: 'Partir pour les Abysses Miroirs', if: (q) => q.flag('acte3_fini'), do: [{ travel: { to: 'abysses', zone: 'greve', cell: [12, 7] } }] },   /* ACTE IV : route ouverte par la fin de l’Acte III */
           { t: 'Pas maintenant' },
         ],
       },
@@ -369,7 +371,7 @@ export const NPCS = {
           'Pour monter, il faut un grappin de lumière. Orin en avait dessiné les plans, et Silex, le maître verrier, les garde dans son atelier. Dis-lui que c’est moi qui t’envoie.',
           FIA('Un grappin ! On va voler d’arbre en arbre ! Enfin… de poteau en poteau.'),
         ],
-        do: [{ take: 'prisme_vert', n: 1 }, { step: 'q_verre' }, { flag: 'verre_fini' }],
+        do: [{ take: 'prisme_vert', n: 1 }, { step: 'q_verre' }, { flag: 'verre_fini' }, { teach: 'porter' } /* ACTE III */],
       },
       {
         if: (q) => S(q, 'q_phare_verre', 'retour'),
@@ -393,11 +395,6 @@ export const NPCS = {
       {
         if: (q) => q.quest('q_phare_verre') === 'done',
         say: ['Regarde-moi ça : les arbres reprennent leurs couleurs. Le Phare de Verre veille de nouveau sur la forêt, et c’est toi qui l’as rallumé.', 'La route vers le sud-est n’est pas encore ouverte, mais Vitrebourg t’attendra toujours. Les graines de la Canopée, la livraison de Galet… il reste de quoi t’occuper, si tu veux.'],
-        /* ACTE VI — liaison PROVISOIRE vers la dernière île (à la fusion : remplacée par le voyage depuis les Pics du Vent) */
-        choices: [
-          { t: 'Embarquer pour la Citadelle du Zénith', do: [{ travel: { to: 'zenith', zone: 'porte', cell: [12, 7] } }] },
-          { t: 'À plus tard' },
-        ],
       },
       {
         if: () => true,
@@ -563,6 +560,7 @@ export const NPCS = {
         say: ['Je fais la traversée entre Vitrebourg et Havre-Aube. Tu veux rentrer ?'],
         choices: [
           { t: 'Retourner à Havre-Aube', do: [{ travel: { to: 'aube', zone: 'havre', cell: [27, 7] } }] },
+          { t: 'Partir pour le Désert des Échos', if: (q) => q.flag('acte2_fini'), do: [{ travel: { to: 'desert', zone: 'cite', cell: [12, 7] } }] },   /* ACTE III */
           { t: 'Pas maintenant' },
         ],
       },
@@ -595,6 +593,22 @@ export const NPCS = {
   },
 };
 
+/* ACTE IV : Les Abysses Miroirs (js/data/abysses.js) */
+import { NPCS_A4 } from './abysses.js';
+Object.assign(NPCS, NPCS_A4);
+/* ACTE III : habitants de la Cité des Échos */
+import { DESERT_NPCS } from './desert-npcs.js';
+Object.assign(NPCS, DESERT_NPCS);
+/* ACTE V : Les Pics du Vent */
+import { NPCS_PICS, PICS_TRAVEL_CHOICE } from './pics-story.js';
+Object.assign(NPCS, NPCS_PICS);
+/* ACTE V : route Abysses -> Pics (acte4_fini), proposée par les passeurs */
+const _ins = (id, before) => { const ch = NPCS[id].talk.filter((t) => t.choices).map((t) => t.choices); ch.forEach((c) => { const k = c.findIndex((x) => x.t === before); if (k >= 0 && !c.includes(PICS_TRAVEL_CHOICE)) c.splice(k, 0, PICS_TRAVEL_CHOICE); }); };
+_ins('calixte', 'Pas maintenant'); _ins('yael', 'Pas maintenant'); _ins('lagon', 'Tu as besoin d’aide ?');
 /* ACTE VI : la Citadelle du Zénith */
-import { ZENITH_NPCS } from './zenith.js';
+import { ZENITH_NPCS, ZENITH_TRAVEL_CHOICE } from './zenith.js';
 Object.assign(NPCS, ZENITH_NPCS);
+/* ACTE VI : route Pics → Zénith (cinq fragments : Aube, Forêt, Désert, Abysses, Pics), proposée par les passeurs.
+   La condition `if` de ZENITH_TRAVEL_CHOICE masque le choix tant que les cinq fragments manquent. */
+const _insZ = (id, before) => { const ch = NPCS[id].talk.filter((t) => t.choices).map((t) => t.choices); ch.forEach((c) => { const k = c.findIndex((x) => x.t === before); if (k >= 0 && !c.includes(ZENITH_TRAVEL_CHOICE)) c.splice(k, 0, ZENITH_TRAVEL_CHOICE); }); };
+_insZ('calixte', 'Pas maintenant'); _insZ('yael', 'Pas maintenant'); _insZ('lagon', 'Tu as besoin d’aide ?'); _insZ('zephyr', 'Au revoir');

@@ -1,5 +1,5 @@
 """Commandes tactiles : joystick, boutons, dialogue au toucher, menus (viewport 844x390, ?touch)."""
-import sys; sys.path.insert(0,'/home/claude/prismarcade/lumen/tests')
+import sys; sys.path.insert(0,__import__('os').path.dirname(__import__('os').path.abspath(__file__)))
 from qa_lib import *
 q=QA('tactile', viewport=(844,390), query='?low&nobloom&touch'); q.load(); pg=q.pg
 cdp=q.ctx.new_cdp_session(pg)

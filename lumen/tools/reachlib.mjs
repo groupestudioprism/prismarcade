@@ -1,7 +1,7 @@
 /* LUMEN — contrôle d'accessibilité d'une île (partagé par build-*.mjs et reach.mjs).
    Toutes les portes et tous les ponts sont ouverts ; le grappin relie les poteaux (logic.js : postLinks).
    « cut » = ronces et roches fissurées franchissables (lame / marteau obtenus). */
-import { buildIsland, reachCells, postLinks } from '../js/logic.js';
+import { buildIsland, reachCells, postLinks, ventLinks } from '../js/logic.js';
 
 export function checkIsland(def, town) {
   const isl = buildIsland(def);
@@ -9,7 +9,9 @@ export function checkIsland(def, town) {
   const townZ = def.zones.find((z) => z.id === town) || def.zones[0];
   const starts = [[townZ.ox + Math.floor(townZ.spawn[0]), townZ.oy + Math.floor(townZ.spawn[1])]];
   def.zones.filter((z) => z.interior).forEach((z) => starts.push([z.ox + z.spawn[0], z.oy + z.spawn[1]]));
-  const free = reachCells(isl, starts, { cut: false }), cut = reachCells(isl, starts, { cut: true });
+  /* ACTE IV : les vannes sont réversibles : on réunit ce qui est accessible avec toutes les vannes basses et toutes hautes */
+  const bothValves = (opts) => { const u = new Set(); [0, 1].forEach((v) => { Object.values(isl.valves || {}).forEach((e) => (e.state = v)); reachCells(isl, starts, opts).forEach((k) => u.add(k)); }); Object.values(isl.valves || {}).forEach((e) => (e.state = 0)); return u; };
+  const free = bothValves({ cut: false }), cut = bothValves({ cut: true });
   const problems = [], notes = [];
   const near = (set, x, y) => [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => set.has((Math.floor(x) + a) + ',' + (Math.floor(y) + b)));
   const check = (label, x, y) => {
@@ -27,15 +29,16 @@ export function checkIsland(def, town) {
   isl.ents.forEach((e) => {
     if (['shard', 'page', 'wisp'].includes(e.t)) check(`${e.t} ${e.id}`, e.x, e.y);
     if (e.rot) { const ok = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => cut.has((e.x + a) + ',' + (e.y + b))); if (!ok) problems.push(`objet orientable ${e.id} hors de portée (${e.x}, ${e.y})`); }
-    if (e.t === 'post') {
-      const links = postLinks(isl, e);
+    if (e.t === 'post' || e.t === 'vent') {
+      const links = (e.t === 'vent' ? ventLinks : postLinks)(isl, e);
       if (!links.length) problems.push(`poteau ${e.id} (${e.x}, ${e.y}) sans liaison`);
       links.forEach((l) => { if (!l.to.id) problems.push('poteau sans id'); });
     }
   });
   // chaque poteau doit pouvoir être atteint à pied depuis une case voisine, et le retour doit exister (liens symétriques)
-  isl.ents.filter((e) => e.t === 'post').forEach((p) => {
-    postLinks(isl, p).forEach((l) => { if (!postLinks(isl, l.to).some((b) => b.to === p)) problems.push(`liaison à sens unique ${p.id} → ${l.to.id}`); });
+  isl.ents.filter((e) => e.t === 'post' || e.t === 'vent').forEach((p) => {
+    const lk = p.t === 'vent' ? ventLinks : postLinks;
+    lk(isl, p).forEach((l) => { if (!lk(isl, l.to).some((b) => b.to === p)) problems.push(`liaison à sens unique ${p.id} → ${l.to.id}`); });
   });
-  return { problems, notes, cells: cut.size, posts: isl.ents.filter((e) => e.t === 'post').length };
+  return { problems, notes, cells: cut.size, posts: isl.ents.filter((e) => e.t === 'post' || e.t === 'vent').length };
 }

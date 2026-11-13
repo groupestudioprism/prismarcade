@@ -3,7 +3,7 @@ import sys, json, time, subprocess, os
 from playwright.sync_api import sync_playwright
 
 PORT = int(os.environ.get("QA_PORT", "8873"))
-ROOT = os.environ.get("QA_ROOT") or os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))   # racine du dépôt (le worktree qui contient ce dossier)
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))   # racine du dépôt (worktree), plus de chemin absolu
 SOL = open(os.path.join(os.path.dirname(__file__), "qa_solutions.json")).read()
 
 HELP = r"""
@@ -19,7 +19,13 @@ window.T = {
   q(id){ return __lumen.quests.state(id)+':'+__lumen.quests.stepId(id); },
   tick(ms){ return new Promise(r=>setTimeout(r,ms||60)); },
   solve(gate){ const L=__lumen; const s=SOL[L.st.player.island||'aube'][gate]; if(!s) return 'nosol:'+gate;
-    Object.entries(s).forEach(([id,v])=>L.set(id,v)); return L.isl.gates[gate].open; },
+    const ents=Object.entries(s), moves=ents.filter(([k])=>k.startsWith('pos:')), A=L.G.a3;
+    if(moves.length){ L.st.player.abilities.porter=true; let todo=moves.slice(), guard=0;   // objets portés : vraie logique de jeu (prendre, puis poser sur un socle libre)
+      while(todo.length && guard++<12){ const rest=[]; for(const [k,p] of todo){ const e=L.isl.ents.find(x=>x.id===k.slice(4)); if(e.x===p[0]&&e.y===p[1]) continue;
+          const so=L.isl.socles.find(q=>q.x===p[0]&&q.y===p[1]); if(!so||L.isl.entAt[p[0]+','+p[1]]){ rest.push([k,p]); continue; }
+          A.lift(e); if(!A.carrying()){ rest.push([k,p]); continue; } A.place(so); } todo=rest; }
+      if(todo.length) return 'socles:'+JSON.stringify(todo); }
+    ents.filter(([k])=>!k.startsWith('pos:')).forEach(([id,v])=>{ if(id==='@orb') L.setOrb(v.at,v.dir); else L.set(id,v); }); return L.isl.gates[gate].open; },
   killAll(){ const c=__lumen.combat; let n=0; c.enemies.filter(e=>e.state!=='dead').forEach(e=>{c.dealDamage(e,99999,'tranchant',{heavy:true});n++}); return n; },
   zone(){ return __lumen.G.zoneId(); },
   info(){ const L=__lumen; return JSON.stringify({mode:L.S.mode,zone:L.G.zoneId(),isl:L.st.player.island,hp:L.st.player.hp,ecus:L.st.player.ecus,x:+(L.P.x/2).toFixed(1),y:+(L.P.z/2).toFixed(1)}); }

@@ -8,6 +8,6 @@ J('arrivée (état voyageur)',"""(async()=>{const m=await import('/lumen/js/game
 J('île/zone',"__lumen.st.player.island+' '+T.zone()+' '+T.q('q_porte')","zenith")
 J('PNJ présents',"JSON.stringify(__lumen.npcs.map(n=>n.id))")
 J('Célestine',"(async()=>await T.talkTo('celestine'))()")
-J('état quête',"T.q('q_porte')+' portails='+__lumen.st.abilities.portails+' b='+__lumen.G.isGateOpen('b_portails')")
+J('état quête',"T.q('q_porte')+' portails='+__lumen.st.player.abilities.portails+' b='+__lumen.G.isGateOpen('b_portails')")
 J('erreurs',"'ok'")
 q.done()

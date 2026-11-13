@@ -6,17 +6,29 @@
    ========================================================= */
 import aube from './islands/aube.js';
 import foret from './islands/foret.js';
+import desert from './islands/desert.js';   /* ACTE III */
+import abysses from './islands/abysses.js';   /* ACTE IV */
+import pics from './islands/pics.js';   /* ACTE V */
 import zenith from './islands/zenith.js';   /* ACTE VI */
 
-export const ISLANDS = [aube, foret, zenith];   /* ACTE VI : à la fusion, ajouter ici les îles des Actes III à V entre foret et zenith */
+export const ISLANDS = [aube, foret, desert /* ACTE III */, abysses /* ACTE IV */, pics /* ACTE V */, zenith /* ACTE VI */];
 
 /* Données propres à chaque île, utilisées par le moteur (point de repos, ville, voyage).
    home : lit où l'on se repose et où l'on réapparaît · town : zone du village · title : nom affiché
    finale : bannière une fois la balise allumée · actEndFlag : drapeau (posé par un dialogue) qui affiche l'écran de fin d'acte
    restoreBoss : la défaite du boss compte dans la restauration des couleurs de l'île */
 export const ISLAND_META = {
+  /* ACTE IV */
+  abysses: { home: { zone: 'auberge_a', cell: [6, 7] }, town: 'greve', title: 'Les Abysses Miroirs', inn: 'au Coquillage', warp: 'greve', boss: 'boss_marees', first: 'q_abysses', restoreBoss: true, smith: 'Varech',
+    finale: { title: 'Le Phare des Abysses brille', sub: 'Retourne voir Marée à la Grève' }, actEndFlag: 'acte4_fini' },
   foret: { home: { zone: 'auberge_f', cell: [9, 3] }, town: 'vitrebourg', title: 'La Forêt de Verre', inn: 'à la Rosée', warp: 'vitrebourg', boss: 'boss_verre', first: 'q_verre', restoreBoss: true,
     finale: { title: 'Le Phare de Verre brille', sub: 'Retourne voir Ambre à Vitrebourg' }, actEndFlag: 'acte2_fini' },
+  /* ACTE III */
+  desert: { home: { zone: 'auberge_d', cell: [9, 3] }, town: 'cite', title: 'Le Désert des Échos', inn: 'à l’Oasis', warp: 'cite', boss: 'boss_echos', first: 'q_echos', restoreBoss: true, smith: 'Rafik',
+    finale: { title: 'Le Phare des Sables brille', sub: 'Retourne voir Oumi dans la Cité des Échos' }, actEndFlag: 'acte3_fini' },
+  /* ACTE V : arrivée normale depuis les Abysses : travel { to: 'pics', zone: 'col', cell: [12, 7] } */
+  pics: { home: { zone: 'auberge_p', cell: [9, 3] }, town: 'col', title: 'Les Pics du Vent', inn: 'au Chamois endormi', warp: 'col', boss: 'boss_meunier', first: 'q_pics', restoreBoss: true, smith: 'Frimas',
+    finale: { title: 'Le Phare des Vents brille', sub: 'Retourne voir Borée au Col' }, actEndFlag: 'acte5_fini', finaleGive: 'prisme_violet' },
   /* ACTE VI */
   zenith: { home: { zone: 'auberge_z', cell: [9, 3] }, town: 'porte', title: 'La Citadelle du Zénith', inn: 'à l’Aurore', warp: 'porte', boss: 'boss_zenith', first: 'q_porte', restoreBoss: true,
     finale: { title: 'Le Phare du Zénith brille', sub: 'La lumière est partagée' }, actEndFlag: 'fin_jeu' },

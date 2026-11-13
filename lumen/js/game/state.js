@@ -1,15 +1,14 @@
-/* =========================================================
-   LUMEN — état d'une partie (ce qui est sauvegardé) et calculs
+/* ==================================================   LUMEN — état d'une partie (ce qui est sauvegardé) et calculs
    dérivés (statistiques, apparence). Format versionné : v.
    ========================================================= */
 import { ITEMS, UPGRADES, isStackable } from '../data/items.js';
 import { QUESTS } from '../data/quests.js';
 import { DEFAULT_LOOK, HAIR_COLORS, SKIN, EYES, CLOAK_COLORS, TRIMS, HEIGHTS, byId } from '../data/looks.js';
 
-export const SAVE_VERSION = 6;   /* ACTE VI : v6 = capacité portails, drapeaux de fin, amélioration d’arme niveau 4 (normalize reste compatible v1 à v5) */
+export const SAVE_VERSION = 6;   /* v6 : ACTE III world.moved (objets portés) ; ACTE VI capacité portails, drapeaux de fin, amélioration d’arme niveau 4 (normalize reste compatible v1 à v5) */
 
 /* Monde d'une île : tout ce qui change quand on joue (une île = un monde, voir otherWorlds) */
-export const newWorld = (firstWarp) => ({ dev: {}, gates: {}, picked: {}, cut: {}, broken: {}, chests: {}, lamps: {}, warps: firstWarp ? { [firstWarp]: 1 } : {}, killed: {} });
+export const newWorld = (firstWarp) => ({ dev: {}, gates: {}, picked: {}, cut: {}, broken: {}, chests: {}, lamps: {}, warps: firstWarp ? { [firstWarp]: 1 } : {}, killed: {}, moved: {} /* ACTE III : id → [x, y] ou null (en main) */ });
 
 export function newState() {
   return {
@@ -64,6 +63,11 @@ function sanitize(st) {
   p.x = p.x === null || p.x === undefined ? null : (Number.isFinite(Number(p.x)) ? Number(p.x) : null); p.z = p.z === null || p.z === undefined ? null : (Number.isFinite(Number(p.z)) ? Number(p.z) : null);
   if (p.x === null || p.z === null) { p.x = null; p.z = null; }
   if (!plain(p.abilities)) p.abilities = {};
+  if (p.portals && !(plain(p.portals) && Array.isArray(p.portals.list))) delete p.portals;   /* ACTE V */
+  /* Capacités déduites de l’avancement (parties antérieures à la fusion des Actes III et IV) : l’Orbe vient du Temple (Acte III), planer du Phare des Abysses (Acte IV) */
+  if (st.flags && (st.flags.dore_fini || st.flags.acte3_fini)) { p.abilities.porter = true; p.abilities.orbe = true; }
+  if (st.flags && st.flags.acte5_fini) { p.abilities.planer = true; p.abilities.portails = true; }   /* ACTE V : Pics du Vent terminés (planer par pierres de vent, Portails) */
+  if (st.flags && (st.flags.acte4_fini || (st.quests && st.quests.q_phare_abysses && st.quests.q_phare_abysses.state === 'done'))) p.abilities.planer = true;
   if (!plain(p.respawn) || typeof p.respawn.zone !== 'string' || !Array.isArray(p.respawn.cell) || p.respawn.cell.length < 2) p.respawn = { zone: p.zone || 'havre', cell: [6, 6] };
   st.playTime = num(st.playTime, 0, 0);
   // inventaire : objets connus, quantités entières positives
@@ -119,6 +123,7 @@ export function stats(st) {
     speed: 1 + (a && a.speed ? a.speed : 0) + accs.reduce((n, x) => n + (x.speed || 0), 0),
     regen: 6 + accs.reduce((n, x) => n + (x.regen || 0) * 8, 0),
     resBrume: accs.reduce((n, x) => n + (x.resBrume || 0), 0),
+    resSable: accs.reduce((n, x) => n + (x.resSable || 0), 0),   /* ACTE III */
     weapon: w || null, weaponId: st.equip.weapon, weaponLvl: wl,
   };
   return s;

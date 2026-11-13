@@ -218,3 +218,12 @@ export const QUESTS = {
 /* ACTE VI : la Citadelle du Zénith */
 import { ZENITH_QUESTS } from './zenith.js';
 Object.assign(QUESTS, ZENITH_QUESTS);
+/* ACTE IV : Les Abysses Miroirs (js/data/abysses.js) */
+import { QUESTS_A4 } from './abysses.js';
+Object.assign(QUESTS, QUESTS_A4);
+/* ACTE III : quêtes du Désert des Échos */
+import { DESERT_QUESTS } from './desert-quests.js';
+Object.assign(QUESTS, DESERT_QUESTS);
+/* ACTE V : Les Pics du Vent */
+import { QUESTS_PICS } from './pics-story.js';
+Object.assign(QUESTS, QUESTS_PICS);

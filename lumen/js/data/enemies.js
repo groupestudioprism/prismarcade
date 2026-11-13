@@ -89,3 +89,12 @@ export const ENEMIES = {
 /* ACTE VI : la Citadelle du Zénith */
 import { ZENITH_ENEMIES } from './zenith.js';
 Object.assign(ENEMIES, ZENITH_ENEMIES);
+/* ACTE V : Les Pics du Vent */
+import { ENEMIES_PICS } from './pics-data.js';
+Object.assign(ENEMIES, ENEMIES_PICS);
+/* ACTE IV : Les Abysses Miroirs (js/data/abysses.js) */
+import { ENEMIES_A4 } from './abysses.js';
+Object.assign(ENEMIES, ENEMIES_A4);
+/* ACTE III : créatures du Désert des Échos */
+import { DESERT_ENEMIES } from './desert-enemies.js';
+Object.assign(ENEMIES, DESERT_ENEMIES);

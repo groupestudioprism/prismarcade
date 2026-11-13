@@ -10,6 +10,19 @@ const FIA = (t) => ({ who: 'fia', t });
 const LYRA = (t) => ({ who: 'lyra', t });
 const fini = (q) => q.flag('fin_jeu');
 
+/* Voyage : le Zénith s’atteint depuis la fin de l’Acte V avec les cinq fragments du Prisme (rouge : Aube, vert : Forêt, doré : Désert,
+   bleu : Abysses, violet : Pics). Les drapeaux sont ceux posés par les fins d’acte (voir data/npcs.js, desert-npcs.js, abysses.js, pics-story.js). */
+export const zenithReady = (q) => !!(q.flag('acte1_fini') && (q.flag('verre_fini') || q.flag('acte2_fini')) && (q.flag('dore_fini') || q.flag('acte3_fini')) && q.flag('acte4_fini') && q.flag('acte5_fini'));
+export const ZENITH_TRAVEL_CHOICE = { t: 'Partir pour la Citadelle du Zénith', if: zenithReady, do: [{ travel: { to: 'zenith', zone: 'porte', cell: [12, 7] } }] };
+/* Retours depuis la Citadelle vers toutes les îles */
+const RETOURS = [
+  { t: 'Partir pour l’Île de l’Aube', do: [{ travel: { to: 'aube', zone: 'havre', cell: [27, 7] } }] },
+  { t: 'Partir pour la Forêt de Verre', do: [{ travel: { to: 'foret', zone: 'vitrebourg', cell: [12, 7] } }] },
+  { t: 'Partir pour le Désert des Échos', do: [{ travel: { to: 'desert', zone: 'cite', cell: [12, 7] } }] },
+  { t: 'Partir pour les Abysses Miroirs', do: [{ travel: { to: 'abysses', zone: 'greve', cell: [12, 7] } }] },
+  { t: 'Partir pour les Pics du Vent', do: [{ travel: { to: 'pics', zone: 'col', cell: [12, 7] } }] },
+];
+
 /* ---------------------------------------------------------
    Habitants
    --------------------------------------------------------- */
@@ -26,7 +39,7 @@ export const ZENITH_NPCS = {
           'Écoute-moi bien, Lyra. Le Grand Prisme n’a pas été brisé par la Brume : il s’est fendu tout seul, il y a longtemps, quand on a voulu le forcer à ne briller que d’une couleur. La Brume n’a fait que remplir la fissure.',
           'Au centre de la Grande Salle, son ombre s’est dressée. Elle se nourrit de ce qui reste du Prisme. Tant qu’elle vit, la lumière ne passera plus de phare en phare.',
           'Il y a un chemin : les Jardins célestes, la Grande Salle, puis le phare au sommet. Mais d’abord, retrouve les tiens. Séléné est arrivée avant toi ; elle t’attend près de la fontaine.',
-          'Prends ceci : un don de la citadelle. Les portails de lumière avalent un faisceau d’un côté et le rendent de l’autre. Tu sauras t’en servir.',
+          'Borée t’a appris à ouvrir des portails ; ici, ils sont partout. Ceux de la citadelle avalent un faisceau d’un côté et le rendent de l’autre, dans la même direction et avec la même couleur. Tu sauras t’en servir.',
         ],
         do: [{ ability: 'portails' }, { open: 'b_portails' }, { step: 'q_porte' }],
       },
@@ -47,7 +60,7 @@ export const ZENITH_NPCS = {
         say: ['Tu l’as vaincue ? Je l’ai senti jusqu’ici : la citadelle a cessé de trembler. Prends le dernier fragment dans le coffre de l’arène. Le phare est au sud, au bout du pont.'],
       },
       {
-        if: (q) => q.quest('q_zenith') === 'active',
+        if: (q) => q.quest('q_zenith') === 'active' && !fini(q),   /* une fois la fin vue, le choix « Revoir la scène finale » prime */
         say: ['Le phare du Zénith est un phare à six faisceaux. Rouge, vert et bleu à gauche ; jaune, magenta et cyan à droite. Chaque couleur partira vers un phare de l’archipel.', 'Les cristaux ouvrent les portes, mais pour la lumière finale, il faudra défaire ce qui a ouvert les portes. C’est ainsi depuis Orin.'],
       },
       {
@@ -353,17 +366,15 @@ export const ZENITH_NPCS = {
         if: (q) => fini(q),
         say: ['Je n’ai jamais autant navigué de ma vie. Depuis que les îles se rapprochent, les routes sont courtes. Où veux-tu aller ?'],
         choices: [
-          { t: 'Partir pour l’Île de l’Aube', do: [{ travel: { to: 'aube', zone: 'havre', cell: [15, 15] } }] },
-          { t: 'Partir pour la Forêt de Verre', do: [{ travel: { to: 'foret', zone: 'vitrebourg', cell: [15, 15] } }] },
+          ...RETOURS,
           { t: 'Pas maintenant' },
         ],
       },
       {
         if: () => true,
-        say: ['Ma barque est amarrée au pied de la citadelle. Elle ne retournera pas aux îles tant que le phare du Zénith est éteint : je ne voudrais pas faire demi-tour dans le noir.', 'Mais si tu veux revoir l’Aube ou la Forêt, je t’y mène.'],
+        say: ['Ma barque est amarrée au pied de la citadelle. Elle ne retournera pas aux îles tant que le phare du Zénith est éteint : je ne voudrais pas faire demi-tour dans le noir.', 'Mais si tu veux revoir l’une des cinq autres îles, je t’y mène.'],
         choices: [
-          { t: 'Partir pour l’Île de l’Aube', do: [{ travel: { to: 'aube', zone: 'havre', cell: [15, 15] } }] },
-          { t: 'Partir pour la Forêt de Verre', do: [{ travel: { to: 'foret', zone: 'vitrebourg', cell: [15, 15] } }] },
+          ...RETOURS,
           { t: 'Pas maintenant' },
         ],
       },
@@ -573,8 +584,8 @@ export const ZENITH_RECIPES = {
 };
 /* Quatrième amélioration des armes, troisième des armures */
 export const ZENITH_UPGRADES = {
-  arme: { ecus: 600, mats: { larme_ombre: 1, eclat_ivoire: 3 }, bonus: 1.3 },
-  armure: { ecus: 420, mats: { essence_brume: 2, eclat_ivoire: 2 }, bonus: 7 },
+  arme: { island: 'zenith', ecus: 600, mats: { larme_ombre: 1, eclat_ivoire: 3 }, bonus: 1.3 },
+  armure: { island: 'zenith', ecus: 420, mats: { essence_brume: 2, eclat_ivoire: 2 }, bonus: 7 },
 };
 
 /* ---------------------------------------------------------

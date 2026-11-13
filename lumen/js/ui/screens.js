@@ -17,6 +17,8 @@ const ABILITIES = [
   { id: 'esquive', name: 'Esquive', desc: 'Une roulade rapide : on ne peut pas être touchée pendant un court instant.', always: true, key: 'Espace' },
   { id: 'onde', name: 'Onde de lumière', desc: 'Fia libère une onde qui frappe tout autour (35 énergie). Traverse les boucliers.', key: 'Clic droit / L' },
   { id: 'charge', name: 'Coup chargé', desc: 'Maintiens l’attaque puis relâche : une attaque tournoyante. Débloqué au niveau 3.', key: 'Maintenir' },
+  { id: 'porter', name: 'Porter', desc: 'Prendre un miroir, un prisme ou une lame posé sur un socle, puis le reposer sur un autre socle libre de la même salle.', key: 'R / appui long' },   /* ACTE III */
+  { id: 'orbe', name: 'Orbe de Fia', desc: 'Fia devient lanterne de poche : elle allume les vasques de pierre et éclaire plus loin dans les temples.', key: 'Interagir' },
   { id: 'vision', name: 'Vision d’éclat', desc: 'Les secrets (roches fissurées, coffres cachés) apparaissent sur la carte.', key: 'Carte' },
 ];
 const fmtTime = (s) => { s = Math.round(s); const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60); return h ? `${h} h ${String(m).padStart(2, '0')}` : `${m} min`; };
@@ -184,7 +186,7 @@ export function createScreens(G) {
     const pages = G.pageList();
     const kinds = Object.keys(ENEMIES);
     body.innerHTML = `<div class="seg">${[['main', 'Principales'], ['side', 'Secondaires'], ['done', 'Terminées'], ['collection', 'Collection']].map(([k, l]) => `<button class="${k === jTab ? 'on' : ''}" data-jt="${k}">${l}</button>`).join('')}</div>
-      <div class="coll"><div><b>${G.counts('shards')} / ${G.countAll('shard')}</b><small>éclats de prisme</small></div><div><b>${pages.filter((p) => p.found).length} / ${pages.length}</b><small>pages d’Orin</small></div><div><b>${G.completion()} %</b><small>île complétée</small></div><div><b>${st.player.fragments}</b><small>fragments de cœur</small></div></div>
+      <div class="coll"><div><b>${G.counts('shards')} / ${G.countAll('shard')}</b><small>éclats de prisme</small></div><div><b>${pages.filter((p) => p.found).length} / ${pages.length}</b><small>pages d’Orin</small></div><div><b>${G.completion()} %</b><small>île complétée</small></div>${G.completionAll ? `<div><b>${G.completionAll().total} %</b><small>archipel (6 îles)</small></div>` : ''}<div><b>${st.player.fragments}</b><small>fragments de cœur</small></div></div>
       <h4>Pages d’Orin</h4><ul class="pages">${pages.map((p) => p.found ? `<li><button class="link" data-page="${p.id}">${esc(p.title)}</button></li>` : '<li class="muted">Page manquante</li>').join('')}</ul>
       <h4>Bestiaire</h4><ul class="bestiary">${kinds.map((k) => { const n = st.stats.killsBy[k] || 0; const e = ENEMIES[k]; return n ? `<li><b>${esc(e.name)}</b><em>${n}</em><small>${esc(e.desc)}</small></li>` : '<li class="muted"><b>???</b><small>Pas encore rencontré.</small></li>'; }).join('')}</ul>`;
     body.onclick = (ev) => {
@@ -314,16 +316,16 @@ export function createScreens(G) {
   /* ================= Forge ================= */
   function forge() {
     cur = 'forge';
-    const st = G.st, disc = st.flags.forge_remise ? 0.8 : 1, smith = G.def.id === 'foret' ? 'Silex' : 'Bran';
+    const st = G.st, disc = st.flags.forge_remise ? 0.8 : 1, smith = (G.meta && G.meta.smith) || (G.def.id === 'foret' ? 'Silex' : 'Bran');   /* ACTE III + IV : forgeron de l’île (meta.smith) */
     const owned = Object.keys(st.inv).filter((id) => ITEMS[id] && ['arme', 'armure'].includes(ITEMS[id].cat) && id !== 'veste_voyage' && id !== 'baton');
     const matsHtml = (m) => Object.entries(m).map(([id, n]) => `<span class="${(st.inv[id] || 0) >= n ? 'ok' : 'miss'}">${icon(ITEMS[id].icon)} ${esc(ITEMS[id].name)} ${st.inv[id] || 0}/${n}</span>`).join('');
     const can = (cost) => st.player.ecus >= Math.round(cost.ecus * disc) && Object.entries(cost.mats).every(([id, n]) => (st.inv[id] || 0) >= n);
     const rows = owned.map((id) => {
-      const it = ITEMS[id], lvl = st.gear[id] || 0, tbl = UPGRADES[it.cat], next = tbl[lvl];
-      return `<li class="${rarityCls(it.rarity)}"><span class="si">${icon(it.icon)}</span><div><b>${esc(it.name)} ${lvl ? '+' + lvl : ''}</b>${next ? `<small>Niveau ${lvl + 1} : ${it.cat === 'arme' ? 'attaque +' + Math.round(next.bonus * 100) + ' %' : 'défense +' + next.bonus}</small><div class="mats">${matsHtml(next.mats)}</div>` : '<small>Amélioration maximale.</small>'}</div>${next ? `<button class="btn small ${can(next) ? 'primary' : ''}" data-up="${id}" ${can(next) ? '' : 'disabled'}>${Math.round(next.ecus * disc)} ${icon('coin')}</button>` : '<span class="tag">Max</span>'}</li>`;
+      const it = ITEMS[id], lvl = st.gear[id] || 0, tbl = UPGRADES[it.cat], next0 = tbl[lvl], next = next0 && (!next0.island || next0.island === G.def.id) ? next0 : null, ailleurs = !!next0 && !next;   /* ACTE VI : le dernier niveau se forge au Zénith */
+      return `<li class="${rarityCls(it.rarity)}"><span class="si">${icon(it.icon)}</span><div><b>${esc(it.name)} ${lvl ? '+' + lvl : ''}</b>${next ? `<small>Niveau ${lvl + 1} : ${it.cat === 'arme' ? 'attaque +' + Math.round(next.bonus * 100) + ' %' : 'défense +' + next.bonus}</small><div class="mats">${matsHtml(next.mats)}</div>` : (ailleurs ? '<small>Une forge plus haute, au Zénith, peut aller plus loin.</small>' : '<small>Amélioration maximale.</small>')}</div>${next ? `<button class="btn small ${can(next) ? 'primary' : ''}" data-up="${id}" ${can(next) ? '' : 'disabled'}>${Math.round(next.ecus * disc)} ${icon('coin')}</button>` : '<span class="tag">Max</span>'}</li>`;
     });
-    const craft = Object.entries(RECIPES).filter(([, r]) => !r.island || r.island === G.def.id /* ACTE VI */).map(([id, r]) => { const it = ITEMS[id]; const have = st.inv[id]; return `<li class="${rarityCls(it.rarity)}"><span class="si">${icon(it.icon)}</span><div><b>${esc(it.name)}</b><small>${esc(it.desc)}</small><div class="mats">${matsHtml(r.mats)}</div></div>${have ? '<span class="tag">Possédé</span>' : `<button class="btn small ${can(r) ? 'primary' : ''}" data-craft="${id}" ${can(r) ? '' : 'disabled'}>${Math.round(r.ecus * disc)} ${icon('coin')}</button>`}</li>`; });
-    open(`<div class="panel shop-card"><div class="j-head"><div><p class="kicker">Forge</p><h2>${smith === 'Silex' ? 'Verrerie de Silex' : 'Forge de Bran'}</h2></div><div class="purse">${icon('coin')} <b>${fmt(st.player.ecus)}</b></div><button class="icon-btn" data-a="close">${icon('close')}</button></div>
+    const craft = Object.entries(RECIPES).filter(([, r]) => !r.island || r.island === G.def.id).map(([id, r]) => { const it = ITEMS[id]; const have = st.inv[id]; return `<li class="${rarityCls(it.rarity)}"><span class="si">${icon(it.icon)}</span><div><b>${esc(it.name)}</b><small>${esc(it.desc)}</small><div class="mats">${matsHtml(r.mats)}</div></div>${have ? '<span class="tag">Possédé</span>' : `<button class="btn small ${can(r) ? 'primary' : ''}" data-craft="${id}" ${can(r) ? '' : 'disabled'}>${Math.round(r.ecus * disc)} ${icon('coin')}</button>`}</li>`; });
+    open(`<div class="panel shop-card"><div class="j-head"><div><p class="kicker">Forge</p><h2>${({ Silex: 'Verrerie de Silex' })[smith] || 'Forge de ' + smith}</h2></div><div class="purse">${icon('coin')} <b>${fmt(st.player.ecus)}</b></div><button class="icon-btn" data-a="close">${icon('close')}</button></div>
       <h4>Améliorer</h4><ul class="shop-list">${rows.join('') || `<li class="muted">${smith} améliore les armes et les armures (pas le bâton ni la veste de voyage).</li>`}</ul>
       <h4>Fabriquer</h4><ul class="shop-list">${craft.join('')}</ul></div>`);
     scr.onclick = (ev) => {
@@ -382,7 +384,7 @@ export function createScreens(G) {
     open(`<div class="panel end-card"><p class="kicker">Acte ${G.def.num || 1} terminé</p><h1>${esc(G.def.endTitle || (G.def.num === 2 ? 'Le Temple de Verre est libéré' : 'Le phare de l’Aube brille'))}</h1><p class="lead">${esc(G.def.ending)}</p>
       <div class="stats"><div><b>${fmtTime(G.st.playTime)}</b><small>temps de jeu</small></div><div><b>${G.completion()} %</b><small>île complétée</small></div>${G.completionAll ? `<div><b>${G.completionAll().total} %</b><small>archipel complété</small></div>` : ''}<div><b>${G.st.player.lvl}</b><small>niveau</small></div><div><b>${G.st.stats.kills}</b><small>créatures vaincues</small></div><div><b>${G.quests.done('side').length}</b><small>quêtes secondaires</small></div></div>
       ${info && info.xp ? `<p class="gain">🎁 +${fmt(info.xp)} XP · +${fmt(info.coins)} pièces sur Prism Arcade</p>` : ''}
-      <div class="next"><h3>La suite du voyage</h3>${G.upcoming.map((u) => `<div class="up"><span>Île ${u.num}</span><b>${esc(u.name)}</b><small>${esc(u.what)} · bientôt</small></div>`).join('')}</div>
+      <div class="next"><h3>La suite du voyage</h3>${(G.islands || []).filter((i) => i.num === (G.def.num || 1) + 1).map((u) => `<div class="up"><span>Île ${u.num}</span><b>${esc(u.name)}</b><small>disponible : parle au passeur</small></div>`).join('')}${G.upcoming.map((u) => `<div class="up"><span>Île ${u.num}</span><b>${esc(u.name)}</b><small>${esc(u.what)} · bientôt</small></div>`).join('')}</div>
       <div class="actions"><button class="btn primary" data-a="close">Continuer à explorer</button><a class="btn" href="../#/">Retour à Prism Arcade</a></div></div>`, 'end');
     scr.onclick = (ev) => { if (ev.target.closest('[data-a="close"]')) close(); };
   }
