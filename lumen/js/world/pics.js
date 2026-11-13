@@ -161,7 +161,7 @@ export function initPics(ctx) {
     cloth.rotation.x = -Math.PI / 2 + 0.28; cloth.position.set(0, 3.0, -0.2); glider.add(cloth); glider.userData.cloth = cloth;
     [-1, 1].forEach((s) => { const b = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 1.8, 4), M.woodDark); b.rotation.x = Math.PI / 2 - 0.28; b.position.set(s * 1.3, 3.0, -0.2); glider.add(b);
       const str = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 1.7, 3), new THREE.MeshBasicMaterial({ color: '#ffffff' })); str.position.set(s * 0.65, 2.0, 0.0); str.rotation.z = s * 0.38; glider.add(str); });
-    glider.add(Object.assign(haloSprite('#c9b8ff', 3.2, 0.35), { position: new THREE.Vector3(0, 2.9, 0) }));
+    { const h = haloSprite('#c9b8ff', 3.2, 0.35); h.position.set(0, 2.9, 0); glider.add(h); }
   }
 
   /* ---------- portails de lumière ---------- */

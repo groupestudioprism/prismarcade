@@ -3,7 +3,7 @@ import sys, json, time, subprocess, os
 from playwright.sync_api import sync_playwright
 
 PORT = int(os.environ.get("QA_PORT", "8776"))
-ROOT = "/home/claude/prismarcade"
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))   # ACTE V : relatif au worktree
 SOL = open(os.path.join(os.path.dirname(__file__), "qa_solutions.json")).read()
 
 HELP = r"""
