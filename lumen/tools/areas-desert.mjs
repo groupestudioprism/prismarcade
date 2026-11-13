@@ -88,7 +88,7 @@ function oasis() {
     props: [
       { t: 'sign', x: 13, y: 2, w: 1, h: 1, text: 'Oasis des Roseaux. L’eau de la Cité vient d’ici. Les scorpions aussi.' },
       { t: 'shelter', x: 19, y: 7, w: 1, h: 1, color: '#c0584a', id: 'abri_oasis' },
-      { t: 'pot', x: 24, y: 8, w: 1, h: 1, color: '#c9783a' },
+      { t: 'pot', x: 23, y: 9, w: 1, h: 1, color: '#c9783a' },
     ],
     chests: [
       { id: 'ch_oas_coeur', x: 4, y: 21, item: 'fragment_coeur', n: 1 },
@@ -119,6 +119,7 @@ function oasis() {
 function dunes() {
   const W = 40, H = 30, g = grid(W, H);
   blob(g, 19.5, 14.5, 20.4, 15.2, 91, 0.2);
+  rect(g, 0, 3, 10, 6, '.');          // esplanade d'arrivée (le pont des salles de sable y débouche)
   rim(g, 92, 0.25);
   scatter(g, '#', 0.035, 93); scatter(g, 'T', 0.045, 94);
   road(g, [[0, 5], [10, 5], [10, 12], [20, 12], [20, 29]]);
@@ -139,7 +140,7 @@ function dunes() {
     id: 'dunes', region: 'dunes', title: 'Les Dunes', theme: 'desert', music: 'dunes', area: true, storm: true, map: toRows(g),
     spawn: [2, 5], entry: [0, 5], entryGate: 'ds4',
     props: [
-      { t: 'sign', x: 3, y: 3, w: 1, h: 1, text: 'Les Dunes. Quand le vent se lève, la lumière ne porte plus : abrite-toi sous une tente, ou attends que le sable retombe. Rien ne presse.' },
+      { t: 'sign', x: 3, y: 4, w: 1, h: 1, text: 'Les Dunes. Quand le vent se lève, la lumière ne porte plus : abrite-toi sous une tente, ou attends que le sable retombe. Rien ne presse.' },
       { t: 'shelter', x: 12, y: 9, w: 1, h: 1, color: '#c0584a', id: 'abri_dunes1' },
       { t: 'shelter', x: 27, y: 10, w: 1, h: 1, color: '#4f8aa0', id: 'abri_dunes2' },
       { t: 'stele', x: 21, y: 7, w: 1, h: 1, id: 'stele_dunes' },
@@ -230,6 +231,7 @@ function temple() {
       { t: 'item', id: 'tablette2', item: 'tablette_echo', x: 3, y: 17 },
       { t: 'item', id: 'tablette3', item: 'tablette_echo', x: 3, y: 26 },
       { t: 'item', id: 'jarre3', item: 'jarre_ancienne', x: 27, y: 14 },
+      { t: 'page', id: 'pg_temple', page: 'orin6', x: 6, y: 24 },
     ],
     combatRooms: [{ gate: 'td_combat', rect: [1, 1, 9, 9] }],
     spawns: [
@@ -307,4 +309,17 @@ function auberge() {
   };
 }
 
-export function areasDesert() { return { cite: cite(), oasis: oasis(), dunes: dunes(), temple: temple(), vestibule: vestibule(), auberge: auberge() }; }
+/* Les accessoires d'une case (abri, stèle, vasque, rocher, panneau…) bloquent le passage comme les autres décors. */
+const BLOCK = new Set(['shelter', 'vasque', 'stele', 'dunerock', 'sign', 'ruin', 'pot']);
+function blockProps(z) {
+  const g = z.map.map((r) => r.split(''));
+  (z.props || []).filter((p) => BLOCK.has(p.t)).forEach((p) => {
+    const ch = g[p.y] && g[p.y][p.x];
+    if (ch === undefined || ch === ' ') throw new Error(`${z.id} : ${p.t} ${p.id || ''} posé dans le vide (${p.x}, ${p.y})`);
+    if (ch === '.' || ch === ',') g[p.y][p.x] = 'H';
+    else if (ch !== 'H') throw new Error(`${z.id} : ${p.t} ${p.id || ''} posé sur « ${ch} » (${p.x}, ${p.y})`);
+  });
+  z.map = toRows(g);
+  return z;
+}
+export function areasDesert() { const A = { cite: cite(), oasis: oasis(), dunes: dunes(), temple: temple(), vestibule: vestibule(), auberge: auberge() }; Object.values(A).forEach(blockProps); return A; }

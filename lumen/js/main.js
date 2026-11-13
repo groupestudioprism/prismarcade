@@ -688,7 +688,7 @@ function fade(cb) { const f = $('#fade'); f.classList.add('on'); setTimeout(() =
    Interactions
    ========================================================= */
 function cellCenter(z, c) { return [W(z.ox + c[0]), W(z.oy + c[1])]; }
-function findTarget() {
+function findTarget(all) {   /* all = true : renvoie tous les candidats triés (outil d'audit tools/audit.py) */
   const cands = [];
   const d = (x, z) => Math.hypot(x - P.x, z - P.z);
   const push = (dist, max, o) => { if (dist < max) cands.push(Object.assign({ dist }, o)); };
@@ -724,7 +724,7 @@ function findTarget() {
   const PRIO = { socle: -0.5, carry: -0.35, vasque: -0.4, shelter: 0.3, stele: 0.5, npc: -1.2, chest: -0.6, post: -0.2, device: -0.3, lock: -0.3, warp: 1.6, door: 0.2, sign: 0.4, lamp: -1.5, bed: 0.5, desk: 0, well: 0.6 };
   cands.sort((a, b) => (a.dist + (PRIO[a.kind] || 0)) - (b.dist + (PRIO[b.kind] || 0)));
   A3.decorate(cands);
-  return cands[0] || null;
+  return all ? cands : (cands[0] || null);
 }
 /* ---------- Grappin de lumière ---------- */
 const DIR_WORDS = { N: 'le nord', E: 'l’est', S: 'le sud', W: 'l’ouest' };
@@ -1354,5 +1354,5 @@ window.__lumen = {
   tp(x, y) { P.x = W(x); P.z = W(y); },
   tpZone(id, c) { const z = zones[zoneIndex[id]]; const cc = c || z.spawn; teleport(W(z.ox + cc[0]), W(z.oy + cc[1])); },
   give: (id, n) => giveItem(id, n),
-  completion, interact: () => interact(false), interactBack: () => interact(true), target: () => S.target, saveTo, openGate, a3: A3, findTarget,
+  findTarget, WARPS, canStand: (x, z) => canStand(x, z), completion, interact: () => interact(false), interactBack: () => interact(true), target: () => S.target, saveTo, openGate, a3: A3,
 };
