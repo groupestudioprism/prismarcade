@@ -1,6 +1,7 @@
 """Sauvegardes hostiles / anciennes versions / migration."""
 import sys, json; sys.path.insert(0,__import__('os').path.dirname(__import__('os').path.abspath(__file__)))
 from qa_lib import *
+import shutil; shutil.rmtree('/tmp/qa_prof_saves2', ignore_errors=True)
 q=QA('sauvegardes', profile='/tmp/qa_prof_saves2'); q.load()
 J=q.js
 base = q.ev("(()=>{const s=JSON.parse(JSON.stringify(__lumen.st));return s})()")
@@ -58,4 +59,25 @@ case('data = chaîne', "bonjour")
 case('data = null', None)
 case('JSON corrompu', None, raw='{"meta":{"v":4,"level":3},"data":{"v":4,"player":')
 case('meta absente', None, raw=json.dumps({"data":base}))
+# --- ancienne géographie de la Forêt (sans marque de géographie) : doit charger et replacer Lyra à l'arrivée de sa zone
+def foret_old(name, zone, x, z, respawn, expect=None):
+    d = mk(player__island='foret', player__zone=zone, player__x=x, player__z=z, player__respawn=respawn, flags__acte1_fini=1)
+    d['world']['gates'] = {'b_vitres': 1, 'b_lisiere': 1, 'fg1': 1}; d['world'].pop('layout', None)
+    put(name, d)
+    q.pg.reload(wait_until="load"); q.pg.wait_for_function("window.__lumen && __lumen.S", timeout=60000); q.prep()
+    n0 = len(q.errs)
+    same = q.ev("__lumen.G.zones.some(z=>z.id==='vitrebourg')")
+    if not same: q.ev("window.__old=1")
+    try: q.ev("(async()=>{const L=__lumen;const sv=await L.G.saves.read('s1');await L.G.startFrom(sv,'s1');return 1})()")
+    except Exception: pass    # changement d'île : la page se recharge
+    if not same: q.reloaded()
+    q.tick(1500)
+    r = q.ev("(()=>{const L=__lumen,z=L.G.zones.find(z=>z.id===L.G.zoneId()); return JSON.stringify({isl:L.st.player.island,layout:L.st.world.layout,zone:L.G.zoneId(),gy:+L.P.gy.toFixed(2),cx:Math.round(L.P.x/2),cy:Math.round(L.P.z/2),zx:z.ox,zy:z.oy,w:z.map[0].length,h:z.map.length,rz:L.st.player.respawn&&L.st.player.respawn.zone,err:0})})()")
+    new = q.errs[n0:]
+    j = json.loads(r); ok = j['isl'] == 'foret' and j['layout'] == 'montagne-1' and j['zone'] == (expect or zone) and 0 <= j['cx'] - j['zx'] < j['w'] and 0 <= j['cy'] - j['zy'] < j['h'] and not new
+    print(('OK   ' if ok else 'FAIL ') + name + ' replacé', r, flush=True); q.results.append((name + ' replacé', 'OK' if ok else 'FAIL', r))
+foret_old('Forêt ancienne géographie : Lisière', 'lisiere', 31.0, 21.0, {'zone': 'lisiere', 'cell': [15, 3]})
+foret_old('Forêt ancienne géographie : Temple (coords hors zone)', 'temple', 999.0, 3.0, {'zone': 'temple', 'cell': [5, 5]})
+foret_old('Forêt ancienne géographie : Phare, respawn Canopée', 'phare_f', 4.0, 4.0, {'zone': 'can2', 'cell': [99, 99]})
+foret_old('Forêt ancienne géographie : zone disparue', 'zone_fantome', 10.0, 10.0, {'zone': 'zone_fantome', 'cell': [1, 1]}, expect='vitrebourg')
 q.done()
