@@ -181,7 +181,8 @@ const WARPS_BY = {
   ],
   foret: [
     { id: 'vitrebourg', name: 'Fontaine de Vitrebourg', zone: 'vitrebourg', cell: [15, 12], arrive: [15, 15], r: 4.6, where: 'Vitrebourg' },
-    { id: 'vitraux', name: 'Cristal des Vitraux', zone: 'f1', cell: [1, 8], arrive: [2, 7], r: 2.2, where: 'Les Salles de Vitraux' },
+    { id: 'vitraux', name: 'Cristal des Vitraux', zone: 'f1', cell: [5, 8], arrive: [5, 9], r: 2.2, where: 'Les Salles de Vitraux' },
+    { id: 'portique', name: 'Cristal du Portique', zone: 'sentier_t', cell: [4, 26], arrive: [3, 26], r: 2.2, where: 'Le Sentier du Portique', mesh: true },   /* MONTAGNE */
     { id: 'belvedere', name: 'Cristal du Belvédère', zone: 'belv', cell: [3, 5], arrive: [4, 5], r: 2.2, where: 'Le Belvédère de Verre', needs: () => isl.gates.fg3 && isl.gates.fg3.open, mesh: true },
     { id: 'temple', name: 'Hall du Temple', zone: 'temple', cell: [15, 4], arrive: [15, 6], r: 2.2, where: 'Le Temple de Verre', needs: (st) => st.flags.boss_verre, mesh: true },
     { id: 'canopee', name: 'Cristal de la Canopée', zone: 'can1', cell: [3, 3], arrive: [4, 4], r: 2.2, where: 'La Canopée', mesh: true },
@@ -334,6 +335,7 @@ function applyWorld() {
   Object.values(isl.gates).forEach((g) => (g.open = false));
   clearTimers(isl);   /* ACTE V */
   restore(isl, { dev: st.world.dev, gates: st.world.gates, pos: st.world.moved });   /* ACTE III : objets portés */
+  Object.entries(DEF.gateLinks || {}).forEach(([from, to]) => { if (isl.gates[from] && isl.gates[from].open) to.forEach((id) => { if (isl.gates[id]) { isl.gates[id].open = true; st.world.gates[id] = 1; } }); });   /* MONTAGNE : portes liées (le raccourci de la Cascade s’ouvre avec le 3e vitrail) */
   Object.keys(st.world.cut).forEach((k) => { const [x, y] = k.split(',').map(Number); isl.terrain[y][x] = ','; world.removeCell('r', x, y); });
   Object.keys(st.world.broken).forEach((k) => { const [x, y] = k.split(',').map(Number); isl.terrain[y][x] = ','; world.removeCell('c', x, y); });
   Object.values(world.views).forEach((v) => { if (v.head && v.target) v.head.rotation.y = v.target(); if (v.pick) v.g.visible = !st.world.picked[v.e.id]; });
@@ -387,7 +389,7 @@ function reEvaluate() {
 }
 /* Ponts vers les donjons (Sanctuaire de Brume, Temple de Verre) : ils se déploient quand Lyra
    arrive au bout du chemin, devant l'arche (après avoir franchi la haie de ronces). */
-const APPROACH_BRIDGES = { b_sanct: 'Le pont du Sanctuaire se déploie', b_temple: 'Le pont du Temple se déploie', b_temple_d: 'Le pont du Temple enseveli se déploie' /* ACTE III */, b_moulins: 'Le pont du Moulin se déploie', b_so2: 'Le pont de la Dalle se déploie', b_so4: 'Le pont du Souffle court se déploie' /* ACTE V */, b_salle: 'Le grand escalier de la Grande Salle se déploie' /* ACTE VI */ };
+const APPROACH_BRIDGES = { b_sanct: 'Le pont du Sanctuaire se déploie', b_temple: 'Le portique du Temple s’ouvre', b_temple_d: 'Le pont du Temple enseveli se déploie' /* ACTE III */, b_moulins: 'Le pont du Moulin se déploie', b_so2: 'Le pont de la Dalle se déploie', b_so4: 'Le pont du Souffle court se déploie' /* ACTE V */, b_salle: 'Le grand escalier de la Grande Salle se déploie' /* ACTE VI */ };
 function approachBridges() {
   Object.keys(APPROACH_BRIDGES).forEach((id) => {
     const g = isl.gates[id]; if (!g || g.open) return;
@@ -401,6 +403,7 @@ function openGate(id, quiet) {
   const g = isl.gates[id]; if (!g || g.open) return;
   g.open = true; st.world.gates[id] = 1;
   world.setGateView(g, true, false);
+  ((DEF.gateLinks || {})[id] || []).forEach((l) => { const lg = isl.gates[l]; if (lg && !lg.open) { lg.open = true; st.world.gates[l] = 1; world.setGateView(lg, true, false); hud.toast('✦', 'Un raccourci s’ouvre vers le bas', 'La descente jusqu’au village est libre.'); } });   /* MONTAGNE */
   if (!quiet) { audio.sfx(g.look === 'door' ? 'door' : 'chest'); g.cells.forEach(([x, y]) => sparks.burst(new THREE.Vector3(W(x), 0.6, W(y)), g.look === 'seal' ? '#b39cff' : '#9fe9ff', 10, 2.5, 2)); }
   quests.check();
 }
@@ -408,6 +411,7 @@ function onGateOpened(id) {
   const g = isl.gates[id];
   world.setGateView(g, true, false);
   st.world.gates[id] = 1;
+  ((DEF.gateLinks || {})[id] || []).forEach((l) => { const lg = isl.gates[l]; if (lg && !lg.open) { lg.open = true; st.world.gates[l] = 1; world.setGateView(lg, true, false); setTimeout(() => hud.toast('✦', 'Un raccourci s’ouvre vers le bas', 'L’escalier de la Cascade descend jusqu’au village.'), 2600); } });   /* MONTAGNE */
   if (id === 'end') { S.restoreT = 1; if (fin) startEnding(false); else startFinale(); quests.check(); return; }   /* ACTE VI : séquence de fin du jeu */
   if (id === 'sd_light') { audio.chord([523, 659, 784]); hud.toast('✦', 'La barrière de cristal se dissout', 'Le Sanctuaire révèle un passage.'); reward('g:sanct:light', 80, 25); quests.check(); return; }
   if ((DEF.stageGates || []).includes(id)) {   // portes d'étape (Branches basses, Phare de Verre)
@@ -421,7 +425,7 @@ function onGateOpened(id) {
   if (kind === 'main') {
     audio.chord([523, 659, 784]); audio.sfx('puzzle_solved');
     const z = zones.find((zz) => zz.ents.some((e) => e.gate === id && !e.optional));
-    hud.toast('✦', `${z ? z.title : 'Énigme'} : résolue`, 'Un pont de lumière se forme.');
+    hud.toast('✦', `${z ? z.title : 'Énigme'} : résolue`, g.kind === 'bridge' ? 'Un pont de lumière se forme.' : 'La barrière de cristal se dissout.');
     reward('g:' + IID + ':' + id, 120, 40); gainXp(25);
   } else if (kind === 'secret') {
     audio.chord([587, 740, 880, 1175]); snd('secret'); hud.toast('✧', 'Un passage secret s’ouvre', 'Un pont mène à une chambre cachée.'); reward('o:' + IID + ':' + id, 60, 20); gainXp(15);
@@ -665,6 +669,15 @@ G.startFrom = async (state, s = 'auto', legacy = false, noIntro = false) => {
   // position
   const zi = zoneIndex[st.player.zone] !== undefined ? zoneIndex[st.player.zone] : zoneIndex[META.town];
   const z = zones[zi];
+  /* MONTAGNE : une partie enregistrée dans l'ancienne géographie de l'île (sans marque `layout`) n'a plus de coordonnées valables :
+     on replace Lyra à l'arrivée de sa zone (elle existe toujours) et on vérifie le point de reprise */
+  const relayout = !!(DEF.layout && st.world.layout !== DEF.layout && !fresh);
+  if (DEF.layout) st.world.layout = DEF.layout;
+  if (relayout) {
+    st.player.x = null;
+    const rz = st.player.respawn && zoneIndex[st.player.respawn.zone] !== undefined ? zones[zoneIndex[st.player.respawn.zone]] : null;
+    if (!rz || !canStand(W(rz.ox + st.player.respawn.cell[0]), W(rz.oy + st.player.respawn.cell[1]))) st.player.respawn = { zone: META.home.zone, cell: META.home.cell };
+  }
   if (st.player.x !== null && st.player.x !== undefined && canStand(st.player.x, st.player.z)) { P.x = st.player.x; P.z = st.player.z; P.face = st.player.face || 0; }
   else { const c = fresh ? META.home.cell : z.spawn; P.x = W(z.ox + c[0]); P.z = W(z.oy + c[1]); P.face = 0; }
   const s0 = calcStats(st); st.player.hp = Math.min(Math.max(1, st.player.hp), s0.maxHp); st.player.en = Math.min(st.player.en, s0.maxEn);
@@ -1132,7 +1145,9 @@ G.drawMap = (cv) => {
   const outdoor = zones.filter((z) => !z.interior);
   let x0 = 1e9, y0 = 1e9, x1 = 0, y1 = 0;
   outdoor.forEach((z) => { x0 = Math.min(x0, z.ox); y0 = Math.min(y0, z.oy); x1 = Math.max(x1, z.ox + z.map[0].length); y1 = Math.max(y1, z.oy + z.map.length); });
-  const s = Math.min((cv.width - 20) / (x1 - x0), (cv.height - 20) / (y1 - y0)), ox = (cv.width - (x1 - x0) * s) / 2 - x0 * s, oy = (cv.height - (y1 - y0) * s) / 2 - y0 * s;
+  const MNT = !!(isl.alt && DEF.layout);   /* MONTAGNE : plan teinté par l'altitude à gauche, coupe de la montagne à droite */
+  const AW = MNT ? Math.round(cv.width * 0.52) : cv.width;
+  const s = Math.min((AW - 20) / (x1 - x0), (cv.height - 20) / (y1 - y0)), ox = (AW - (x1 - x0) * s) / 2 - x0 * s, oy = (cv.height - (y1 - y0) * s) / 2 - y0 * s;
   g.clearRect(0, 0, cv.width, cv.height);
   const seen = (zi) => st.seen[zones[zi].id];
   for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
@@ -1141,6 +1156,8 @@ G.drawMap = (cv) => {
     if (t === '=') { const gt = isl.gates[isl.gateCell[x + ',' + y]]; if (!gt.open) continue; g.fillStyle = '#e8b65a'; }
     else { if (zi < 0 || !seen(zi) || zones[zi].interior) continue; const th = themeOf(zones[zi]); g.fillStyle = t === '#' || t === 'T' ? 'rgba(255,255,255,.18)' : t === '~' ? '#5fa8e8' : t === 'H' ? 'rgba(240,198,107,.55)' : t === ',' ? 'rgba(232,214,180,.6)' : t === 'r' ? '#3f5a32' : t === 'x' ? '#9fe9ff' : th === 'sanctuaire' ? 'rgba(160,140,220,.5)' : th === 'temple' ? 'rgba(120,190,220,.5)' : th === 'foret' || th === 'canopee' || th === 'phare_verre' ? 'rgba(110,210,180,.55)' : th === 'zenith' || th === 'jardins' || th === 'salle' || th === 'phare_zenith' ? 'rgba(240,214,150,.6)' : th === 'lande' ? 'rgba(180,200,120,.5)' : zones[zi].secret ? 'rgba(216,180,254,.5)' : 'rgba(150,220,140,.55)'; }
     g.fillRect(ox + x * s, oy + y * s, s + 0.5, s + 0.5);
+    if (MNT && t !== '=') { const lv = isl.hgt[y][x] || 0; g.fillStyle = `rgba(255,255,255,${(lv / 14 * 0.42).toFixed(3)})`; g.fillRect(ox + x * s, oy + y * s, s + 0.5, s + 0.5);
+      const ls = isl.hgt[y + 1] && isl.terrain[y + 1][x] !== ' ' && isl.terrain[y + 1][x] !== '=' ? isl.hgt[y + 1][x] : null; if (ls !== null && lv - ls >= 2) { g.fillStyle = 'rgba(20,40,60,.8)'; g.fillRect(ox + x * s, oy + (y + 1) * s - Math.max(1, s * 0.3), s + 0.5, Math.max(1.5, s * 0.3)); } }
     if (t === 'c' && st.player.abilities.vision && seen(zi)) { g.fillStyle = '#ffe2a0'; g.fillRect(ox + x * s + s * 0.25, oy + y * s + s * 0.25, s * 0.5, s * 0.5); }
   }
   g.font = '600 13px Inter, sans-serif'; g.textAlign = 'center';
@@ -1150,11 +1167,47 @@ G.drawMap = (cv) => {
   WARPS.forEach((w) => { if (!st.world.warps[w.id]) return; const z = zones[zoneIndex[w.zone]]; g.fillStyle = '#9fe9ff'; g.font = '700 16px Inter'; g.fillText('✦', ox + (z.ox + w.cell[0] + 0.5) * s, oy + (z.oy + w.cell[1] + 0.9) * s); });
   const qt = quests.tracked(), stp = qt ? quests.step(qt) : null;
   if (stp && stp.zone && zoneIndex[stp.zone] !== undefined) { const z = zones[zoneIndex[stp.zone]]; const npc = stp.npc && npcs.find((n) => n.id === stp.npc); let mx, my; if (npc && !zones[npc.zi].interior) { mx = npc.x / T; my = npc.z / T; } else { mx = z.ox + z.map[0].length / 2; my = z.oy + z.map.length / 2; } g.fillStyle = '#ffc861'; g.font = '800 22px Inter'; g.fillText('◆', ox + (mx + 0.5) * s, oy + (my + 0.9) * s); }
+  if (MNT) mountainProfile(g, cv, AW, x0, x1, outdoor, seen);
   // Lyra
   const inside = zones[S.zone] && zones[S.zone].interior;
   const px = inside ? (zones[S.zone].id === 'auberge_in' ? W(5) : W(23)) / T : P.x / T, py = inside ? 4 : P.z / T;
   g.fillStyle = '#fff'; g.beginPath(); g.arc(ox + (px + 0.5) * s, oy + (py + 0.5) * s, Math.max(4, s * 0.8), 0, 7); g.fill(); g.strokeStyle = '#3e3f9c'; g.lineWidth = 2.5; g.stroke();
 };
+
+
+/* MONTAGNE : coupe (vue de face, depuis le sud) : silhouette du massif par colonne, niveaux, zones visitées et position de Lyra */
+function mountainProfile(g, cv, AW, x0, x1, outdoor, seen) {
+  const X0 = AW + 24, X1 = cv.width - 14, Y0 = 56, Y1 = cv.height - 44, MAXL = 14;
+  const lvl = (y) => Y1 - (y / MAXL) * (Y1 - Y0);
+  const sx = (X1 - X0) / (x1 - x0);
+  g.save();
+  g.fillStyle = 'rgba(0,0,0,.28)'; g.fillRect(AW + 8, 8, cv.width - AW - 16, cv.height - 16);
+  g.font = '700 17px Inter, sans-serif'; g.textAlign = 'left'; g.fillStyle = '#e8f6f4'; g.fillText('Coupe de la montagne', AW + 20, 34);
+  // graduations d'altitude
+  g.font = '600 13px Inter, sans-serif'; g.fillStyle = 'rgba(255,255,255,.75)'; g.strokeStyle = 'rgba(255,255,255,.16)'; g.lineWidth = 1;
+  for (let l = 0; l <= MAXL; l += 2) { g.beginPath(); g.moveTo(X0, lvl(l)); g.lineTo(X1, lvl(l)); g.stroke(); g.fillText(String(l), X0 - 22, lvl(l) + 4); }
+  // silhouette : pour chaque colonne, le niveau le plus haut ; couleur de la zone qui porte ce sommet
+  for (let x = x0; x < x1; x++) {
+    let best = -1, bz = -1; for (let y = 0; y < isl.h; y++) { const t = isl.terrain[y][x]; if (!t || t === ' ' || t === '=') continue; const zi = isl.zoneAt[y][x]; if (zi >= 0 && zones[zi].interior) continue; const lv = isl.hgt[y][x] || 0; if (lv > best) { best = lv; bz = zi; } }
+    if (best < 0) continue;
+    const vis = bz >= 0 && seen(bz);
+    g.fillStyle = vis ? 'rgba(120,214,190,.9)' : 'rgba(150,170,190,.32)';
+    g.fillRect(X0 + (x - x0) * sx, lvl(best), sx + 0.6, Y1 - lvl(best) + 1);
+    g.fillStyle = vis ? 'rgba(255,255,255,.55)' : 'rgba(255,255,255,.18)'; g.fillRect(X0 + (x - x0) * sx, lvl(best), sx + 0.6, 2);
+  }
+  // paliers : un repère par zone visitée à son altitude moyenne
+  g.font = '700 13px Inter, sans-serif'; g.textAlign = 'center';
+  const lab = { vitrebourg: 'Vitrebourg', lisiere: 'Lisière', f2: 'Vitraux', belv: 'Belvédère', temple: 'Temple', sentier_t: 'Portique', can1: 'Canopée', can3: 'Passerelle', phare_f: 'Phare' };
+  outdoor.forEach((z) => { const zi = zoneIndex[z.id]; if (!lab[z.id] || !seen(zi)) return; let sum = 0, n = 0, mx = 0; z.map.forEach((row, ly) => { for (let lx = 0; lx < row.length; lx++) if (row[lx] !== ' ') { sum += isl.hgt[z.oy + ly][z.ox + lx] || 0; n++; } }); mx = z.ox + z.map[0].length / 2; const lv = n ? sum / n : 0;
+    g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText(lab[z.id], X0 + (mx - x0) * sx + 1, lvl(lv) - 7); g.fillStyle = '#fff'; g.fillText(lab[z.id], X0 + (mx - x0) * sx, lvl(lv) - 8); });
+  // phare au sommet
+  g.font = '700 22px Inter, sans-serif'; g.fillStyle = '#ffe9a8'; { const z = zones[zoneIndex.phare_f]; if (z) g.fillText('✦', X0 + (z.ox + z.map[0].length / 2 - x0) * sx, lvl(13) - 26); }
+  // Lyra
+  const inside = zones[S.zone] && zones[S.zone].interior;
+  if (!inside) { const lx = P.x / T, lv = isl.hgt[Math.round(P.z / T)] ? heightAt(P.x, P.z) / 0.75 : 0; g.fillStyle = '#fff'; g.strokeStyle = '#3e3f9c'; g.lineWidth = 3; g.beginPath(); g.arc(X0 + (lx + 0.5 - x0) * sx, lvl(lv), 7, 0, 7); g.fill(); g.stroke();
+    g.font = '700 15px Inter, sans-serif'; g.textAlign = 'right'; g.fillStyle = '#ffe9a8'; g.fillText(`Altitude ${Math.round(lv)} / 13`, X1, cv.height - 18); }
+  g.restore();
+}
 
 /* =========================================================
    Complétion
@@ -1474,6 +1527,12 @@ function update(dt) {
   amb.fogNear = lerp(amb.fogNear, A.fog[0], k); amb.fogFar = lerp(amb.fogFar, A.fog[1], k);
   scene.fog.near = amb.fogNear; scene.fog.far = amb.fogFar;
   scene.fog.color.lerp(A.fogColor ? tint.set(A.fogColor) : skyU.horizon.value, k);
+  if (DEF.layout && isl.alt && S.mode !== 'title') {   /* MONTAGNE : plus on monte, plus la brume est proche et claire (mer de brume au pied, air vif en haut) */
+    const hf = Math.min(1, Math.max(0, P.gy / HU / 13));
+    scene.fog.near = amb.fogNear * (1 - 0.28 * hf); scene.fog.far = amb.fogFar * (1 - 0.2 * hf);
+    scene.fog.color.lerp(tint.set('#e2f7f5'), 0.14 * hf);
+    skyU.top.value.lerp(tint.set('#bfe6f4'), 0.25 * hf); skyU.bottom.value.lerp(tint.set('#e8f8f6'), 0.2 * hf);
+  }
   amb.hemi = lerp(amb.hemi, A.hemi, k); amb.sun = lerp(amb.sun, A.sun, k);
   hemi.color.copy(skyU.top.value).lerp(new THREE.Color('#ffffff'), 0.5); hemi.intensity = (1.05 + r * 0.4) * amb.hemi;
   sun.intensity = (1.7 + r * 1.0) * amb.sun; sun.color.set('#ffc6b0').lerp(new THREE.Color('#fff1d6'), r);
@@ -1503,11 +1562,24 @@ function update(dt) {
   opening.frame();   // intro : décor 3D du titre / cinématique (reprend la caméra, le ciel et les lumières)
 }
 
+/* MONTAGNE : repère du phare. À la caméra fixe on ne voit que quelques cases devant Lyra : le Phare, tout en haut, est signalé par une
+   petite boussole (direction + niveaux restants à gravir). Seulement sur les îles à relief marquées `layout` (la Forêt de Verre). */
+let peakEl = null, peakT = 0;
+function updatePeak(dt) {
+  if (!(DEF.layout && isl.alt && zoneIndex.phare_f !== undefined)) return;
+  if (!peakEl) { peakEl = document.createElement('div'); peakEl.id = 'peak-gauge'; peakEl.hidden = true; peakEl.setAttribute('aria-hidden', 'true'); peakEl.style.cssText = 'position:fixed;left:50%;top:9px;transform:translateX(-50%);z-index:6;pointer-events:none;font:700 12px Inter,system-ui,sans-serif;color:#eafffa;background:rgba(14,40,52,.55);border:1px solid rgba(160,240,220,.35);border-radius:999px;padding:3px 10px;white-space:nowrap;text-shadow:0 1px 2px rgba(0,0,0,.6)'; document.body.appendChild(peakEl); }
+  peakT -= dt; if (peakT > 0) return; peakT = 0.25;
+  const z = zones[S.zone], show = S.mode === 'play' && z && !z.interior && !$('#hud').hidden;
+  peakEl.hidden = !show; if (!show) return;
+  const pz = zones[zoneIndex.phare_f], tx = W(pz.ox + pz.map[0].length / 2), tz = W(pz.oy + pz.map.length / 2);
+  const ang = Math.atan2(tx - P.x, -(tz - P.z)), lv = Math.round(P.gy / HU), left = Math.max(0, 13 - lv);
+  peakEl.innerHTML = `<span style="display:inline-block;transform:rotate(${ang.toFixed(2)}rad);color:#ffe9a8">▲</span> ✦ Phare · ${left ? left + ' niveaux à gravir' : 'au sommet'} <span style="opacity:.7">· alt. ${lv}</span>`;
+}
 function frame(now) {
   requestAnimationFrame(frame);
   let dt = Math.min(0.05, (now - last) / 1000); last = now;
   if (S.hitstop > 0) { S.hitstop -= dt; dt *= 0.08; }
-  update(dt);
+  update(dt); updatePeak(dt);
   /* ALTITUDE : pose les objets dynamiques sur le relief le temps du rendu, et règle le trou de visibilité autour de Lyra (et du PNJ en dialogue) */
   lift.apply();
   try {

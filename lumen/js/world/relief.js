@@ -58,7 +58,7 @@ export function buildReliefMesh(isl, zi, cells, th, tileColor, material) {
       if (drop < 1e-3) return;
       const rows = kind === 'cliff' ? Math.max(1, Math.round(drop / 1.1)) : Math.max(1, Math.round(drop / 1.6));
       const out = [dx, 0, dz];
-      const base = kind === 'cliff' ? C(th.rock) : C(th.dirt);
+      const base = kind === 'cliff' ? C(th.cliff || th.rock) : C(th.wall || th.dirt);   /* thèmes : `cliff` (falaise) et `wall` (flanc sur le vide) facultatifs */
       /* grille (rows+1) × 3 de sommets ; seuls les sommets strictement intérieurs sont décalés (jonctions sans fissure) */
       const V = [];
       for (let r = 0; r <= rows; r++) {

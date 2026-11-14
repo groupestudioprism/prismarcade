@@ -40,10 +40,24 @@ export default {
    ],
    "area": true
   },
+  "cascade": {
+   "name": "L’escalier de la Cascade",
+   "zones": [
+    "cascade"
+   ],
+   "area": true
+  },
   "lisiere": {
    "name": "La Lisière du Verre",
    "zones": [
     "lisiere"
+   ],
+   "area": true
+  },
+  "portique": {
+   "name": "Le Sentier du Portique",
+   "zones": [
+    "sentier_t"
    ],
    "area": true
   },
@@ -60,7 +74,8 @@ export default {
     "can1",
     "can2",
     "can3",
-    "can4"
+    "can4",
+    "cime_c"
    ]
   },
   "phare": {
@@ -87,6 +102,12 @@ export default {
   "text": "Une Lueur transparente flotte entre les troncs."
  },
  "ending": "Le Phare de Verre brille. Un fragment vert du Grand Prisme flotte au-dessus de la flamme.",
+ "layout": "montagne-1",
+ "gateLinks": {
+  "fg3": [
+   "rac_cime"
+  ]
+ },
  "zones": [
   {
    "id": "f1",
@@ -94,51 +115,51 @@ export default {
    "title": "Le vitrail jaune",
    "num": 1,
    "secret": false,
-   "ox": 36,
-   "oy": 0,
+   "ox": 41,
+   "oy": 69,
    "spawn": [
-    0,
-    5
+    5,
+    10
    ],
    "entryGate": "b_vitres",
    "hint": "Un vitrail ne laisse passer que sa couleur. La lumière blanche devient jaune en le traversant.",
    "map": [
-    "###########",
+    "#####x#####",
     "#.........#",
-    "#.........#",
-    "#.........#",
-    "#....#....#",
-    "...........",
-    "#.........#",
+    "#......#..#",
     "#.......#.#",
-    "#.....##..#",
+    "#.......#.#",
+    "#...#.....#",
     "#.........#",
-    "###########"
+    "#.........#",
+    "#.........#",
+    "#.........#",
+    "#####.#####"
    ],
    "ents": [
     {
      "t": "lantern",
-     "x": 3,
-     "y": 8,
-     "dir": "E",
+     "x": 8,
+     "y": 7,
+     "dir": "N",
      "rot": true
     },
     {
      "t": "vitrail",
-     "x": 3,
-     "y": 5,
+     "x": 5,
+     "y": 7,
      "color": "y"
     },
     {
      "t": "mirror",
-     "x": 3,
-     "y": 2,
-     "state": 1,
+     "x": 2,
+     "y": 7,
+     "state": 0,
      "rot": true
     },
     {
      "t": "receiver",
-     "x": 8,
+     "x": 2,
      "y": 2,
      "color": "y",
      "gate": "fg1"
@@ -146,7 +167,20 @@ export default {
     {
      "t": "shard",
      "x": 9,
-     "y": 9
+     "y": 1
+    }
+   ],
+   "h": 3,
+   "doors": [
+    {
+     "gate": "fg1",
+     "look": "barrier",
+     "cells": [
+      [
+       5,
+       0
+      ]
+     ]
     }
    ]
   },
@@ -156,73 +190,86 @@ export default {
    "title": "Rouge et vert",
    "num": 2,
    "secret": false,
-   "ox": 51,
-   "oy": 0,
+   "ox": 41,
+   "oy": 58,
    "spawn": [
-    0,
-    5
+    5,
+    10
    ],
    "entryGate": "fg1",
    "hint": "Le prisme sépare la lumière ; le relais à anneaux (mélangeur) réunit tout ce qu’il reçoit. Rouge + vert = jaune.",
    "map": [
-    "###########",
+    "#####x#####",
+    "#.......#.#",
+    "#......##.#",
     "#.........#",
     "#.........#",
     "#.........#",
-    "#.........#",
-    "...........",
     "#.........#",
     "#.......#.#",
-    "#..#....###",
     "#.........#",
-    "###########"
+    "#.........#",
+    "#####.#####"
    ],
    "ents": [
     {
      "t": "lantern",
-     "x": 5,
-     "y": 9,
-     "dir": "E",
+     "x": 9,
+     "y": 5,
+     "dir": "N",
      "rot": true
     },
     {
      "t": "prism",
-     "x": 5,
-     "y": 6
+     "x": 6,
+     "y": 5
     },
     {
      "t": "mirror",
-     "x": 2,
-     "y": 6,
-     "state": 0,
-     "rot": true
-    },
-    {
-     "t": "mirror",
-     "x": 2,
-     "y": 2,
+     "x": 6,
+     "y": 8,
      "state": 1,
      "rot": true
     },
     {
+     "t": "mirror",
+     "x": 2,
+     "y": 8,
+     "state": 0,
+     "rot": true
+    },
+    {
      "t": "relay",
-     "x": 5,
-     "y": 2,
+     "x": 2,
+     "y": 5,
      "mix": true,
-     "out": "N",
+     "out": "W",
      "rot": true
     },
     {
      "t": "receiver",
-     "x": 8,
+     "x": 2,
      "y": 2,
      "color": "y",
      "gate": "fg2"
     },
     {
      "t": "shard",
-     "x": 9,
+     "x": 1,
      "y": 1
+    }
+   ],
+   "h": 4,
+   "doors": [
+    {
+     "gate": "fg2",
+     "look": "barrier",
+     "cells": [
+      [
+       5,
+       0
+      ]
+     ]
     }
    ]
   },
@@ -232,51 +279,51 @@ export default {
    "title": "Magenta et cyan",
    "num": 3,
    "secret": false,
-   "ox": 66,
-   "oy": 0,
+   "ox": 41,
+   "oy": 47,
    "spawn": [
-    0,
-    5
+    5,
+    10
    ],
    "entryGate": "fg2",
    "hint": "Deux lanternes, deux vitraux, deux cristaux. Chaque couleur a sa route : les faisceaux peuvent se croiser.",
    "map": [
-    "###########",
+    "#####x#####",
+    "#.........#",
+    "#.........#",
+    "#.....#...#",
+    "#....#....#",
+    "#.......#.#",
+    "#.......#.#",
     "#.........#",
     "#.........#",
     "#.........#",
-    "#.........#",
-    "......#....",
-    "#......#..#",
-    "#.........#",
-    "#...##....#",
-    "#.........#",
-    "###########"
+    "#####.#####"
    ],
    "ents": [
     {
      "t": "lantern",
-     "x": 1,
+     "x": 9,
      "y": 9,
-     "dir": "E",
+     "dir": "N",
      "rot": true
     },
     {
      "t": "vitrail",
-     "x": 1,
-     "y": 7,
+     "x": 7,
+     "y": 9,
      "color": "m"
     },
     {
      "t": "mirror",
-     "x": 1,
-     "y": 2,
-     "state": 1,
+     "x": 2,
+     "y": 9,
+     "state": 0,
      "rot": true
     },
     {
      "t": "receiver",
-     "x": 8,
+     "x": 2,
      "y": 2,
      "color": "m",
      "gate": "fg3"
@@ -284,40 +331,53 @@ export default {
     {
      "t": "lantern",
      "x": 9,
-     "y": 9,
-     "dir": "E",
+     "y": 1,
+     "dir": "N",
      "rot": true
     },
     {
      "t": "vitrail",
-     "x": 9,
-     "y": 6,
+     "x": 6,
+     "y": 1,
      "color": "c"
     },
     {
      "t": "mirror",
-     "x": 9,
-     "y": 3,
-     "state": 0,
+     "x": 3,
+     "y": 1,
+     "state": 1,
      "rot": true
     },
     {
      "t": "receiver",
-     "x": 6,
-     "y": 3,
+     "x": 3,
+     "y": 4,
      "color": "c",
      "gate": "fg3"
     },
     {
      "t": "vitrail",
-     "x": 3,
-     "y": 4,
+     "x": 4,
+     "y": 7,
      "color": "y"
     },
     {
      "t": "shard",
-     "x": 9,
+     "x": 1,
      "y": 1
+    }
+   ],
+   "h": 5,
+   "doors": [
+    {
+     "gate": "fg3",
+     "look": "barrier",
+     "cells": [
+      [
+       5,
+       0
+      ]
+     ]
     }
    ]
   },
@@ -327,37 +387,37 @@ export default {
    "title": "Vitrebourg",
    "num": 0,
    "secret": false,
-   "ox": 0,
-   "oy": 0,
+   "ox": 2,
+   "oy": 80,
    "spawn": [
     12,
     7
    ],
    "map": [
-    "      T  #TT#TT##T###T        ",
-    "  HHHHHHH....T.......HHHHHH   ",
-    "  HHHHHHH............HHHHHH   ",
-    "  HHHHHHH.T...T....T.HHHHHH   ",
-    "  #..,....H.......H.....,.TH  ",
-    " ,,,,,,,,,,,,,,,,,,,,,,,,,,,,,",
-    "T......T.,..H..,.T.......TH.# ",
-    " #.......,.T...,..HH...HH....T",
-    "#.HHHHH..,.....,.............T",
-    "T.HHHHH..,,,,.,,,..,,,,,,,,..T",
-    "T.HHHHH.H....,,,,,H,......T..#",
-    "#..T..H.....,,HHH,,..........#",
-    "T......H....,,HHH,,....T.H...T",
-    "T......T....,,HHH,,.H........T",
-    "#...........H,,,,,,,,,,,,....#",
-    "T..T..,,,,,,,.,,,..........H.T",
-    "T.HHHHHT.....H.,.H...........#",
-    "TTHHHHH........,.......T.....T",
-    "# HHHHH..~~....,............# ",
-    "  #.....~~~~...,...HHHHHHT.T  ",
-    "   #....~~~~~..,..THHHHHH.#   ",
-    "    #T...~~~...,H..HHHHHHT    ",
-    "      T#.T.....,H.....T###    ",
-    "      # #T###TT,#TT#TT        "
+    "      T  #TT#TTxxT###T        T#TTTT,,,TTTTT,T##",
+    "  HHHHHHH....TH,,....HHHHHH   T......,......,..T",
+    "  HHHHHHH......,,....HHHHHH   #......,......,..#",
+    "  HHHHHHH.T...T,,..T.HHHHHH   #......,......,..T",
+    "  #..,....H....,,.H.....,.TT  H....T.,......,..#",
+    " ,,,,,,,,,,,,,,,,,,,,,,,,,,,,,x,,,,,,,,,,,,,,##T",
+    "T......T.,..H..,.T.......TH.# T...,,,,,,,,,     ",
+    " #.......,.T...,..HH...HH....T...T...T  #       ",
+    "#.HHHHH..,.....,.............T.......# T        ",
+    "T.HHHHH..,,,,.,,,..,,,,,,,,...TTT###T##         ",
+    "T.HHHHH.H....,,,,,H,......T..#                  ",
+    "#..T..H.....,,HHH,,..........#                  ",
+    "T......H....,,HHH,,....T.H...T                  ",
+    "T......T....,,HHH,,.H........T                  ",
+    "#...........H,,,,,,,,,,,,....#                  ",
+    "T..T..,,,,,,,.,,,..........H.T                  ",
+    "T.HHHHHT.....H.,.H...........#                  ",
+    "TTHHHHH........,.......T.....T                  ",
+    "# HHHHH..~~....,............#                   ",
+    "  #.....~~~~...,...HHHHHHT.T                    ",
+    "   #....~~~~~..,..THHHHHH.#                     ",
+    "    #T...~~~...,H..HHHHHHT                      ",
+    "      T#.T.....,T.....T###                      ",
+    "      # #T###TT,#TT#TT                          "
    ],
    "ents": [
     {
@@ -365,6 +425,32 @@ export default {
      "x": 12,
      "y": 7
     }
+   ],
+   "hmap": [
+    "      2  2222222222222        222222222222223222",
+    "  2222222222222222222222222   222222222222223222",
+    "  2222222222222222222222222   222222222222222222",
+    "  2222222222222222222222222   222222222222222222",
+    "  22222222222222222222222222  222222222222222222",
+    " 22222222222222222222222222222222222222222222222",
+    "22222222222222222222222222222 2222222222222     ",
+    " 1111111111111111111111111111111111111  1       ",
+    "11111111111111111111111111111111111111 1        ",
+    "111111111111111111111111111111111111111         ",
+    "111111111111111111111111111111                  ",
+    "111111111111111111111111111111                  ",
+    "111111111111111111111111111111                  ",
+    "111111111111111111111111111111                  ",
+    "000000000000000000000000000000                  ",
+    "000000000000000000000000000000                  ",
+    "000000000000000000000000000000                  ",
+    "000000000000000000000000000000                  ",
+    "0 000000000000000000000000000                   ",
+    "  00000000000000000000000000                    ",
+    "   000000000000000000000000                     ",
+    "    0000000000000000000000                      ",
+    "      00000000000000000000                      ",
+    "      0 00000000000000                          "
    ],
    "area": true,
    "theme": "foret",
@@ -595,19 +681,19 @@ export default {
     },
     {
      "t": "sign",
-     "x": 16,
-     "y": 22,
+     "x": 14,
+     "y": 1,
      "w": 1,
      "h": 1,
-     "text": "Au sud : la Lisière du Verre, puis le Temple. Les cerfs de verre n’aiment pas les visiteurs."
+     "text": "Au nord : la porte de la Lisière du Verre, puis le Temple. Les cerfs de verre n’aiment pas les visiteurs. Le village est au pied de la montagne : tout ce qui brille là-haut, c’est le Phare."
     },
     {
      "t": "sign",
-     "x": 27,
+     "x": 30,
      "y": 4,
      "w": 1,
      "h": 1,
-     "text": "À l’est : les salles de vitraux. Rouge + vert = jaune, dit-on ici."
+     "text": "À l’est, le sentier monte vers les salles de vitraux, accrochées au flanc de la montagne. Rouge + vert = jaune, dit-on ici."
     }
    ],
    "npcs": [
@@ -656,7 +742,33 @@ export default {
      "face": "W"
     }
    ],
-   "pickups": []
+   "pickups": [],
+   "doors": [
+    {
+     "gate": "b_lisiere",
+     "look": "barrier",
+     "cells": [
+      [
+       15,
+       0
+      ],
+      [
+       16,
+       0
+      ]
+     ]
+    },
+    {
+     "gate": "b_vitres",
+     "look": "barrier",
+     "cells": [
+      [
+       30,
+       5
+      ]
+     ]
+    }
+   ]
   },
   {
    "id": "lisiere",
@@ -664,82 +776,104 @@ export default {
    "title": "La Lisière du Verre",
    "num": 0,
    "secret": false,
-   "ox": 0,
-   "oy": 26,
+   "ox": 2,
+   "oy": 52,
    "spawn": [
     15,
-    1
+    26
    ],
    "map": [
-    "           T  T,    T             ",
-    "          #.TT.,T#T###   #        ",
-    "      T##T.....,T.T...#T# #       ",
-    "    T#.........,....#......T#     ",
-    "    T.....,,,,,,.............T T  ",
-    "  #T#.....,...................#   ",
-    " # T.,,,,,,.............rr...T.#  ",
-    "  #..,.T#.,...............r....#T ",
-    "#T...,....,.#.......T.........#   ",
-    "  #..,....,,,,,,,TT...........#T  ",
-    "#T #T,..........,...#........T    ",
-    "   T............,......T....#     ",
-    "    ##..........,.........T..T    ",
-    "      TrrrTrrrrrrrrrrrrrrT rr     ",
-    "      TT.T......,.........#.T     ",
-    "   # T #........,..........####   ",
-    "   T ##..T..T...,......T...#..#   ",
-    "  T.#...#.......,.............# # ",
-    "   #........T...,,,,,,,....#####T ",
-    "  #.....rr......T.....,.....#..#  ",
-    "  ###c#..#..#.........,#.......T T",
-    "   #..#...............,#...rT...T ",
-    "  ##..c..........,,,,,,........#  ",
-    "  T####..........,TT.....#.....T  ",
-    "    TT...........,.T......T..#T   ",
-    "   TT###.T.......,#.......T..#    ",
-    "        T#..#....,T...TT.T TT     ",
-    "        T #T###T#,##T#T # T       "
+    "#T#,TT   T T##TT#,##T#TT          ",
+    "T..,,,,,,,,,,,,,,,..#...T#T ##    ",
+    "T##T..T#.T......T,T...T.#T.#.#    ",
+    "   T.............,..#.........# # ",
+    "  T####....##....,.............T# ",
+    "  ##..c..........,,,,,,..........T",
+    "  ##..#..T............,....r.T.T# ",
+    " #T##c#T#.............,........#  ",
+    " T...#..rr..#.......T.,........T  ",
+    "  #..........TT.,,,,,,,....####T  ",
+    " T #T...........,...#.........#.T ",
+    "    ##..........,......T...#..##  ",
+    "    # T#........,..........####   ",
+    "      T T.T.....,.........#       ",
+    "    ## #rTrrrrrrrrrrrrrrrrrT      ",
+    "  T T.#.........,...........T#    ",
+    "   TTT..#T..T...,......T....TT    ",
+    "  T..,..#.......,.............TT  ",
+    " #...,....,,,,,,,............#.#  ",
+    " ##..,....,.....T...........#..#T ",
+    "#T #.,...#,.#..........#..r...T   ",
+    " #T..,,,,,,..........T.#rr..T..T  ",
+    "  #T##....,...................T   ",
+    "   TT.....,,,,,,.#TT.....#..T.T   ",
+    "   # #.........,...T......TT T    ",
+    "     ###TT.....,..#......#T       ",
+    "         #TT#..,,.T.T#TT#         ",
+    "            ###,,T##              "
    ],
    "ents": [],
+   "hmap": [
+    "888888   8 8888888888888          ",
+    "888888888888888888888888888 88    ",
+    "888888888888888888888888888888    ",
+    "   8888888888888888888888888888 8 ",
+    "  8888888888888888888888888888888 ",
+    "  88888888888888888888888888888888",
+    "  8888888888888888888888888888888 ",
+    " 8888888888888888888887788888888  ",
+    " 6666666666666666666666666666666  ",
+    "  666666666666666666666666666666  ",
+    " 6 666666666666666666666666666666 ",
+    "    6666666666666666666666666666  ",
+    "    6 6666666666666666666666666   ",
+    "      6 6666666666666666666       ",
+    "    66 666666666556666666666      ",
+    "  4 44444444444444444444444444    ",
+    "   444444444444444444444444444    ",
+    "  444444444444444444444444444444  ",
+    " 4444444444444444444444444444444  ",
+    " 44444444444444444444444444444444 ",
+    "44 4433444334444444444444444444   ",
+    " 2222222222222222222222222222222  ",
+    "  22222222222222222222222222222   ",
+    "   2222222222222222222222222222   ",
+    "   2 22222222222222222222222 2    ",
+    "     2222222222222222222222       ",
+    "         2222222222222222         ",
+    "            22222222              "
+   ],
    "area": true,
    "theme": "foret",
    "props": [
     {
-     "t": "ruin",
-     "x": 17,
+     "t": "sign",
+     "x": 13,
      "y": 25,
      "w": 1,
      "h": 1,
-     "name": "Portique du Temple"
-    },
-    {
-     "t": "sign",
-     "x": 13,
-     "y": 2,
-     "w": 1,
-     "h": 1,
-     "text": "Lisière du Verre. Les ronces cristallines ne cèdent qu’à une vraie lame."
+     "text": "Lisière du Verre : les premières pentes. Les ronces cristallines ne cèdent qu’à une vraie lame. Plus haut, le sentier longe le Temple."
     }
    ],
    "chests": [
     {
      "id": "ch_lis_coeur",
      "x": 4,
-     "y": 21,
+     "y": 6,
      "item": "fragment_coeur",
      "n": 1
     },
     {
      "id": "ch_lis_bague",
      "x": 29,
-     "y": 17,
+     "y": 10,
      "item": "anneau_prisme",
      "n": 1
     },
     {
      "id": "ch_lis_ecus",
      "x": 25,
-     "y": 3,
+     "y": 24,
      "ecus": 80
     }
    ],
@@ -749,89 +883,89 @@ export default {
      "id": "givre1",
      "item": "givre_foret",
      "x": 4,
-     "y": 8
+     "y": 19
     },
     {
      "t": "item",
      "id": "givre2",
      "item": "givre_foret",
      "x": 27,
-     "y": 8
+     "y": 19
     },
     {
      "t": "item",
      "id": "givre3",
      "item": "givre_foret",
      "x": 9,
-     "y": 23
+     "y": 4
     },
     {
      "t": "item",
      "id": "givre4",
      "item": "givre_foret",
      "x": 30,
-     "y": 23
+     "y": 4
     }
    ],
    "spawns": [
     {
      "type": "eclat",
      "x": 9,
-     "y": 6,
+     "y": 21,
      "n": 2
     },
     {
      "type": "eclat",
      "x": 20,
-     "y": 5,
+     "y": 22,
      "n": 2
     },
     {
      "type": "eclat",
      "x": 22,
-     "y": 10,
+     "y": 17,
      "n": 1
     },
     {
      "type": "lierre",
      "x": 27,
-     "y": 4,
+     "y": 23,
      "n": 1
     },
     {
      "type": "ronceux",
      "x": 12,
-     "y": 17,
+     "y": 10,
      "n": 1
     },
     {
      "type": "cerf",
      "x": 21,
-     "y": 21,
+     "y": 6,
      "n": 1
     },
     {
      "type": "cerf",
      "x": 8,
-     "y": 16,
+     "y": 11,
      "n": 1
     },
     {
      "type": "lierre",
      "x": 28,
-     "y": 22,
+     "y": 5,
      "n": 1
     },
     {
      "type": "eclat",
      "x": 12,
-     "y": 22,
+     "y": 5,
      "n": 2
     },
     {
      "type": "sentinelle",
      "x": 17,
-     "y": 24,
+     "y": 3,
      "n": 1,
      "elite": true
     }
@@ -843,8 +977,8 @@ export default {
    "title": "Le Temple de Verre",
    "num": 0,
    "secret": false,
-   "ox": 2,
-   "oy": 56,
+   "ox": 8,
+   "oy": 23,
    "spawn": [
     15,
     1
@@ -922,6 +1056,7 @@ export default {
      "gate": "td_light"
     }
    ],
+   "h": 10,
    "area": true,
    "theme": "temple",
    "dungeon": true,
@@ -1136,8 +1271,8 @@ export default {
    "title": "Auberge de la Rosée",
    "num": 0,
    "secret": false,
-   "ox": 150,
-   "oy": 0,
+   "ox": 75,
+   "oy": 88,
    "spawn": [
     6,
     7
@@ -1244,15 +1379,14 @@ export default {
    "title": "Le Belvédère de Verre",
    "num": 0,
    "secret": false,
-   "ox": 81,
-   "oy": 0,
+   "ox": 41,
+   "oy": 36,
    "spawn": [
-    2,
-    5
+    5,
+    8
    ],
-   "entryGate": "fg3",
    "map": [
-    "###########",
+    "########x##",
     "#.........#",
     "#.T.....T.#",
     "#.........#",
@@ -1265,6 +1399,7 @@ export default {
     "#####.#####"
    ],
    "ents": [],
+   "h": 6,
    "area": true,
    "theme": "canopee",
    "music": "canopee",
@@ -1272,17 +1407,17 @@ export default {
     {
      "t": "sign",
      "x": 5,
-     "y": 3,
+     "y": 4,
      "w": 1,
      "h": 1,
-     "text": "Le Phare de Verre se dresse au bout de la Canopée, tout là-haut. Il lui faut le jaune, le magenta et le cyan, ensemble. Au sud, un pont de lumière attend celui qui saura grimper."
+     "text": "Le Belvédère. Tout le flanc de la montagne s’étend sous tes pieds. Le Phare de Verre brille tout là-haut, au nord. À l’ouest, l’escalier de la cascade redescend jusqu’au village. Au nord, la porte de la Canopée attend celui qui saura grimper."
     }
    ],
    "chests": [
     {
      "id": "ch_belv",
      "x": 5,
-     "y": 7,
+     "y": 6,
      "item": "grande_potion",
      "n": 2
     }
@@ -1293,7 +1428,19 @@ export default {
      "id": "belv_eclat",
      "item": "eclat_verre",
      "x": 7,
-     "y": 5
+     "y": 6
+    }
+   ],
+   "doors": [
+    {
+     "gate": "b_canopee",
+     "look": "barrier",
+     "cells": [
+      [
+       8,
+       0
+      ]
+     ]
     }
    ],
    "warp": {
@@ -1309,16 +1456,16 @@ export default {
    "title": "Les Branches basses",
    "num": 0,
    "secret": false,
-   "ox": 78,
-   "oy": 16,
+   "ox": 41,
+   "oy": 23,
    "spawn": [
     8,
-    2
+    10
    ],
    "entryGate": "b_canopee",
    "hint": "Grappin de lumière : tiens-toi à côté d’un poteau, tourné vers le poteau d’en face, puis appuie sur E. Le câble fait le reste.",
    "map": [
-    "########.#    #######",
+    "##########    #######",
     "#T...T....    ......#",
     "#.........    ......#",
     "#.........    ......#",
@@ -1330,7 +1477,7 @@ export default {
     "#.........    ......#",
     "#.........    ......#",
     "#T........    .T..T.#",
-    "##########    #######"
+    "########.#    #######"
    ],
    "ents": [
     {
@@ -1365,6 +1512,7 @@ export default {
      "gate": "fc0"
     }
    ],
+   "h": 7,
    "area": true,
    "theme": "canopee",
    "music": "canopee",
@@ -1439,8 +1587,8 @@ export default {
    "title": "Les Feuilles de lumière",
    "num": 4,
    "secret": false,
-   "ox": 102,
-   "oy": 17,
+   "ox": 65,
+   "oy": 24,
    "spawn": [
     0,
     5
@@ -1534,6 +1682,7 @@ export default {
      "y": 9
     }
    ],
+   "h": 8,
    "theme": "canopee",
    "music": "canopee"
   },
@@ -1543,94 +1692,95 @@ export default {
    "title": "La Passerelle des Sentinelles",
    "num": 0,
    "secret": false,
-   "ox": 120,
-   "oy": 14,
+   "ox": 59,
+   "oy": 2,
    "spawn": [
-    1,
-    8
+    22,
+    7
    ],
    "entryGate": "fc1",
    "hint": "La salle de l’autre côté du vide est gardée. Tant que ses gardiens vivent, le sceau reste fermé.",
    "map": [
-    "########                ",
-    "#......#                ",
-    "#......#  ########      ",
-    "          .#...###      ",
-    "          ......##      ",
-    "#......   ......##      ",
-    "#T.....   ......##   ###",
-    "#......   ......x.   ..#",
-    ".......   ...#..x.   ..x",
-    "#......   ......x.   ..#",
-    "#......   ......##   ###",
-    "#T...T.   ......##      ",
-    "#######   ......##      ",
-    "          .#...###      ",
-    "          ########      ",
-    "                        "
+    "                        ",
+    "      ########          ",
+    "      ###...#.          ",
+    "      ##......   #######",
+    "      ##......   .T...T#",
+    "###   ##......   ......#",
+    "#..   .x......   ......#",
+    "x..   .x..#...   .......",
+    "#..   .x......   ......#",
+    "###   ##......   .....T#",
+    "      ##......   ......#",
+    "      ##......          ",
+    "      ###...#.          ",
+    "      ########  #......#",
+    "                #......#",
+    "                ########"
    ],
    "ents": [
     {
      "t": "post",
-     "x": 6,
-     "y": 8
-    },
-    {
-     "t": "post",
-     "x": 10,
-     "y": 8
-    },
-    {
-     "t": "post",
      "x": 17,
-     "y": 8
+     "y": 7
     },
     {
      "t": "post",
-     "x": 21,
-     "y": 8
+     "x": 13,
+     "y": 7
     },
     {
      "t": "post",
-     "x": 3,
-     "y": 5
+     "x": 6,
+     "y": 7
     },
     {
      "t": "post",
-     "x": 3,
-     "y": 2
+     "x": 2,
+     "y": 7
+    },
+    {
+     "t": "post",
+     "x": 20,
+     "y": 10
+    },
+    {
+     "t": "post",
+     "x": 20,
+     "y": 13
     }
    ],
+   "h": 11,
    "area": true,
    "theme": "canopee",
    "music": "canopee",
    "props": [
     {
      "t": "sign",
-     "x": 5,
-     "y": 7,
+     "x": 18,
+     "y": 8,
      "w": 1,
      "h": 1,
      "text": "La Passerelle des Sentinelles. Les gardiens de l’arène ne traversent pas le vide : le grappin, lui, si."
     },
     {
      "t": "brazier",
-     "x": 4,
-     "y": 6,
+     "x": 19,
+     "y": 9,
      "w": 1,
      "h": 1
     },
     {
      "t": "brazier",
-     "x": 4,
-     "y": 10,
+     "x": 19,
+     "y": 5,
      "w": 1,
      "h": 1
     },
     {
      "t": "crystal",
-     "x": 20,
-     "y": 13,
+     "x": 3,
+     "y": 2,
      "w": 1,
      "h": 1
     }
@@ -1638,23 +1788,23 @@ export default {
    "chests": [
     {
      "id": "ch_can_p1",
-     "x": 2,
-     "y": 10,
+     "x": 21,
+     "y": 5,
      "item": "anneau_canopee",
      "n": 1
     },
     {
      "id": "ch_can_arene",
-     "x": 14,
-     "y": 12,
+     "x": 9,
+     "y": 3,
      "ecus": 120,
      "item": "sceptre",
      "n": 1
     },
     {
      "id": "ch_can_niche",
-     "x": 5,
-     "y": 1,
+     "x": 18,
+     "y": 14,
      "item": "fragment_coeur",
      "n": 1
     }
@@ -1664,50 +1814,50 @@ export default {
      "t": "item",
      "id": "graine2",
      "item": "graine_canopee",
-     "x": 2,
-     "y": 7
+     "x": 21,
+     "y": 8
     },
     {
      "t": "item",
      "id": "graine3",
      "item": "graine_canopee",
-     "x": 23,
-     "y": 7
+     "x": 0,
+     "y": 8
     },
     {
      "t": "page",
      "id": "pg_niche",
      "page": "orin5",
-     "x": 2,
-     "y": 1
+     "x": 21,
+     "y": 14
     }
    ],
    "spawns": [
     {
      "type": "eclat_ambre",
-     "x": 12,
-     "y": 5,
+     "x": 11,
+     "y": 10,
      "n": 3,
      "room": "cn_combat"
     },
     {
      "type": "lierre",
-     "x": 14,
-     "y": 4,
-     "n": 1,
-     "room": "cn_combat"
-    },
-    {
-     "type": "cerf_prisme",
-     "x": 12,
+     "x": 9,
      "y": 11,
      "n": 1,
      "room": "cn_combat"
     },
     {
+     "type": "cerf_prisme",
+     "x": 11,
+     "y": 4,
+     "n": 1,
+     "room": "cn_combat"
+    },
+    {
      "type": "sentinelle_azur",
-     "x": 14,
-     "y": 8,
+     "x": 9,
+     "y": 7,
      "n": 1,
      "room": "cn_combat",
      "elite": true
@@ -1719,20 +1869,20 @@ export default {
      "look": "seal",
      "cells": [
       [
-       16,
+       7,
+       8
+      ],
+      [
+       7,
        7
       ],
       [
-       16,
-       8
+       7,
+       6
       ],
       [
-       16,
-       9
-      ],
-      [
-       23,
-       8
+       0,
+       7
       ]
      ]
     }
@@ -1741,10 +1891,10 @@ export default {
     {
      "gate": "cn_combat",
      "rect": [
-      10,
-      3,
-      15,
-      13
+      8,
+      2,
+      13,
+      12
      ]
     }
    ],
@@ -1756,10 +1906,10 @@ export default {
    "title": "Le Nid de lumière",
    "num": 5,
    "secret": false,
-   "ox": 144,
-   "oy": 17,
+   "ox": 44,
+   "oy": 4,
    "spawn": [
-    0,
+    14,
     5
    ],
    "entryGate": "cn_combat",
@@ -1767,105 +1917,84 @@ export default {
    "seed": 3102,
    "map": [
     "###############",
-    "#.....  ......#",
-    "#.....  ......#",
-    "#.....  ......#",
-    "#.....  ......#",
-    "......  .......",
-    "#.....  ......#",
-    "#.....  ......#",
-    "#.....  ......#",
-    "#.....  ......#",
+    "#......  .....#",
+    "#......  .....#",
+    "#......  .....#",
+    "#......  .....#",
+    ".......  ......",
+    "#......  .....#",
+    "#......  .....#",
+    "#......  .....#",
+    "#......  .....#",
     "###############"
    ],
    "ents": [
     {
      "t": "post",
-     "x": 5,
-     "y": 3
+     "x": 9,
+     "y": 7
     },
     {
      "t": "post",
-     "x": 8,
-     "y": 3
+     "x": 6,
+     "y": 7
     },
     {
      "t": "post",
-     "x": 5,
-     "y": 8
+     "x": 9,
+     "y": 2
     },
     {
      "t": "post",
-     "x": 8,
-     "y": 8
+     "x": 6,
+     "y": 2
     },
     {
      "t": "lantern",
-     "x": 8,
-     "y": 6,
-     "dir": "E",
+     "x": 6,
+     "y": 4,
+     "dir": "W",
      "rot": true
     },
     {
      "t": "mirror",
-     "x": 4,
-     "y": 6,
+     "x": 10,
+     "y": 4,
      "state": 0,
      "rot": true
     },
     {
      "t": "prism",
-     "x": 4,
-     "y": 7
+     "x": 10,
+     "y": 3
     },
     {
      "t": "mirror",
-     "x": 9,
-     "y": 7,
+     "x": 5,
+     "y": 3,
      "state": 0,
      "rot": true
     },
     {
      "t": "receiver",
-     "x": 9,
-     "y": 4,
+     "x": 5,
+     "y": 6,
      "color": "r",
      "gate": "fc2"
     },
     {
      "t": "mirror",
-     "x": 4,
-     "y": 9,
-     "state": 0,
-     "rot": true
-    },
-    {
-     "t": "receiver",
      "x": 10,
-     "y": 9,
-     "color": "g",
-     "gate": "fc2"
-    },
-    {
-     "t": "mirror",
-     "x": 1,
-     "y": 7,
-     "state": 1,
-     "rot": true
-    },
-    {
-     "t": "receiver",
-     "x": 1,
-     "y": 8,
-     "color": "b",
-     "gate": "fc2"
-    },
-    {
-     "t": "mirror",
-     "x": 4,
      "y": 1,
      "state": 0,
      "rot": true
+    },
+    {
+     "t": "receiver",
+     "x": 4,
+     "y": 1,
+     "color": "g",
+     "gate": "fc2"
     },
     {
      "t": "mirror",
@@ -1875,11 +2004,33 @@ export default {
      "rot": true
     },
     {
-     "t": "shard",
+     "t": "receiver",
      "x": 13,
-     "y": 9
+     "y": 2,
+     "color": "b",
+     "gate": "fc2"
+    },
+    {
+     "t": "mirror",
+     "x": 10,
+     "y": 9,
+     "state": 0,
+     "rot": true
+    },
+    {
+     "t": "mirror",
+     "x": 1,
+     "y": 7,
+     "state": 1,
+     "rot": true
+    },
+    {
+     "t": "shard",
+     "x": 1,
+     "y": 1
     }
    ],
+   "h": 12,
    "theme": "canopee",
    "music": "canopee"
   },
@@ -1889,33 +2040,33 @@ export default {
    "title": "Le Phare de Verre",
    "num": 6,
    "secret": false,
-   "ox": 162,
-   "oy": 11,
+   "ox": 22,
+   "oy": 8,
    "spawn": [
-    0,
-    11
+    18,
+    1
    ],
    "entryGate": "fc2",
    "hint": "Le phare exige le jaune, le magenta et le cyan en même temps. Chaque salle donne sa couleur, mais il faudra défaire ce qui a ouvert les portes.",
    "map": [
     "###################",
+    "#.....#.....#......",
     "#.....#.....#.....#",
-    "#.....#.....x.....#",
     "#.....#.....#.....#",
     "#.....#.....#.....#",
-    "#.....#..#..#.....#",
+    "#.....#.....#.....#",
     "#.....x.....x.....#",
+    "#.....#..#..#.....#",
     "#.....#.....#.....#",
     "#.....#.....#.....#",
+    "#.....x.....#.....#",
     "#.....#.....#.....#",
-    "#.....#.....#.....#",
-    "......#.....#.....#",
     "###################"
    ],
    "ents": [
     {
      "t": "beacon",
-     "x": 15,
+     "x": 3,
      "y": 6,
      "gate": "end",
      "need": [
@@ -1926,147 +2077,148 @@ export default {
     },
     {
      "t": "lantern",
-     "x": 1,
-     "y": 9,
-     "dir": "S",
+     "x": 17,
+     "y": 3,
+     "dir": "N",
      "rot": true
     },
     {
      "t": "mirror",
-     "x": 1,
+     "x": 17,
      "y": 6,
      "state": 1,
      "rot": true
     },
     {
      "t": "mirror",
-     "x": 4,
-     "y": 9,
+     "x": 14,
+     "y": 3,
      "state": 1,
      "rot": true
     },
     {
      "t": "vitrail",
-     "x": 3,
+     "x": 15,
      "y": 6,
      "color": "y"
     },
     {
      "t": "receiver",
-     "x": 4,
-     "y": 3,
+     "x": 14,
+     "y": 9,
      "color": "w",
      "gate": "ph_d1"
     },
     {
      "t": "lantern",
      "x": 9,
-     "y": 10,
-     "dir": "E",
+     "y": 2,
+     "dir": "W",
      "rot": true
     },
     {
      "t": "prism",
      "x": 9,
-     "y": 8
+     "y": 4
     },
     {
      "t": "mirror",
-     "x": 7,
-     "y": 8,
+     "x": 11,
+     "y": 4,
      "state": 0,
      "rot": true
     },
     {
      "t": "mirror",
+     "x": 7,
+     "y": 4,
+     "state": 1,
+     "rot": true
+    },
+    {
+     "t": "mirror",
      "x": 11,
-     "y": 8,
+     "y": 9,
      "state": 1,
      "rot": true
     },
     {
      "t": "mirror",
      "x": 7,
-     "y": 3,
-     "state": 1,
-     "rot": true
-    },
-    {
-     "t": "mirror",
-     "x": 11,
-     "y": 3,
+     "y": 9,
      "state": 0,
      "rot": true
     },
     {
      "t": "relay",
      "x": 9,
-     "y": 3,
+     "y": 9,
      "mix": true,
-     "out": "W",
+     "out": "E",
      "rot": true
     },
     {
      "t": "mirror",
      "x": 9,
-     "y": 2,
+     "y": 10,
      "state": 1,
      "rot": true
     },
     {
      "t": "receiver",
-     "x": 7,
-     "y": 2,
+     "x": 11,
+     "y": 10,
      "color": "m",
      "gate": "ph_d2"
     },
     {
      "t": "lantern",
-     "x": 13,
-     "y": 10,
-     "dir": "N",
+     "x": 5,
+     "y": 2,
+     "dir": "S",
      "rot": true
     },
     {
      "t": "vitrail",
-     "x": 14,
-     "y": 10,
+     "x": 4,
+     "y": 2,
      "color": "c"
     },
     {
      "t": "mirror",
-     "x": 17,
-     "y": 10,
+     "x": 1,
+     "y": 2,
      "state": 1,
      "rot": true
     },
     {
      "t": "mirror",
-     "x": 17,
-     "y": 8,
+     "x": 1,
+     "y": 4,
      "state": 0,
      "rot": true
     },
     {
      "t": "mirror",
-     "x": 15,
-     "y": 8,
+     "x": 3,
+     "y": 4,
      "state": 0,
      "rot": true
     },
     {
      "t": "mirror",
-     "x": 15,
-     "y": 2,
+     "x": 3,
+     "y": 10,
      "state": 0,
      "rot": true
     },
     {
      "t": "shard",
-     "x": 17,
-     "y": 1
+     "x": 1,
+     "y": 11
     }
    ],
+   "h": 13,
    "theme": "phare_verre",
    "music": "phare",
    "doors": [
@@ -2075,7 +2227,7 @@ export default {
      "look": "barrier",
      "cells": [
       [
-       6,
+       12,
        6
       ]
      ]
@@ -2085,20 +2237,20 @@ export default {
      "look": "barrier",
      "cells": [
       [
-       12,
+       6,
        6
       ],
       [
-       12,
-       2
+       6,
+       10
       ]
      ]
     }
    ],
    "warp": {
     "id": "phare",
-    "x": 3,
-    "y": 10,
+    "x": 15,
+    "y": 2,
     "name": "Cristal du Phare de Verre"
    },
    "stages": [
@@ -2107,166 +2259,354 @@ export default {
    ],
    "final": "end",
    "respawn": true
+  },
+  {
+   "id": "sentier_t",
+   "region": "portique",
+   "title": "Le Sentier du Portique",
+   "num": 0,
+   "secret": false,
+   "ox": 2,
+   "oy": 21,
+   "spawn": [
+    2,
+    29
+   ],
+   "map": [
+    "#####TT###TT#TTTTTTTTH",
+    "#.,,,,,,,,,,,,,,,,,,,x",
+    "#.,..#                ",
+    "T.,,.#                ",
+    "#.,,.T                ",
+    "#.,,.#                ",
+    "#.,,TT                ",
+    "T.,,.#                ",
+    "T.,,.T                ",
+    "T.,,.T                ",
+    "T.,,.#                ",
+    "#.,,.#                ",
+    "TT,,.T                ",
+    "#.,,.T                ",
+    "#.,,.T                ",
+    "#.,,.T                ",
+    "T.,,.#                ",
+    "T.,,.#                ",
+    "T.,,T#                ",
+    "T.,,.T                ",
+    "T.,,.#                ",
+    "T.,,.T                ",
+    "T.,,.T                ",
+    "#.,,.#                ",
+    "TT,,.#                ",
+    "T.,,.#                ",
+    "#.,,.T                ",
+    "T.,,.T                ",
+    "T.,,.T                ",
+    "#.,,.#                ",
+    "#T,,T#                "
+   ],
+   "ents": [],
+   "hmap": [
+    "aaaaaaaaaaaaaaaaaaaaaa",
+    "aaaaaaaaaaaaaaaaaaaaaa",
+    "aaaaaa                ",
+    "aaaaaa                ",
+    "aaaaaa                ",
+    "aaaaaa                ",
+    "aaaaaa                ",
+    "aaaaaa                ",
+    "aaaaaa                ",
+    "aaaaaa                ",
+    "999999                ",
+    "999999                ",
+    "999999                ",
+    "999999                ",
+    "999999                ",
+    "999999                ",
+    "999999                ",
+    "999999                ",
+    "999999                ",
+    "999999                ",
+    "999999                ",
+    "999999                ",
+    "999999                ",
+    "999999                ",
+    "888888                ",
+    "888888                ",
+    "888888                ",
+    "888888                ",
+    "888888                ",
+    "888888                ",
+    "888888                "
+   ],
+   "area": true,
+   "theme": "foret",
+   "props": [
+    {
+     "t": "ruin",
+     "x": 21,
+     "y": 0,
+     "w": 1,
+     "h": 1,
+     "name": "Portique du Temple"
+    },
+    {
+     "t": "sign",
+     "x": 4,
+     "y": 28,
+     "w": 1,
+     "h": 1,
+     "text": "Sentier du Portique. Le Temple de Verre se dresse à ta droite, sur sa terrasse. Son entrée est au nord : le sentier le contourne."
+    }
+   ],
+   "npcs": [],
+   "pickups": [],
+   "doors": [
+    {
+     "gate": "b_temple",
+     "look": "seal",
+     "cells": [
+      [
+       21,
+       1
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "cascade",
+   "region": "cascade",
+   "title": "L’escalier de la Cascade",
+   "num": 0,
+   "secret": false,
+   "ox": 38,
+   "oy": 41,
+   "spawn": [
+    1,
+    1
+   ],
+   "map": [
+    "#,,",
+    "#,.",
+    "~,.",
+    "~,.",
+    "~,.",
+    "~,.",
+    "~,T",
+    "~,.",
+    "~,T",
+    "~,.",
+    "~,.",
+    "~,T",
+    "~,T",
+    "~,.",
+    "~,.",
+    "~,.",
+    "~,.",
+    "~,.",
+    "~,.",
+    "~,.",
+    "~,.",
+    "~,.",
+    "~,.",
+    "~,.",
+    "~,.",
+    "~,.",
+    "~,.",
+    "~,.",
+    "~,.",
+    "~,T",
+    "~,.",
+    "~,.",
+    "~,.",
+    "~,.",
+    "~,.",
+    "~,.",
+    "~,.",
+    "#xx",
+    ",,,"
+   ],
+   "ents": [],
+   "hmap": [
+    "666",
+    "666",
+    "666",
+    "666",
+    "666",
+    "555",
+    "555",
+    "555",
+    "555",
+    "555",
+    "555",
+    "555",
+    "555",
+    "555",
+    "555",
+    "444",
+    "444",
+    "444",
+    "444",
+    "444",
+    "444",
+    "444",
+    "444",
+    "444",
+    "333",
+    "333",
+    "333",
+    "333",
+    "333",
+    "333",
+    "333",
+    "333",
+    "333",
+    "333",
+    "222",
+    "222",
+    "222",
+    "222",
+    "222"
+   ],
+   "area": true,
+   "theme": "canopee",
+   "props": [
+    {
+     "t": "sign",
+     "x": 2,
+     "y": 3,
+     "w": 1,
+     "h": 1,
+     "text": "L’escalier de la Cascade. Un raccourci qui ne s’ouvre que vers le bas : le village est tout en bas, au pied de la montagne."
+    }
+   ],
+   "npcs": [],
+   "pickups": [],
+   "doors": [
+    {
+     "gate": "rac_cime",
+     "look": "barrier",
+     "cells": [
+      [
+       1,
+       37
+      ],
+      [
+       2,
+       37
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "cime_c",
+   "region": "canopee",
+   "title": "La Corniche",
+   "num": 0,
+   "secret": false,
+   "ox": 83,
+   "oy": 2,
+   "spawn": [
+    0,
+    27
+   ],
+   "map": [
+    ".####",
+    "....#",
+    "....#",
+    "....#",
+    "....#",
+    "....#",
+    "....#",
+    ",,,.#",
+    "..,.#",
+    "..,.#",
+    "..,.#",
+    ".T,.#",
+    "..,T#",
+    "..,.#",
+    "..,.#",
+    "..,.#",
+    "..,.#",
+    ".T,.#",
+    "..,.#",
+    "..,.#",
+    "..,T#",
+    "..,.#",
+    "..,.#",
+    "..,.#",
+    "..,.#",
+    "..,.#",
+    "..,.#",
+    ",,,.#",
+    "....#"
+   ],
+   "ents": [],
+   "hmap": [
+    "bbbbb",
+    "bbbbb",
+    "bbbbb",
+    "bbbbb",
+    "bbbbb",
+    "bbbbb",
+    "bbbbb",
+    "bbbbb",
+    "bbbbb",
+    "bbbbb",
+    "bbbbb",
+    "aaaaa",
+    "aaaaa",
+    "aaaaa",
+    "aaaaa",
+    "aaaaa",
+    "aaaaa",
+    "aaaaa",
+    "99999",
+    "99999",
+    "99999",
+    "99999",
+    "99999",
+    "99999",
+    "88888",
+    "88888",
+    "88888",
+    "88888",
+    "88888"
+   ],
+   "area": true,
+   "theme": "canopee",
+   "music": "canopee",
+   "props": [
+    {
+     "t": "sign",
+     "x": 1,
+     "y": 25,
+     "w": 1,
+     "h": 1,
+     "text": "La Corniche. La rampe monte en lacet jusqu’à la Passerelle des Sentinelles. Plus haut encore, le Phare."
+    }
+   ],
+   "npcs": [],
+   "pickups": []
   }
  ],
  "bridges": [
   {
-   "gate": "b_vitres",
-   "cells": [
-    [
-     30,
-     5
-    ],
-    [
-     31,
-     5
-    ],
-    [
-     32,
-     5
-    ],
-    [
-     33,
-     5
-    ],
-    [
-     34,
-     5
-    ],
-    [
-     35,
-     5
-    ]
-   ]
-  },
-  {
-   "gate": "fg1",
-   "cells": [
-    [
-     47,
-     5
-    ],
-    [
-     48,
-     5
-    ],
-    [
-     49,
-     5
-    ],
-    [
-     50,
-     5
-    ]
-   ]
-  },
-  {
-   "gate": "fg2",
-   "cells": [
-    [
-     62,
-     5
-    ],
-    [
-     63,
-     5
-    ],
-    [
-     64,
-     5
-    ],
-    [
-     65,
-     5
-    ]
-   ]
-  },
-  {
-   "gate": "fg3",
-   "cells": [
-    [
-     77,
-     5
-    ],
-    [
-     78,
-     5
-    ],
-    [
-     79,
-     5
-    ],
-    [
-     80,
-     5
-    ]
-   ]
-  },
-  {
-   "gate": "b_lisiere",
-   "cells": [
-    [
-     15,
-     24
-    ],
-    [
-     15,
-     25
-    ]
-   ]
-  },
-  {
-   "gate": "b_temple",
-   "cells": [
-    [
-     17,
-     54
-    ],
-    [
-     17,
-     55
-    ]
-   ]
-  },
-  {
-   "gate": "b_canopee",
-   "cells": [
-    [
-     86,
-     11
-    ],
-    [
-     86,
-     12
-    ],
-    [
-     86,
-     13
-    ],
-    [
-     86,
-     14
-    ],
-    [
-     86,
-     15
-    ]
-   ]
-  },
-  {
    "gate": "fc0",
    "cells": [
     [
-     99,
-     22
+     62,
+     29
     ],
     [
-     100,
-     22
+     63,
+     29
     ],
     [
-     101,
-     22
+     64,
+     29
     ]
    ]
   },
@@ -2274,16 +2614,16 @@ export default {
    "gate": "fc1",
    "cells": [
     [
-     117,
-     22
+     80,
+     29
     ],
     [
-     118,
-     22
+     81,
+     29
     ],
     [
-     119,
-     22
+     82,
+     29
     ]
    ]
   },
@@ -2291,16 +2631,16 @@ export default {
    "gate": "fc2",
    "cells": [
     [
-     159,
-     22
+     43,
+     9
     ],
     [
-     160,
-     22
+     42,
+     9
     ],
     [
-     161,
-     22
+     41,
+     9
     ]
    ]
   }
