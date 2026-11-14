@@ -50,6 +50,16 @@ export const QUESTS = {
     rewards: { xp: 400, ecus: 200, unlock: ['tenue_aube'], pa: [300, 100] },
   },
 
+  /* fin de l'Acte I : guide vers le passeur (terminée en arrivant à Vitrebourg) */
+  q_traversee: {
+    kind: 'main', act: 1, title: 'Vers la Forêt de Verre', giver: 'calixte', after: 'q_phare',
+    summary: 'Le phare de l’Aube brille : la mer est de nouveau sûre. Calixte, le passeur, attend sur le port pour t’emmener vers la prochaine île.',
+    steps: [
+      { id: 'passeur', type: 'talk', npc: 'calixte', doneIf: 'vitrebourg', text: 'Prendre la barque de Calixte, le passeur (au bout de la grand-rue, à l’est du village)', zone: 'havre' },
+    ],
+    rewards: { xp: 40 },
+  },
+
   /* ================= Quêtes secondaires ================= */
   s_pain: {
     kind: 'side', title: 'Le pain de Maëlle', giver: 'maelle',

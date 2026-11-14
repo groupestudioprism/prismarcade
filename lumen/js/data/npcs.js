@@ -70,7 +70,7 @@ export const NPCS = {
           'Un éclat rouge du Grand Prisme flotte au-dessus de la flamme. Il pointe vers l’ouest… vers la Forêt de Verre.',
           'Cette robe était celle des gardiens du phare. Elle te revient.',
           FIA('La Forêt de Verre ! Il paraît que les arbres y sonnent comme des cloches quand le vent passe.'),
-          'Repose-toi d’abord. La route vers les autres îles s’ouvrira bientôt.',
+          'La mer est de nouveau sûre. Calixte, le passeur, t’attend sur le port, au bout de la grand-rue à l’est du village. Sa barque t’emmènera vers la Forêt de Verre quand tu seras prête.',
         ],
         do: [{ step: 'q_phare' }, { flag: 'acte1_fini' }],
       },
@@ -327,9 +327,9 @@ export const NPCS = {
       },
       {
         if: () => true,
-        say: ['Le phare brille ! Pour la première fois depuis longtemps, je vois la route : au sud-est, une île couverte d’arbres de verre. La Forêt de Verre. Je t’y emmène quand tu veux.'],
+        say: ['Le phare brille ! Pour la première fois depuis longtemps, je vois la route : à l’ouest, une île couverte d’arbres de verre. La Forêt de Verre. Je t’y emmène quand tu veux.'],
         choices: [
-          { t: 'Partir pour la Forêt de Verre', do: [{ travel: { to: 'foret', zone: 'vitrebourg', cell: [12, 7] } }] },
+          { t: 'Partir pour la Forêt de Verre', do: [{ step: 'q_traversee' }, { travel: { to: 'foret', zone: 'vitrebourg', cell: [12, 7] } }] },
           { t: 'Partir pour le Désert des Échos', if: (q) => q.flag('acte2_fini'), do: [{ travel: { to: 'desert', zone: 'cite', cell: [12, 7] } }] },   /* ACTE III */
           { t: 'Partir pour les Abysses Miroirs', if: (q) => q.flag('acte3_fini'), do: [{ travel: { to: 'abysses', zone: 'greve', cell: [12, 7] } }] },   /* ACTE IV : route ouverte par la fin de l’Acte III */
           { t: 'Pas maintenant' },
