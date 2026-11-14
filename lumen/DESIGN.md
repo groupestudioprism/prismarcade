@@ -432,3 +432,35 @@ Canopée (can1..can4) : vides franchis par paires de poteaux de grappin (portée
 **Caméra.** Fixe : `CAM_YAW = 0`, `CAM_PITCH = 0,95`. La souris, le tactile et la manette ne la tournent plus (molette / pincer = zoom borné). `S.yaw`/`S.yawT` restent utilisables en interne (cinématiques, tests).
 **Trou de visibilité.** `world/hole.js` : un patch `onBeforeCompile` posé une fois sur tous les matériaux Mesh (instanciés/fusionnés compris ; pas les shaders propres, Points, Sprites) ; les fragments qui sont devant Lyra (profondeur + `margin`) et au-dessus de ses pieds (`foot`), dans un disque d’écran, sont écartés par tramage. Aucun coût de géométrie, marche avec `?low&nobloom`. Réglages `hole.cfg` : `radius` 2,3 (unités monde projetées), `margin` 0,55, `foot` 0,8, `alpha` 0,92 ; `?nohole` le désactive. Un second trou suit le PNJ en dialogue. Les intérieurs restent corrects (le sol devant le joueur n’est jamais percé).
 **Test.** `node tools/build-test-montagne.mjs` écrit `js/islands/test-montagne.js` (île cachée, hors `ISLANDS`, jamais sauvegardée) ; `?ile=test-montagne`. `tests/qa_altitude.py`.
+
+## Forêt de Verre : la montagne (implémenté, branche `montagne-foret`)
+
+L'île 2 n'est plus un archipel de salles : c'est UNE montagne (`layout: 'montagne-1'`, 16 zones extérieures, altitude 0 à 13, soit 9,75 u). Caméra fixe, nord en haut : on monte vers le nord. Tout le contenu (zones, PNJ, quêtes, coffres, éclats, boss, drapeaux `acte2_fini`, `boss_verre`, fragment vert) est conservé avec les mêmes identifiants ; l'ordre des étapes de quête est inchangé (les sauvegardes stockent l'indice d'étape).
+
+Plan par altitude (niveau = 0,75 u) :
+| Niv. | Zone | Rôle |
+|---|---|---|
+| 0 à 2 | Vitrebourg | village au pied de la montagne, trois bandes (bas 0, place 1, haut 2) ; Auberge de la Rosée au sud |
+| 1,5 à 5 (niv. 2 à 8) | Lisière du Verre | quatre terrasses reliées par des escaliers ; haie de ronces en travers de la route, roches, cerfs de verre |
+| 3, 4, 5 | salles des vitraux f1, f2, f3 | un vitrail par palier, portes `fg1` à `fg3` |
+| 6 | Belvédère | cristal de voyage, palier d'orientation |
+| 7 | Branches basses (can1) | début de la Canopée, grappin |
+| 8, 11, 12 | Branches hautes, Passerelle, Nid de lumière | passerelles de cime `fc0`..`fc2`, seuls ponts restants |
+| 8 à 10 | Sentier du Portique puis Temple de Verre | flanc ouest : la route vers le boss `boss_verre` |
+| 13 | Phare de Verre | sommet, énigmes `ph_*`, fragment vert |
+
+Choix de construction. Les salles d'origine gardent leur carte et leurs énigmes ; `tools/build-foret.mjs` les fait pivoter (`rotateZone`, dans `tools/areas-montagne.mjs`) pour que l'entrée soit au sud et la sortie au nord, puis revérifie chaque énigme par force brute. Les ponts entre zones sont remplacés par des portes de barrière (`kind: 'barrier'`) : la montagne est continue, la progression est fermée par les portes d'origine (`b_vitres`, `b_lisiere`, `b_temple`, `fg1`..`fg3`, `b_canopee`). La porte `b_vitres` est posée sur l'unique goulot (case 30,5 du village) ; un test vérifie qu'il n'y a aucun chemin autour.
+
+Ce qui est propre à la montagne (mécanique et rythme) :
+1. Raccourci de la Cascade, qui s'ouvre vers le bas : résoudre le 3e vitrail (`fg3`) ouvre `rac_cime` (lien `gateLinks`) et un escalier de 39 cases descend du Belvédère au village. La montée se fait en étapes, la redescente est un cadeau. Un test vérifie que le raccourci est fermé tant que `fg3` ne l'est pas.
+2. Chaque palier a son rythme : terrasses à escaliers (Lisière), salles à énigme de lumière (vitraux), grappin sur les cimes, puis boss latéral.
+3. Brume et ciel dépendent de l'altitude (`P.gy`) : mer de brume proche au pied, air clair et lointain en haut.
+4. Falaises et murs en verre vert-bleu clair (`cliff`/`wall` dans le thème), plus des parois sombres au-dessus du vide.
+5. Boussole du Phare dans le HUD (`#peak-gauge` : « Phare · N niveaux à gravir · alt. X »). Avec une caméra fixe à 17 u de distance et un sol visible de 6 cases au nord de Lyra, voir le Phare depuis le village est physiquement impossible : la boussole le remplace.
+6. Carte : plan teinté par l'altitude, lignes de falaise, et « coupe de la montagne » (profil des altitudes avec la position de Lyra), lisible sur téléphone (la grande carte tient dans l'écran). Cristal de voyage « Portique » ajouté.
+
+Sauvegardes : `world.layout` marque la nouvelle géographie. Une partie sans marque (ancienne Forêt) est chargée, Lyra est replacée à l'arrivée de sa zone (qui existe toujours), le point de reprise invalide est ramené à l'auberge.
+
+Changements moteur (minimes) : `relief.js` lit des couleurs optionnelles `th.cliff` / `th.wall` ; `main.js` : `gateLinks`, relayout au chargement, toasts de barrière, HUD, carte, brume. Aucun changement de règles Firestore.
+
+Tests : `tests/qa_montagne_foret.py` (montée réelle village → Phare au clavier avec grappin, altitude croissante, falaise bloquante, raccourci, trou de visibilité en trois points), `qa_foret_full.py` (3 transitions à pied), `qa_saves.py` (anciennes Forêts), bibliothèque `tests/qa_walk.py`.
