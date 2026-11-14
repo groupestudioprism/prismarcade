@@ -58,7 +58,7 @@ q.tick(500)
 J('récompenses q_echos', "T.rewardCheck('q_echos',{inv:{},unl:{},ecus:0})")
 # ---------- Dunes : abri de tempête, ennemis, coffres, ronces ----------
 J('dunes : abri', """(async()=>{const L=__lumen,A=L.G.a3;L.tpZone('dunes',[12,10]);await T.tick(500);A.setStorm('storm');await T.tick(300);
-  const t=await T2.stand(12,9,t=>t.kind==='shelter');if(!t)return 'abri?';L.interact();await T.tick(1200);return 'tempête après abri: '+A.storm.phase+' portée '+L.isl.range})()""", "calm portée null")
+  const t=await T2.stand(96+12,9,t=>t.kind==='shelter');if(!t)return 'abri?';L.interact();await T.tick(1200);return 'tempête après abri: '+A.storm.phase+' portée '+L.isl.range})()""", "calm portée null")
 J('dunes : ennemis', "(async()=>{const L=__lumen;L.tpZone('dunes',[15,12]);await T.tick(1000);const t={};L.combat.enemies.forEach(e=>t[e.type]=(t[e.type]||0)+1);return JSON.stringify(t)})()", "scarabee")
 J('dunes : combats (scorpion, chacal, cactus, momie, écho)', "(async()=>{const L=__lumen;const k=await T.cutAndKill(['scorpion','chacal','cactus','scarabee'],40000);return k})()")
 J('dunes : coffres', """(async()=>{const o=[];for(const id of ['ch_dun_ecus','ch_dun_the','ch_dun_masse'])o.push(id+':'+await T.openChest(id));return o.join(' ')})()""")

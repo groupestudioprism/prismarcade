@@ -1490,9 +1490,11 @@ function update(dt) {
     const F = S.finale; F.t += dt;
     const k = Math.min(1, F.t / 4.5), e = k * k * (3 - 2 * k);
     S.camT.lerp(F.at, damp(2, dt));
-    const yaw = F.from.yaw + e * 1.6, dist = lerp(F.from.dist, 30, e), pitch = lerp(F.from.pitch, 0.55, e);
+    /* CAMÉRA FIXE : le tour de caméra de la finale est purement visuel (S.yaw n'est jamais touché) ; il revient en douceur au plan fixe avant de rendre la main */
+    const bk = Math.max(0, Math.min(1, (F.t - 5.1) / 1.3)), back = bk * bk * (3 - 2 * bk), ee = e * (1 - back);
+    const yaw = F.from.yaw + ee * 1.6, dist = lerp(F.from.dist, 30, ee), pitch = lerp(F.from.pitch, 0.55, ee);
     camera.position.set(S.camT.x + Math.sin(yaw) * Math.cos(pitch) * dist, S.camT.y + Math.sin(pitch) * dist, S.camT.z + Math.cos(yaw) * Math.cos(pitch) * dist);
-    camera.lookAt(S.camT.x, S.camT.y + 2 * e, S.camT.z);
+    camera.lookAt(S.camT.x, S.camT.y + 2 * ee, S.camT.z);
     S.restoreT = 1;
     if (F.t > 6.5) { S.finale = null; S.mode = 'play'; setTouch(true); hud.banner(META.finale.title, META.finale.sub); quests.check(); npcMarkers(); }
   } else if (S.mode === 'ending' && fin) {
@@ -1631,6 +1633,6 @@ window.__lumen = {
   tpZone(id, c) { const z = zones[zoneIndex[id]]; const cc = c || z.spawn; teleport(W(z.ox + cc[0]), W(z.oy + cc[1])); },
   give: (id, n) => giveItem(id, n),
   findTarget, WARPS, canStand: (x, z) => canStand(x, z), completion, interact: () => interact(false), interactBack: () => interact(true), target: () => S.target, saveTo, openGate, a3: A3,
-  fin, zscene, startEnding,   /* ACTE VI : audit de ciblage et tests */
+  fin, zscene, startEnding, startFinale,   /* ACTE VI : audit de ciblage et tests */
   lift, hole, heightAt, CAM_YAW, CAM_PITCH, worldY: (o) => lift.worldY(o),   /* ALTITUDE : tests (y logique = au-dessus du sol ; worldY = y rendu) */
 };

@@ -323,3 +323,10 @@ Mise à jour du 06/11/2026 (session de stabilisation) :
 - Tests : `qa_montagne_foret.py`, `qa_foret_full.py`, `qa_saves.py`, outil de marche réelle `qa_walk.py` (BFS + grappin). Toujours `flock /tmp/lumen-chrome.lock`, un seul test à la fois.
 - Limites connues : le Phare n'est pas visible en 3D depuis le village (boussole HUD à la place) ; les salles restent des plateformes carrées ; sous les terrasses hautes les parois sont de hautes colonnes ; les gouffres de la Canopée restent visibles ; étiquettes de la carte légèrement serrées.
 - Non-régression : aube (2 faux échecs connus : énigme lumière du sanctuaire, écran de fin), désert, abysses 1 à 6, pics, zénith 1 à 6, audit zénith, saves, altitude, touch : OK.
+
+## Audit « caméra fixe » (branche camera-audit)
+- **Constat** (rayons réels sur les maillages, `tests/qa_camera_fixe.py`) : seuls les murs de donjon (2,9 u, zones à `th.floor`) cachaient totalement des objets clés (Abysses : 13 éclats, vannes, socles, lanterne, bassins ; Zénith : un panneau). Décor extérieur (rochers bas, arbres, maisons) : aucun objet clé totalement masqué ; PNJ derrière un étal ou une maison seulement partiellement, et le second trou du dialogue les dévoile (capture vue).
+- **Correctif** : `world/build.js` abaisse à 0,95 un mur de donjon dont la case nord est du sol (`lowFront`). Finale (main.js) : le tour de caméra revient en douceur au plan fixe ; `S.yaw` n'est modifié nulle part. `__lumen.startFinale` exposé.
+- **Textes** : plus aucune mention de rotation de caméra (le test grep le code, les docs et les CSS). Contrôles : haut = nord vérifié (marche, esquive, orientation pour grappin / plané).
+- **Test** : `QA_PORT=8876 flock /tmp/lumen-chrome.lock timeout 900 python3 -u tests/qa_camera_fixe.py [île…]`. `qa_desert_full.py` : coordonnée de l'abri des Dunes corrigée (échec déjà présent avant l'audit : la case était donnée hors de la zone).
+- **Reste** : un objet clé derrière un grand décor reste caché tant que Lyra est loin (le trou ne suit que Lyra et le PNJ en dialogue) ; les ennemis derrière un arbre sont parfois masqués.
