@@ -181,7 +181,7 @@ lumen/
   - les parties de la version 0.2 sont reprises (fonction `migrateLegacy`).
 
 ### Commandes (PC)
-- **Déplacement :** ZQSD, WASD ou flèches. **Caméra :** glisser la souris. **Zoom :** molette.
+- **Déplacement :** ZQSD, WASD ou flèches. **Caméra :** fixe (nord en haut, aucune rotation). **Zoom :** molette.
 - **Attaque :** clic gauche ou K (maintenir pour le coup chargé). **Onde :** clic droit ou L.
 - **Esquive :** Espace ou Maj. **Interagir :** E. **Sens inverse :** R. **Potion :** F.
 - **Menus :** I (inventaire), J (journal), M (carte), C (personnage), Échap (menu).
@@ -305,3 +305,14 @@ Mise à jour du 06/11/2026 (session de stabilisation) :
 - **Fichiers communs touchés** (fusion) : `logic.js` (vent, relais `hold`, `tickTimers`, `ventLinks`), `levels.js`, `main.js`, `world/build.js` (thèmes), `world/creatures.js`, `data/items|enemies|shops|looks|npcs|quests.js` (une ligne de fusion chacun), `audio/music|ambience|sfx.js`, `engine/input.js` (touche V), `index.html` + css (bouton ◎), `ui/screens.js` (forgeron par île, prochaines îles), `game/state.js`, `tools/verify|reachlib|coherence.mjs`, `tests/qa_lib.py` (ROOT relatif).
 - **Limites honnêtes** : durée 70-80 min non mesurée en jeu réel ; boss à IA générique ; le Phare n'a pas de relais temporisé (vérifié par énumération statique) ; rendu testé seulement en logiciel (≈2 images/s).
 - **Tests** : `tests/qa_pics_smoke.py`, `tests/qa_pics_full.py` (`QA_PORT=8872 flock /tmp/lumen-chrome.lock timeout 900 python3 -u …` ; `qa_pics_travel.py` = route Abysses → Pics, `qa_pics_regress.py`, `qa_pics_portals.py`, `audit_targets.py`), solutions dans `tests/qa_solutions.json` (clé `pics`) et `tests/qa_solutions_pics_timed.json` (séquences chronométrées, régénérées par build-pics).
+
+
+## Annexe RELIEF — socle moteur de l’altitude (branche `montagne-moteur`)
+
+- **Données :** `zone.h` + `zone.hmap` (voir DESIGN.md, « Relief »). `HU` = 0,75, `MAX_STEP` = 1 niveau, case = 2 u. Absence = 0 : les 6 îles sont inchangées. `bridge.h` nombre ou tableau.
+- **API :** `js/altitude.js` (`heightAt`, `stepOk`, `attachAltitude`, `setActiveIsland`) ; `js/world/lift.js` (`lift.add/addGroup/worldY`) ; `js/world/relief.js` ; `js/world/hole.js`. Dans `window.__lumen` : `heightAt`, `lift`, `hole`, `worldY`. `P.gy` = sol sous Lyra ; `P.y` reste la hauteur au-dessus du sol.
+- **Règle d’or :** tout objet dynamique garde un y logique relatif au sol ; s’il est créé hors des groupes déjà gérés (combat, PNJ, joueur), l’enregistrer avec `lift.add(obj)`.
+- **Outils :** `reachlib`, `reach`, `verify`, `coherence` (lint de `hmap` et des ponts), `generate`, `timed`, `analyse-abysses` sont conscients de l’altitude ; les `build-*.mjs` conservent désormais `h` et `hmap` (sans régénérer les îles).
+- **Test :** `?ile=test-montagne` (île cachée `js/islands/test-montagne.js`, générée par `tools/build-test-montagne.mjs`, 3 terrasses 0/4/8, escalier, rampe, falaise) ; `tests/qa_altitude.py`. `qa_touch.py` attend désormais une caméra qui ne tourne pas.
+- **Limites connues :** grappin et planeur interpolent le sol (`P.gy`) mais le câble/la trajectoire restent calculés en y logique : ne pas mettre de poteau de grappin ni de saut de planeur au-dessus d’une falaise de plus de ~4 niveaux sans test ; les portails téléportent au sol de la case d’arrivée (aucun enterrement). Les murs de roche utilisent la couleur de la zone : à affiner par thème. Une marche diagonale entre deux cases a Δ ≥ 2 est refusée (pas de coupe-coin). Pas d’altitude dans les intérieurs.
+- **Conseils pour bâtir la montagne :** terrasses plates sous les décors (maisons, arbres, coffres) ; Δ ≤ 1 niveau par case sur les rampes et escaliers ; falaises = Δ ≥ 2 ; laisser un couloir de 2 cases pour les escaliers ; vérifier avec `node tools/verify.mjs` et `reach.mjs` ; copier le modèle de `tools/build-test-montagne.mjs` ; ajouter `h`/`hmap` aux clés de zone du script de build.

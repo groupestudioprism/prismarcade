@@ -51,9 +51,9 @@ tap('[data-touch=interact]',700); q.step('appui long = sens inverse', lambda: q.
 for ui in ['inventaire','journal','carte','options']:
     pg.locator(f'[data-ui={ui}]').click(); pg.wait_for_timeout(250); q.step('menu tactile '+ui, lambda: q.ev("__lumen.S.mode+'|'+(__lumen.G.screens.current||'')+'|touch='+!document.getElementById('touch').hidden"), lambda r: r.startswith('screen|menu|touch=false'))
     pg.locator('#screen .m-close').click(); pg.wait_for_timeout(250); q.step('fermeture '+ui, lambda: q.ev("__lumen.S.mode+'|touch='+!document.getElementById('touch').hidden"), lambda r: r.startswith('play|touch=true'))
-# glisser la caméra à droite
+# glisser (caméra fixe : sans effet)
 y0=q.ev("__lumen.S.yawT"); touch('touchStart',700,200,2); touch('touchMove',640,200,2); touch('touchMove',560,200,2); touch('touchEnd',0,0); pg.wait_for_timeout(300)
-q.step('glisser à droite = caméra', lambda: [y0,q.ev("__lumen.S.yawT")], lambda r: r[0]!=r[1])
+q.step('glisser à droite = la caméra ne tourne plus (fixe)', lambda: [y0,q.ev("__lumen.S.yawT")], lambda r: r[0]==r[1])
 # la bulle d'interaction
 q.js('invite tactile',"document.getElementById('prompt').innerText+'|'+document.getElementById('prompt').hidden")
 q.done()

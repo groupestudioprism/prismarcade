@@ -2,9 +2,10 @@
    node tools/reach.mjs */
 import { ISLANDS, ISLAND_META } from '../js/levels.js';
 import { checkIsland } from './reachlib.mjs';
+import testMontagne from '../js/islands/test-montagne.js';   /* ALTITUDE : île de test (relief) */
 
 let bad = 0;
-for (const def of ISLANDS) {
+for (const def of [...ISLANDS, testMontagne]) {
   const r = checkIsland(def, (ISLAND_META[def.id] || {}).town);
   console.log(`${def.name} : ${r.cells} cases accessibles, ${r.posts} poteau(x) de grappin`);
   console.log(`  ${r.notes.length} élément(s) derrière des ronces ou des roches fissurées (arme requise)${process.argv.includes('-v') ? ' :' : ' — liste avec -v'}`);

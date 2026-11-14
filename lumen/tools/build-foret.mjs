@@ -238,7 +238,7 @@ const island = {
   ending: 'Le Phare de Verre brille. Un fragment vert du Grand Prisme flotte au-dessus de la flamme.',
   zones: Z.map((z) => {
     const o = { id: z.id, region: z.region, title: z.title, num: z.num || 0, secret: !!z.secret, ox: z.ox, oy: z.oy, spawn: z.area ? z.spawn : z.entry, entryGate: z.entryGate, barrier: z.barrier, hint: z.hint, seed: z.seed, map: z.map, ents: z.ents || [] };
-    ['area', 'theme', 'music', 'interior', 'dungeon', 'props', 'npcs', 'chests', 'pickups', 'spawns', 'doors', 'warp', 'exit', 'combatRooms', 'stages', 'final', 'respawn'].forEach((k) => { if (z[k] !== undefined) o[k] = z[k]; });
+    ['h', 'hmap', /* ALTITUDE */ 'area', 'theme', 'music', 'interior', 'dungeon', 'props', 'npcs', 'chests', 'pickups', 'spawns', 'doors', 'warp', 'exit', 'combatRooms', 'stages', 'final', 'respawn'].forEach((k) => { if (z[k] !== undefined) o[k] = z[k]; });
     return o;
   }),
   bridges,

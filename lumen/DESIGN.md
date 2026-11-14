@@ -83,7 +83,7 @@ Une nuit, une ombre sans forme, **la Brume**, a enveloppé le Grand Prisme, qui 
 | Action | Clavier et souris | Manette (PC) | Tactile |
 |---|---|---|---|
 | Se déplacer | ZQSD / WASD / flèches | Stick gauche | Joystick à gauche |
-| Tourner la caméra | Glisser avec la souris | Stick droit | Glisser à droite |
+| Caméra | Fixe (nord en haut, aucune rotation) | Fixe | Fixe |
 | Zoom | Molette | Gâchettes | Pincer |
 | Interagir (tourner, ramasser, parler) | E / Espace | A | Bouton d'action |
 | Interaction inverse (tourner dans l'autre sens) | R | X | Appui long |
@@ -289,7 +289,7 @@ Les maillages statiques sont fusionnés (maisons, meubles, personnages, nuages),
 
 ### Interface (`css/lumen.css`)
 Panneaux en verre fumé teinté (dégradé violet profond, liseré clair en haut), accents rose et or, boîte de dialogue avec filet dégradé, vignette douce (désactivée en « mouvement réduit »), titre qui scintille, bannières en dégradé. Lisible sur téléphone.
-- **Caméra** : vue de trois quarts au-dessus du personnage, rotation libre, zoom limité. Plan large lorsqu'un phare s'allume.
+- **Caméra** : vue de trois quarts au-dessus du personnage, **fixe** (lacet 0 : le haut de l’écran est le nord, −z ; inclinaison 0,95 rad), aucune rotation, zoom limité (9 à 30). Plan large lorsqu'un phare s'allume.
 
 ## 12. Son et musique
 Tout est **synthétisé en direct** (Web Audio, aucun fichier, aucune musique protégée). Code : `js/engine/audio.js` (façade) et `js/audio/` (`core.js` contexte/bus/limiteur, `music.js`, `sfx.js`, `ambience.js`). L'API est décrite dans `COORDINATION.md`.
@@ -421,3 +421,14 @@ Canopée (can1..can4) : vides franchis par paires de poteaux de grappin (portée
 - **Créatures :** crabe-lanterne (chargeur, faible aux coups lourds), méduse-reflet (à distance, résiste à la lumière), anguille d’ombre (rapide, faible à la lumière), sentinelle de corail (bouclier), boss Gardien des Marées (deux phases).
 - **Vérification :** `tools/analyse-abysses.mjs` explore l’espace des états (réglage de tous les objets × zone de marche de Lyra) : solution, aucune impasse, aucun faisceau qui sort, objets tous manœuvrables. `tools/build-abysses.mjs` assemble l’île et écrit `js/islands/abysses.js`.
 - **Route :** les Abysses s’atteignent **après l’Acte III** (`acte3_fini`) : Yaël (Désert), Calixte (Havre-Aube) ; retour par Lagon vers le Désert, Vitrebourg ou Havre-Aube. Tessel (Forêt) ne propose plus que le Désert.
+
+
+## Relief : altitude, caméra fixe, trou de visibilité (implémenté, socle moteur)
+
+**Données.** Une zone peut avoir `h` (niveau de base, défaut 0) et `hmap` (tableau de chaînes, une par ligne de `map`, un caractère par case : `0-9a-z` = niveau 0 à 35 ; espace, `.` et `_` = 0). Absence = 0 partout : les îles existantes sont inchangées (même pas de maillage relief). `bridge.h` : nombre ou tableau (sinon le pont est interpolé entre les terres de ses extrémités). 1 niveau = `HU` = 0,75 unité ; une case = 2 unités ; **marche maximale `MAX_STEP` = 1 niveau** : |Δ| ≤ 1 est franchissable (rampe, marche), au-delà c’est une falaise (non franchissable, dessinée en mur de roche).
+**Hauteur.** `heightAt(x, z)` (js/altitude.js) : continue, interpolation bilinéaire entre les centres de cases voisines ; un échantillon de l’autre côté d’une falaise ou d’un vide est remplacé par le niveau de la case propriétaire (la falaise reste franche). Elle sert au terrain, au joueur (`P.gy`), PNJ, ennemis, projectiles, objets au sol, coffres, faisceaux, ponts, ombres, audio, caméra (cible = `P.gy + 0,8`). `stepOk` (logique) = connexité ; `reachCells` et tous les outils (`reachlib`, `verify`, `reach`, `coherence`, `generate`) l’utilisent : une case entourée de cases trop hautes est inaccessible.
+**Convention « lift ».** Le y logique d’un objet dynamique est sa hauteur au-dessus du sol local ; juste avant le rendu `lift.apply()` ajoute `heightAt`, juste après `lift.restore()` l’enlève. Le code de jeu n’a donc pas à connaître l’altitude. Le contenu statique a l’altitude cuite dans `buildWorld`.
+**Terrain.** `world/relief.js` : maillage par zone, sommets colorés, cases plates = 1 quad, cases en pente = 4 ; murs de terre sous le vide, murs de roche facettés sur les falaises, masse de roche sous la montagne.
+**Caméra.** Fixe : `CAM_YAW = 0`, `CAM_PITCH = 0,95`. La souris, le tactile et la manette ne la tournent plus (molette / pincer = zoom borné). `S.yaw`/`S.yawT` restent utilisables en interne (cinématiques, tests).
+**Trou de visibilité.** `world/hole.js` : un patch `onBeforeCompile` posé une fois sur tous les matériaux Mesh (instanciés/fusionnés compris ; pas les shaders propres, Points, Sprites) ; les fragments qui sont devant Lyra (profondeur + `margin`) et au-dessus de ses pieds (`foot`), dans un disque d’écran, sont écartés par tramage. Aucun coût de géométrie, marche avec `?low&nobloom`. Réglages `hole.cfg` : `radius` 2,3 (unités monde projetées), `margin` 0,55, `foot` 0,8, `alpha` 0,92 ; `?nohole` le désactive. Un second trou suit le PNJ en dialogue. Les intérieurs restent corrects (le sol devant le joueur n’est jamais percé).
+**Test.** `node tools/build-test-montagne.mjs` écrit `js/islands/test-montagne.js` (île cachée, hors `ISLANDS`, jamais sauvegardée) ; `?ile=test-montagne`. `tests/qa_altitude.py`.

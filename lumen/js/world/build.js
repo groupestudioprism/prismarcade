@@ -10,6 +10,9 @@ import { hash, T, W, BEAM_Y } from '../engine/util.js';
 import { U, tickGfx, patchSway, patchWater, glassTexture, shaftTexture, haloSprite, merge, mx, bakeStatic } from './gfx.js';
 import { createLife } from './life.js';
 import { abyssView, ABYSSES_ENTS } from './abysses.js';   /* ACTE IV */
+import { heightOf, levelAt } from '../altitude.js';   /* ALTITUDE */
+import { buildReliefMesh } from './relief.js';
+import { hole } from './hole.js';
 import { DESERT_THEMES, buildSplitter, buildSocle, desertTrees, desertProp, tickDesert } from './desert-props.js';   /* ACTE III */
 
 const C = (hex) => new THREE.Color(hex);
@@ -52,6 +55,8 @@ export const themeOf = (z) => (z && z.theme) || 'puzzle';
 export function buildWorld(scene, isl, def, opts = {}) {
   const LOW = !!opts.low;
   const root = new THREE.Group(); scene.add(root);
+  const ALT = !!isl.alt;   /* ALTITUDE : vrai si l'île a du relief ; sinon H() vaut 0 partout et rien ne change */
+  const H = (wx, wz) => (ALT ? heightOf(isl, wx, wz) : 0);
   const zones = def.zones;
   const terr = (x, y) => (y >= 0 && y < isl.h && x >= 0 && x < isl.w ? isl.terrain[y][x] : ' ');
   const isLand = (x, y) => { const t = terr(x, y); return t !== ' ' && t !== '='; };
@@ -89,6 +94,7 @@ export function buildWorld(scene, isl, def, opts = {}) {
     items.forEach((it, i) => {
       dummy.position.set(0, 0, 0); dummy.rotation.set(0, 0, 0); dummy.scale.set(1, 1, 1);
       const col = set(dummy, it, i);
+      if (ALT && !o.noH) dummy.position.y += H(dummy.position.x, dummy.position.z);   /* ALTITUDE : posé sur le relief */
       dummy.updateMatrix(); m.setMatrixAt(i, dummy.matrix);
       if (col) m.setColorAt(i, col);
     });
@@ -134,23 +140,32 @@ export function buildWorld(scene, isl, def, opts = {}) {
     const wallTheme = th.floor;   // sanctuaire / intérieur : '#' = murs hauts
     const floorCells = cells.filter(([x, y]) => !(wallTheme && terr(x, y) === '#'));
     const patch = (x, y) => (Math.sin(x * 0.33 + y * 0.21) + Math.sin(x * 0.12 - y * 0.29 + 1.7) + Math.sin((x + y) * 0.07)) * 0.022;
-    instanced(G, tileGeo, M.grass, floorCells, (o, [x, y]) => {
+    const tileColor = (x, y) => {
       const t = terr(x, y), edge = depthOf[x + ',' + y] === 0;
-      o.position.set(W(x), -0.3 + (th.floor ? 0 : (hash(x, y, 1) - 0.5) * 0.025), W(y));
       if (th.wood) return C((y % 2) ? '#b4825a' : '#a87650').offsetHSL(0, 0, (hash(x, y, 3) - 0.5) * 0.045 + ((x * 3 + y) % 4) * 0.008);
       if (th.floor) return C(((x + y) % 2) ? th.grass : th.edge).offsetHSL(0, 0, (hash(x, y, 3) - 0.5) * 0.04);
       if (t === ',' || t === 'r' && false) return C(th.path).offsetHSL(0, 0, (hash(x, y, 3) - 0.5) * 0.05 + patch(x, y) * 0.6);
       if (t === 'x') return C(th.path);
       return C(edge ? th.edge : th.grass).offsetHSL((hash(x, y, 2) - 0.5) * 0.02 + patch(x, y) * 0.3, 0, (hash(x, y, 3) - 0.5) * 0.03 + patch(x, y));
+    };
+    /* ALTITUDE : une zone a du relief si l'un de ses sols n'est pas au niveau 0 ou touche un sol d'un autre niveau.
+       Elle reçoit alors un maillage à hauteurs par sommet (relief.js) à la place des dalles, de la terre et des falaises. */
+    const hasRelief = ALT && !z.interior && cells.some(([x, y]) => { const l = levelAt(isl, x, y); if (l) return true; return [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => { const q = isLand(x + dx, y + dy) ? levelAt(isl, x + dx, y + dy) : null; return q !== null && q !== l; }); });
+    if (hasRelief) {
+      if (!M.terrain) M.terrain = mat('#ffffff', { roughness: 0.95, vertexColors: true });
+      G.add(buildReliefMesh(isl, zi, cells, th, tileColor, M.terrain));
+    } else instanced(G, tileGeo, M.grass, floorCells, (o, [x, y]) => {
+      o.position.set(W(x), -0.3 + (th.floor ? 0 : (hash(x, y, 1) - 0.5) * 0.025), W(y));
+      return tileColor(x, y);
     });
     if (!z.interior) {
-      instanced(G, dirtGeo, M.dirt, cells, (o, [x, y]) => { o.position.set(W(x), -1.5, W(y)); return C(th.dirt).offsetHSL(0, 0, (hash(x, y, 4) - 0.5) * 0.08); });
+      if (!hasRelief) instanced(G, dirtGeo, M.dirt, cells, (o, [x, y]) => { o.position.set(W(x), -1.5, W(y)); return C(th.dirt).offsetHSL(0, 0, (hash(x, y, 4) - 0.5) * 0.08); });
       instanced(G, underGeo, M.under, cells, (o, [x, y]) => {
         const h = 2 + depthOf[x + ',' + y] * 2.4 + hash(x, y, 5) * 3;
         o.position.set(W(x) + (hash(x, y, 6) - 0.5) * 0.6, -2.4 - h / 2, W(y) + (hash(x, y, 7) - 0.5) * 0.6);
         o.rotation.set(Math.PI, hash(x, y, 8) * 6, 0); o.scale.set(1, h, 1);
         return C(th.under).offsetHSL(0, 0, (hash(x, y, 9) - 0.5) * 0.1 + 0.07); /* un peu plus clair : le dessous des îles n'est plus noir */
-      }, { receive: false });
+      }, { receive: false, noH: true });
     }
     // murs (donjon, intérieurs) ou rochers (extérieur)
     const rocks = cells.filter(([x, y]) => terr(x, y) === '#');
@@ -240,7 +255,7 @@ export function buildWorld(scene, isl, def, opts = {}) {
       for (let i = 0; i < nS; i++) {
         const [x, y] = picks[Math.floor(hash(i, zi, 131) * picks.length)];
         const sm = new THREE.Mesh(new THREE.PlaneGeometry(2.6 + hash(x, y, 132) * 1.4, 11), new THREE.MeshBasicMaterial({ color: th.glass ? '#b8ffee' : '#ffe9b8', map: shaftTexture(), transparent: true, opacity: 0.0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false }));
-        sm.position.set(W(x) + 1.2, 5.2, W(y)); sm.rotation.set(0, hash(x, y, 133) * 3.14, 0.33); sm.rotation.order = 'YXZ'; sm.userData = { ph: hash(x, y, 134) * 6, base: th.glass ? 0.2 : 0.13 };
+        sm.position.set(W(x) + 1.2, 5.2 + H(W(x), W(y)), W(y)); sm.rotation.set(0, hash(x, y, 133) * 3.14, 0.33); sm.rotation.order = 'YXZ'; sm.userData = { ph: hash(x, y, 134) * 6, base: th.glass ? 0.2 : 0.13 };
         detail(zi, sm.position.x, sm.position.z).add(sm); shafts.push(sm);
       }
     }
@@ -347,13 +362,16 @@ export function buildWorld(scene, isl, def, opts = {}) {
           const grp = new THREE.Group();
           [-0.62, 0, 0.62].forEach((o) => { const p = new THREE.Mesh(plank, M.wood); p.position.set(o, -0.07, 0); p.castShadow = true; p.receiveShadow = true; grp.add(p); });
           [-0.95, 0.95].forEach((z) => { const r = new THREE.Mesh(rail, M.wood); r.position.set(0, 0.55, z); grp.add(r); const p = new THREE.Mesh(post, M.wood); p.position.set(-0.85, 0.25, z); grp.add(p); });
-          grp.position.set(W(x), 0, W(y)); if (!along) grp.rotation.y = Math.PI / 2;
+          const by = H(W(x), W(y));   /* ALTITUDE : pont posé sur le relief, incliné selon sa pente */
+          grp.position.set(W(x), by, W(y)); if (!along) grp.rotation.y = Math.PI / 2;
+          if (ALT) { grp.rotation.order = 'YXZ'; const sl = along ? (H(W(x) + 1, W(y)) - H(W(x) - 1, W(y))) / 2 : -(H(W(x), W(y) + 1) - H(W(x), W(y) - 1)) / 2; grp.rotation.z = Math.atan(sl); }
           grp.visible = false;
-          const ghost = new THREE.Mesh(ghostGeo, M.ghost); ghost.position.set(W(x), -0.05, W(y)); if (!along) ghost.rotation.y = Math.PI / 2;
+          const ghost = new THREE.Mesh(ghostGeo, M.ghost); ghost.position.set(W(x), -0.05 + by, W(y)); if (!along) ghost.rotation.y = Math.PI / 2;
+          if (ALT) { ghost.rotation.order = 'YXZ'; ghost.rotation.z = grp.rotation.z; }
           root.add(grp, ghost);
-          gateViews[gt.id].push({ group: grp, ghost, kind: 'bridge', delay: i * 0.12 });
+          gateViews[gt.id].push({ group: grp, ghost, kind: 'bridge', delay: i * 0.12, baseY: by });
         } else {
-          const grp = new THREE.Group(); grp.position.set(W(x), 0, W(y));
+          const grp = new THREE.Group(); grp.position.set(W(x), H(W(x), W(y)), W(y));
           let m = null;
           if (gt.look === 'seal') {
             m = new THREE.MeshBasicMaterial({ color: new THREE.Color('#b39cff').multiplyScalar(1.4), transparent: true, opacity: 0.55, depthWrite: false, side: THREE.DoubleSide });
@@ -370,7 +388,7 @@ export function buildWorld(scene, isl, def, opts = {}) {
             [[-0.5, 0.1, 1.3], [0.05, -0.2, 1.7], [0.55, 0.15, 1.2]].forEach(([ox, oz, s]) => { const c = new THREE.Mesh(new THREE.OctahedronGeometry(0.42, 0), m); c.position.set(ox, s * 0.7, oz); c.scale.set(0.8, s * 1.4, 0.8); c.castShadow = true; grp.add(c); });
           }
           zg.add(grp);
-          gateViews[gt.id].push({ group: grp, kind: gt.look || 'barrier', mat: m, delay: 0 });
+          gateViews[gt.id].push({ group: grp, kind: gt.look || 'barrier', mat: m, delay: 0, baseY: H(W(x), W(y)) });
         }
       });
     });
@@ -379,10 +397,10 @@ export function buildWorld(scene, isl, def, opts = {}) {
     (gateViews[g.id] || []).forEach((v) => {
       if (v.kind === 'bridge') {
         v.ghost.visible = !open;
-        if (instant) { v.group.visible = open; v.group.position.y = 0; v.group.scale.set(1, 1, 1); v.anim = 1; }
-        else if (open) { v.group.visible = true; v.anim = -v.delay; v.group.position.y = -3; }
+        if (instant) { v.group.visible = open; v.group.position.y = v.baseY || 0; v.group.scale.set(1, 1, 1); v.anim = 1; }
+        else if (open) { v.group.visible = true; v.anim = -v.delay; v.group.position.y = (v.baseY || 0) - 3; }
       } else {
-        if (instant) { v.group.visible = !open; v.group.scale.set(1, 1, 1); v.group.position.y = 0; v.anim = 0; }
+        if (instant) { v.group.visible = !open; v.group.scale.set(1, 1, 1); v.group.position.y = v.baseY || 0; v.anim = 0; }
         else if (open) v.anim = 0.0001;
       }
     });
@@ -401,7 +419,7 @@ export function buildWorld(scene, isl, def, opts = {}) {
   isl.ents.forEach((e) => {
     const zg = e.zone >= 0 && zones[e.zone] ? detail(e.zone, W(e.x), W(e.y)) : root;
     const g = new THREE.Group();
-    g.position.set(W(e.x), 0, W(e.y));
+    g.position.set(W(e.x), H(W(e.x), W(e.y)), W(e.y));   /* ALTITUDE */
     const v = { e, g };
     if (e.t === 'lantern') {
       pedestal(g, e.rot);
@@ -527,7 +545,7 @@ export function buildWorld(scene, isl, def, opts = {}) {
 
   /* ACTE III : socles (objets portés) */
   const socleViews = [];
-  (isl.socles || []).forEach((so) => { const sv = buildSocle(so, { THREE, M, glow, haloSprite, W }); detail(so.zone, W(so.x), W(so.y)).add(sv.g); socleViews.push(sv); });
+  (isl.socles || []).forEach((so) => { const sv = buildSocle(so, { THREE, M, glow, haloSprite, W }); sv.g.position.y += H(W(so.x), W(so.y)); detail(so.zone, W(so.x), W(so.y)).add(sv.g); socleViews.push(sv); });
 
   /* ---------- Bâtiments et décor des zones d'aventure ---------- */
   const props = [];   // { p, zi, g, kind, light? }
@@ -768,6 +786,7 @@ export function buildWorld(scene, isl, def, opts = {}) {
   zones.forEach((z, zi) => {
     (z.props || []).forEach((p) => {
       const r = p.t === 'house' ? { g: house(p, z) } : propMesh(p, z);
+      r.g.position.y += H(r.g.position.x, r.g.position.z);   /* ALTITUDE : bâtiments et meubles posés sur le relief (prévoir un sol plat dessous) */
       detail(zi, r.g.position.x, r.g.position.z).add(r.g);
       { const u = r.g.userData, skip = new Set(); ['spin', 'float', 'flame', 'bulb', 'hang', 'bucket'].forEach((k) => u[k] && skip.add(u[k])); (u.flames || []).forEach((m) => skip.add(m)); (u.drops || []).forEach((m) => skip.add(m)); bakeStatic(r.g, skip); }
       props.push({ p, zi, z, g: r.g });
@@ -778,7 +797,7 @@ export function buildWorld(scene, isl, def, opts = {}) {
   const chestViews = {};
   const chestGeo = new THREE.BoxGeometry(1.1, 0.7, 0.8), lidGeo = new THREE.BoxGeometry(1.14, 0.3, 0.84);
   function makeChest(c, z, zi) {
-    const g = new THREE.Group(); g.position.set(W(z.ox + c.x), 0, W(z.oy + c.y));
+    const g = new THREE.Group(); g.position.set(W(z.ox + c.x), H(W(z.ox + c.x), W(z.oy + c.y)), W(z.oy + c.y));
     const rare = c.item && ['marteau', 'sceptre', 'fragment_coeur', 'anneau_vie', 'amulette_lume'].includes(c.item);
     const b = new THREE.Mesh(chestGeo, rare ? mat('#5a4a8a') : M.wood); b.position.y = 0.35; b.castShadow = true; g.add(b);
     const band = new THREE.Mesh(new THREE.BoxGeometry(1.14, 0.12, 0.84), M.gold); band.position.y = 0.45; g.add(band);
@@ -794,7 +813,7 @@ export function buildWorld(scene, isl, def, opts = {}) {
 
   const pickupViews = {};
   zones.forEach((z, zi) => (z.pickups || []).forEach((pk) => {
-    const g = new THREE.Group(); g.position.set(W(z.ox + pk.x), 0, W(z.oy + pk.y));
+    const g = new THREE.Group(); g.position.set(W(z.ox + pk.x), H(W(z.ox + pk.x), W(z.oy + pk.y)), W(z.oy + pk.y));
     let f;
     if (pk.item === 'fleur_miel') {
       f = new THREE.Group();
@@ -830,7 +849,7 @@ export function buildWorld(scene, isl, def, opts = {}) {
     let io = 0, ic = 0, iflare = 0;
     const a = new THREE.Vector3(), b = new THREE.Vector3(), d = new THREE.Vector3();
     segs.forEach((s) => {
-      a.set(W(s.x0), BEAM_Y, W(s.y0)); b.set(W(s.x1), BEAM_Y, W(s.y1));
+      a.set(W(s.x0), BEAM_Y + H(W(s.x0), W(s.y0)), W(s.y0)); b.set(W(s.x1), BEAM_Y + H(W(s.x1), W(s.y1)), W(s.y1));   /* ALTITUDE : faisceau incliné entre les hauteurs de ses extrémités */
       d.subVectors(b, a); const len = d.length(); if (len < 0.01) return;
       d.normalize();
       const mid = a.clone().add(b).multiplyScalar(0.5);
@@ -922,10 +941,10 @@ export function buildWorld(scene, isl, def, opts = {}) {
       if (v.kind === 'bridge' && v.anim !== undefined && v.group.visible && v.anim < 1) {
         v.anim += dt * 1.6;
         const k = Math.max(0, Math.min(1, v.anim)), e = 1 - Math.pow(1 - k, 3);
-        v.group.position.y = -3 + 3 * e; v.group.scale.setScalar(Math.max(0.01, e));
+        v.group.position.y = (v.baseY || 0) - 3 + 3 * e; v.group.scale.setScalar(Math.max(0.01, e));
       } else if (v.kind !== 'bridge' && v.anim > 0 && v.group.visible) {
         v.anim += dt * 1.2;
-        if (v.kind === 'door') v.group.position.y = -v.anim * 2.8;
+        if (v.kind === 'door') v.group.position.y = (v.baseY || 0) - v.anim * 2.8;
         else { v.group.scale.set(1 + v.anim * 0.3, Math.max(0.01, 1 - v.anim), 1 + v.anim * 0.3); if (v.mat && v.mat.opacity !== undefined) v.mat.opacity = Math.max(0, 0.85 - v.anim); }
         if (v.anim >= 1) v.group.visible = false;
       }
@@ -963,5 +982,6 @@ export function buildWorld(scene, isl, def, opts = {}) {
     if (current >= 0 && current !== life.cur) { life.cur = current; life.setZone(current, props); }
   }
 
-  return { socleViews, setSky, grappleLine, grappleHide, root, M, views, gateViews, setGateView, drawBeams, animate, props, chestViews, pickupViews, removeCell, showZones, zoneGroups, decor };
+  hole.install(root);   /* ALTITUDE : trou de visibilité (caméra fixe) sur tous les matériaux du décor */
+  return { H, socleViews, setSky, grappleLine, grappleHide, root, M, views, gateViews, setGateView, drawBeams, animate, props, chestViews, pickupViews, removeCell, showZones, zoneGroups, decor };
 }

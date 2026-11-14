@@ -9,7 +9,10 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { ISLANDS, ISLAND_META, UPCOMING } from './levels.js';
+import { ISLANDS, HIDDEN_ISLANDS, ISLAND_META, UPCOMING } from './levels.js';
+import { heightAt, setActiveIsland, hasRelief, stepOk, MAX_STEP, HU } from './altitude.js';   /* ALTITUDE */
+import { lift } from './world/lift.js';
+import { hole } from './world/hole.js';
 import { buildIsland, evaluate, rotate, walkable, snapshot, restore, COLORS, BLOCK_TERRAIN, DIRS, postLinks, glideFrom /* ACTE IV */, clearTimers /* ACTE V */ } from './logic.js';
 import { orbAct } from './mech/eau.js';   /* ACTE IV */
 /* ACTE V : Les Pics du Vent */
@@ -44,11 +47,15 @@ import { globalCompletion } from './game/completion.js';
 
 const params = new URLSearchParams(location.search);
 /* Une page = une île : le voyage enregistre l'île d'arrivée puis recharge la page (voir switchIsland). */
-const DEF = ISLANDS.find((i) => i.id === (params.get('ile') || store.get('lumen.island', 'aube'))) || ISLANDS[0], IID = DEF.id;
+/* Îles de test (HIDDEN_ISLANDS) : chargeables par ?ile=test-montagne (ou ?island=…), jamais proposées au joueur ni mémorisées. */
+const ASKED = params.get('ile') || params.get('island');
+const DEF = (ASKED && HIDDEN_ISLANDS.find((i) => i.id === ASKED)) || ISLANDS.find((i) => i.id === (ASKED || store.get('lumen.island', 'aube'))) || ISLANDS[0], IID = DEF.id;
 const META = ISLAND_META[IID];
+const HIDDEN = HIDDEN_ISLANDS.includes(DEF);   /* île de test : jamais de sauvegarde, jamais de voyage */
 const settings = Object.assign({ quality: 'auto', master: 1, sfx: 1, music: 0.8, ambience: 0.8, voice: 0.9, muted: platform.muted() }, store.get('lumen.settings', {}));
 audio.set({ master: settings.master, sfx: settings.sfx, music: settings.music, ambience: settings.ambience, voice: settings.voice, muted: settings.muted });
 const TOUCH0 = matchMedia('(pointer: coarse)').matches || params.has('touch');
+const NOHOLE = params.has('nohole');   /* ALTITUDE : désactive le trou de visibilité (comparaisons, tests) */
 let LOW = settings.quality === 'low' || params.has('low') || (settings.quality === 'auto' && TOUCH0 && Math.min(screen.width, screen.height) < 500);
 
 /* =========================================================
@@ -127,6 +134,7 @@ Object.assign(AMB, DESERT_AMB);   /* ACTE III */
    Monde
    ========================================================= */
 const isl = buildIsland(DEF);
+setActiveIsland(isl);   /* ALTITUDE : heightAt(x, z) lit le relief de cette île */
 isl.frozenTimers = false;   /* ACTE V : relais temporisés actifs en jeu (les outils d’analyse les figent) */
 const zones = DEF.zones;
 const zoneIndex = Object.fromEntries(zones.map((z, i) => [z.id, i]));
@@ -210,7 +218,7 @@ const WARPS = WARPS_BY[IID] || [];
 const warpMeshes = {};
 WARPS.filter((w) => w.mesh).forEach((w) => {
   const z = zones[zoneIndex[w.zone]];
-  const g = new THREE.Group(); g.position.set(W(z.ox + w.cell[0]), 0, W(z.oy + w.cell[1]));
+  const g = new THREE.Group(); g.position.set(W(z.ox + w.cell[0]), heightAt(W(z.ox + w.cell[0]), W(z.oy + w.cell[1])), W(z.oy + w.cell[1]));
   const base = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 1, 0.4, 8), world.M.stone); base.position.y = 0.2; g.add(base);
   const cr = new THREE.Mesh(new THREE.OctahedronGeometry(0.45, 0), new THREE.MeshStandardMaterial({ color: '#bff3ff', emissive: '#7fdcff', emissiveIntensity: 1.5, flatShading: true }));
   cr.position.y = 1.3; cr.scale.y = 1.5; g.add(cr); g.userData.cr = cr; g.visible = false;
@@ -223,8 +231,11 @@ WARPS.filter((w) => w.mesh).forEach((w) => {
 const ev = bus();
 let st = newState();
 let slot = 'auto';
-const P = { x: 0, y: 0, z: 0, vx: 0, vz: 0, face: 0, alive: true, dodging: false, dodgeT: 0, dodgeCD: 0, iframes: 0, swing: null, swingCD: 0, combo: 0, comboT: 0, chargeT: 0, spinT: 0, hurtT: 0, kbx: 0, kbz: 0, regenT: 0, buffRegen: 0 };
-const S = { mode: 'title', zone: -1, zoneT: 0, time: 0, yaw: 0.35, yawT: 0.35, pitch: 0.92, dist: TOUCH0 ? 12 : 17, camT: new THREE.Vector3(), shake: 0, hitstop: 0, restore: 0, restoreT: 0, wardrobe: false, finale: null, talkTo: null, boss: null, hints: {}, lastSave: 0, ambT: null };
+const P = { x: 0, y: 0, gy: 0, z: 0, vx: 0, vz: 0, face: 0, alive: true, dodging: false, dodgeT: 0, dodgeCD: 0, iframes: 0, swing: null, swingCD: 0, combo: 0, comboT: 0, chargeT: 0, spinT: 0, hurtT: 0, kbx: 0, kbz: 0, regenT: 0, buffRegen: 0 };
+/* CAMÉRA FIXE : le jeu normal regarde toujours vers le nord (haut de l'écran = nord = −z). Plus aucune rotation par le joueur ;
+   S.yaw / S.yawT restent utilisables en interne (cinématiques, tests) et la conversion des commandes les respecte. */
+const CAM_YAW = 0, CAM_PITCH = 0.95;
+const S = { mode: 'title', zone: -1, zoneT: 0, time: 0, yaw: CAM_YAW, yawT: CAM_YAW, pitch: CAM_PITCH, dist: TOUCH0 ? 12 : 17, camT: new THREE.Vector3(), shake: 0, hitstop: 0, restore: 0, restoreT: 0, wardrobe: false, finale: null, talkTo: null, boss: null, hints: {}, lastSave: 0, ambT: null };
 const G = {
   scene, camera, isl, zones, def: DEF, P, audio, emit: ev.emit, on: ev.on, upcoming: UPCOMING.filter((u) => u.num > DEF.num && !ISLANDS.some((i) => i.num === u.num)), meta: META /* ACTE IV */,   /* ACTE V : filtre des îles à venir */
   get st() { return st; },
@@ -266,8 +277,8 @@ G.setQuality = (q) => { settings.quality = q; store.set('lumen.settings', settin
 G.saveSettings = () => { Object.assign(settings, audio.get()); store.set('lumen.settings', settings); };
 G.pageList = () => Object.keys(DEF.pages).map((id) => ({ id, title: DEF.pages[id].title, found: isl.ents.some((e) => e.t === 'page' && e.page === id && st.world.picked[e.id]) || !!st.world.picked['page_' + id] }));
 G.helpHtml = () => input.touch
-  ? '<p><b>Joystick</b> (gauche) : marcher · <b>glisser à droite</b> : caméra</p><p><b>⚔</b> attaque (maintenir : coup chargé) · <b>✦</b> Onde de lumière · <b>⤳</b> esquive · <b>✋</b> interagir (appui long : sens inverse) · <b>♥</b> objet rapide</p>'
-  : '<p><b>ZQSD / WASD / flèches</b> : marcher · <b>glisser la souris</b> : caméra · <b>molette</b> : zoom</p><p><b>Clic gauche / K</b> : attaque (maintenir : coup chargé) · <b>Clic droit / L</b> : Onde de lumière · <b>Espace / Maj</b> : esquive</p><p><b>E</b> : interagir · <b>R</b> : tourner dans l’autre sens · <b>F</b> : objet rapide · <b>I</b> inventaire · <b>J</b> journal · <b>M</b> carte · <b>C</b> personnage · <b>Échap</b> : menu</p>';
+  ? '<p><b>Joystick</b> (gauche) : marcher · <b>pincer</b> : zoom (la caméra est fixe, le haut de l’écran est le nord)</p><p><b>⚔</b> attaque (maintenir : coup chargé) · <b>✦</b> Onde de lumière · <b>⤳</b> esquive · <b>✋</b> interagir (appui long : sens inverse) · <b>♥</b> objet rapide</p>'
+  : '<p><b>ZQSD / WASD / flèches</b> : marcher · <b>molette</b> : zoom (caméra fixe : le haut de l’écran est le nord)</p><p><b>Clic gauche / K</b> : attaque (maintenir : coup chargé) · <b>Clic droit / L</b> : Onde de lumière · <b>Espace / Maj</b> : esquive</p><p><b>E</b> : interagir · <b>R</b> : tourner dans l’autre sens · <b>F</b> : objet rapide · <b>I</b> inventaire · <b>J</b> journal · <b>M</b> carte · <b>C</b> personnage · <b>Échap</b> : menu</p>';
 
 /* =========================================================
    Lyra et Fia
@@ -275,13 +286,15 @@ G.helpHtml = () => input.touch
 const hero = new Lyra(lookToModel(st.look));   // nouveau modèle de Lyra (facetté, contours noirs, Fia intégrée)
 scene.add(hero.root);
 hero.root.traverse((o) => { if (o.isMesh && !o.userData.noShadow) o.castShadow = true; });
+G.lift = lift; G.hole = hole;
+lift.add(hero.root, () => P.gy);   /* ALTITUDE : P.y = hauteur au-dessus du sol, P.gy = sol sous Lyra (mis à jour chaque image) */
 const fia = new THREE.Mesh(new THREE.SphereGeometry(0.13, 12, 8), glow('#fff0c2', 5)); scene.add(fia);
 fia.visible = false;   // Fia fait désormais partie du modèle de Lyra
-const fiaLight = new THREE.PointLight(0xffd9a0, LOW ? 0 : 6, 8, 2); scene.add(fiaLight);
+const fiaLight = new THREE.PointLight(0xffd9a0, LOW ? 0 : 6, 8, 2); scene.add(fiaLight); lift.add(fiaLight);
 const chargeRing = new THREE.Mesh(new THREE.RingGeometry(0.9, 1.1, 32), new THREE.MeshBasicMaterial({ color: new THREE.Color('#9fe9ff').multiplyScalar(2), transparent: true, opacity: 0, depthWrite: false }));
-chargeRing.rotation.x = -Math.PI / 2; scene.add(chargeRing);
+chargeRing.rotation.x = -Math.PI / 2; scene.add(chargeRing); lift.add(chargeRing);
 const selRing = new THREE.Mesh(new THREE.TorusGeometry(0.98, 0.045, 6, 40), new THREE.MeshBasicMaterial({ color: new THREE.Color(0xffc861).multiplyScalar(2.6), transparent: true, opacity: 0.9 }));
-selRing.rotation.x = Math.PI / 2; selRing.visible = false; scene.add(selRing);
+selRing.rotation.x = Math.PI / 2; selRing.visible = false; scene.add(selRing); lift.add(selRing);
 G.applyLook = () => { hero.build(lookToModel(st.look)); hero.root.traverse((o) => { if (o.isMesh && !o.userData.noShadow) o.castShadow = true; }); updateWeaponModel(); };
 function updateWeaponModel() { const w = ITEMS[st.equip.weapon]; hero.setWeapon(w ? w.model : null); }
 
@@ -296,10 +309,10 @@ zones.forEach((z, zi) => (z.npcs || []).forEach((n) => {
   const x = W(z.ox + n.x), zz = W(z.oy + n.y);
   c.root.position.set(x, 0, zz);
   c.root.rotation.y = n.face === 'N' ? Math.PI : n.face === 'E' ? Math.PI / 2 : n.face === 'W' ? -Math.PI / 2 : 0;
-  world.zoneGroups[zi].add(c.root);
+  world.zoneGroups[zi].add(c.root); lift.add(c.root);
   const mk = new THREE.Group();
   const gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.22, 0), new THREE.MeshBasicMaterial({ color: new THREE.Color('#ffc861').multiplyScalar(2.4) }));
-  gem.scale.y = 1.6; mk.add(gem); mk.visible = false; world.zoneGroups[zi].add(mk);
+  gem.scale.y = 1.6; mk.add(gem); mk.visible = false; world.zoneGroups[zi].add(mk); lift.add(mk);
   npcs.push({ id: n.id, d, c, zi, x, z: zz, hx: x, hz: zz, face: c.root.rotation.y, baseFace: c.root.rotation.y, wander: n.wander || 0, counter: !!n.counter, mk, gem, wt: rand(1, 4), tx: x, tz: zz, talking: false });
 }));
 function npcMarkers() {
@@ -594,7 +607,7 @@ function packPosition() {
   syncGates();
 }
 async function saveTo(s) {
-  if (S.leaving) return null;   // voyage en cours : l'état est déjà écrit
+  if (S.leaving || HIDDEN) return null;   // voyage en cours : l'état est déjà écrit ; île de test : on ne touche pas aux sauvegardes du joueur   // voyage en cours : l'état est déjà écrit
   packPosition();
   const r = await saves.write(s, st, regionName());
   S.lastSave = S.time;
@@ -638,7 +651,7 @@ G.travelTo = async (id, zone, cell) => {
 G.startFrom = async (state, s = 'auto', legacy = false, noIntro = false) => {
   audio.unlock();
   if (opening.gate(state, s, legacy, noIntro)) return;   // intro : fondu / cinématique d'ouverture, puis rappel avec noIntro
-  const want = state ? ((state.player && state.player.island) || 'aube') : legacy || !state ? 'aube' : IID;
+  const want = HIDDEN ? IID : state ? ((state.player && state.player.island) || 'aube') : legacy || !state ? 'aube' : IID;
   if (want !== IID && ISLANDS.some((i) => i.id === want)) { switchIsland(want, s, state ? 'resume' : legacy ? 'legacy' : 'new'); return; }
   screens.close();
   slot = s;
@@ -656,7 +669,7 @@ G.startFrom = async (state, s = 'auto', legacy = false, noIntro = false) => {
   else { const c = fresh ? META.home.cell : z.spawn; P.x = W(z.ox + c[0]); P.z = W(z.oy + c[1]); P.face = 0; }
   const s0 = calcStats(st); st.player.hp = Math.min(Math.max(1, st.player.hp), s0.maxHp); st.player.en = Math.min(st.player.en, s0.maxEn);
   P.alive = true; P.vx = P.vz = 0; P.swing = null; P.dodging = false;
-  S.zone = -1; S.camT.set(P.x, 0.8, P.z); S.yaw = S.yawT = 0.35; S.mode = 'play';
+  S.zone = -1; S.camT.set(P.x, heightAt(P.x, P.z) + 0.8, P.z); S.yaw = S.yawT = CAM_YAW; S.pitch = CAM_PITCH; S.mode = 'play';
   platform.startSession();
   hud.show(true); setTouch(true); input.enable(true); input.clear();
   // arrivée sur une autre île (voyage) : sa quête principale démarre toute seule (sinon Ambre n'ouvre jamais les ponts)
@@ -694,8 +707,14 @@ function intro() {
 /* =========================================================
    Déplacements et collisions
    ========================================================= */
-function canStand(x, z, r = 0.34) {
-  for (const [ox, oz] of [[-r, -r], [r, -r], [-r, r], [r, r]]) if (!walkable(isl, Math.round((x + ox) / T), Math.round((z + oz) / T))) return false;
+function canStand(x, z, r = 0.34, fx, fz) {
+  const cx = Math.round(x / T), cy = Math.round(z / T);
+  for (const [ox, oz] of [[-r, -r], [r, -r], [-r, r], [r, r]]) {
+    const ax = Math.round((x + ox) / T), ay = Math.round((z + oz) / T);
+    if (!walkable(isl, ax, ay)) return false;
+    if (isl.alt && (ax !== cx || ay !== cy) && !stepOk(isl, cx, cy, ax, ay)) return false;   /* ALTITUDE : falaise = mur (|Δh| > pas) */
+  }
+  if (isl.alt && fx !== undefined) { const ox = Math.round(fx / T), oy = Math.round(fz / T); if ((ox !== cx || oy !== cy) && !stepOk(isl, ox, oy, cx, cy)) return false; }   /* évite de traverser une falaise en un grand pas (esquive) */
   return true;
 }
 G.canStand = canStand;
@@ -756,7 +775,7 @@ function groundAt() {
   const th = themeOf(z);
   return z && z.interior ? 'bois' : th === 'temple' || th === 'sanctuaire' || th === 'grotte' || th === 'lac' || th === 'phare_abysses' /* ACTE IV */ || th === 'moulins' /* ACTE V */ ? 'pierre' : th === 'pics' || th === 'phare_vents' ? 'neige' /* ACTE V */ : th === 'foret' || th === 'canopee' || th === 'phare_verre' ? 'verre' : th === 'lande' || th === 'desert' || th === 'cite' || th === 'ruines' ? 'terre' : th === 'temple_sable' || th === 'phare_sable' ? 'pierre' : 'herbe';   /* ACTE III */
 }
-function teleport(x, z) { P.x = x; P.z = z; P.vx = P.vz = 0; S.camT.set(x, 0.8, z); S.zone = -1; }
+function teleport(x, z) { P.x = x; P.z = z; P.vx = P.vz = 0; S.camT.set(x, heightAt(x, z) + 0.8, z); S.zone = -1; }
 function fade(cb) { const f = $('#fade'); f.classList.add('on'); setTimeout(() => { cb && cb(); f.classList.remove('on'); }, 450); }
 
 /* =========================================================
@@ -765,7 +784,8 @@ function fade(cb) { const f = $('#fade'); f.classList.add('on'); setTimeout(() =
 function cellCenter(z, c) { return [W(z.ox + c[0]), W(z.oy + c[1])]; }
 function findTarget(all) {   /* ACTE VI : all → renvoie tous les candidats (audit) */
   const cands = [];
-  const d = (x, z) => Math.hypot(x - P.x, z - P.z);
+  /* ALTITUDE : une cible sur une autre terrasse (écart de plus de deux niveaux) est hors d'atteinte */
+  const d = (x, z) => Math.hypot(x - P.x, z - P.z) + (isl.alt && Math.abs(heightAt(x, z) - heightAt(P.x, P.z)) > 2 * HU + 0.05 ? 99 : 0);
   const push = (dist, max, o) => { if (dist < max) cands.push(Object.assign({ dist }, o)); };
   const zi = S.zone, z = zones[zi];
   // objets de lumière
@@ -882,12 +902,13 @@ function updateGrapple(dt) {
   }
   P.x = lerp(g.from.x, g.to.x, e); P.z = lerp(g.from.z, g.to.z, e); P.y = Math.sin(Math.PI * e) * 1.15;
   // câble : de la main de Lyra à la tête du poteau d'arrivée (visuel de world/ si disponible, sinon secours)
-  const a = tmpV.set(P.x, P.y + 1.3, P.z);
+  const hkH = heightAt(g.hook.x, g.hook.z);   /* ALTITUDE : le câble relie les hauteurs réelles */
+  const a = tmpV.set(P.x, P.gy + P.y + 1.3, P.z);
   if (world.grappleLine) {
-    world.grappleLine(a.clone(), new THREE.Vector3(g.hook.x, 2.95, g.hook.z), cast, pull);
+    world.grappleLine(a.clone(), new THREE.Vector3(g.hook.x, 2.95 + hkH, g.hook.z), cast, pull);
     if (!g.pulled && pull > 0.02) { g.pulled = true; audio.sfx('grapple_pull'); }
   } else {
-    const b = new THREE.Vector3(lerp(P.x, g.hook.x, cast), lerp(P.y + 1.3, 2.25, cast), lerp(P.z, g.hook.z, cast));
+    const b = new THREE.Vector3(lerp(P.x, g.hook.x, cast), lerp(P.gy + P.y + 1.3, 2.25 + hkH, cast), lerp(P.z, g.hook.z, cast));
     const len = a.distanceTo(b); rope.visible = len > 0.05; rope.position.copy(a).lerp(b, 0.5); rope.scale.set(1, Math.max(0.01, len), 1); rope.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize());
     ropeTip.visible = true; ropeTip.position.copy(b); ropeTip.rotation.y += dt * 8;
   }
@@ -1082,7 +1103,7 @@ function dodge() {
    ========================================================= */
 function startFinale() {
   const b = isl.ents.find((e) => e.t === 'beacon');
-  S.finale = { t: 0, at: new THREE.Vector3(W(b.x), 2, W(b.y)), from: { yaw: S.yaw, dist: S.dist, pitch: S.pitch } };
+  S.finale = { t: 0, at: new THREE.Vector3(W(b.x), 2 + heightAt(W(b.x), W(b.y)), W(b.y)), from: { yaw: S.yaw, dist: S.dist, pitch: S.pitch } };
   S.mode = 'cutscene'; setTouch(false); hud.prompt('');
   audio.chord([392, 494, 587, 784, 988], 0.4);
   const first = platform.reward('g:' + IID + ':end', 120, 40);
@@ -1214,7 +1235,7 @@ function createSparks() {
       for (let j = 0; j < count; j++) {
         const i = k; k = (k + 1) % n;
         const a = Math.random() * Math.PI * 2, el = Math.random() * 1.4 - 0.3, s = speed * (0.3 + Math.random() * 0.7);
-        pos[i * 3] = p.x; pos[i * 3 + 1] = p.y; pos[i * 3 + 2] = p.z;
+        pos[i * 3] = p.x; pos[i * 3 + 1] = p.y + heightAt(p.x, p.z); pos[i * 3 + 2] = p.z;   /* ALTITUDE : y relatif au sol */
         vel[i * 3] = Math.cos(a) * Math.cos(el) * s; vel[i * 3 + 1] = Math.sin(el) * s + up; vel[i * 3 + 2] = Math.sin(a) * Math.cos(el) * s;
         col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b; life[i] = l * (0.6 + Math.random() * 0.6); grav[i] = g;
       }
@@ -1331,8 +1352,8 @@ function update(dt) {
     } else { P.vx = lerp(P.vx, tx, damp(14, dt)); P.vz = lerp(P.vz, tz, damp(14, dt)); }
     const kx = P.kbx * dt, kz = P.kbz * dt; P.kbx *= Math.exp(-9 * dt); P.kbz *= Math.exp(-9 * dt);
     const nx = P.x + P.vx * dt + kx, nz = P.z + P.vz * dt + kz;
-    if (canStand(nx, P.z)) P.x = nx; else { P.vx = 0; P.kbx = 0; }
-    if (canStand(P.x, nz)) P.z = nz; else { P.vz = 0; P.kbz = 0; }
+    if (canStand(nx, P.z, 0.34, P.x, P.z)) P.x = nx; else { P.vx = 0; P.kbx = 0; }
+    if (canStand(P.x, nz, 0.34, P.x, P.z)) P.z = nz; else { P.vz = 0; P.kbz = 0; }
     const sp = Math.hypot(P.vx, P.vz);
     if (sp > 0.6 && !P.dodging) { P.stepT = (P.stepT || 0) - dt; if (P.stepT <= 0) { audio.step(groundAt()); P.stepT = sp > 6.5 ? 0.26 : 0.38; } } else P.stepT = 0;
     if (sp > 0.3 && !P.swing && !P.dodging) P.face += angleTo(P.face, Math.atan2(P.vx, P.vz)) * damp(12, dt);
@@ -1356,6 +1377,10 @@ function update(dt) {
     if (S.time - S.lastSave > 60) saveTo('auto');
     // salles de combat : barrière fermée tant que des créatures vivent
   }
+  /* ALTITUDE : sol sous Lyra (pendant le grappin / le plané, interpolé entre départ et arrivée pour ne pas « sauter » sur une falaise) */
+  { const gg = (S.mode === 'grapple' && S.grap) || (S.mode === 'glide' && S.glide);
+    if (gg && gg.dur) { const kk = Math.min(1, gg.t / gg.dur), ee = kk * kk * (3 - 2 * kk); P.gy = lerp(heightAt(gg.from.x, gg.from.z), heightAt(gg.to.x, gg.to.z), ee); }
+    else P.gy = heightAt(P.x, P.z); }
   /* -------- combats -------- */
   if (S.mode === 'grapple') updateGrapple(dt);
   if (S.mode === 'glide') mech.updateGlide(dt, t);   /* ACTE V */
@@ -1401,7 +1426,8 @@ function update(dt) {
   });
   /* -------- caméra -------- */
   const cam = input.camera();
-  if (S.mode === 'play') { S.yawT -= cam.dx * 0.006; S.pitch = clamp(S.pitch + cam.dy * 0.003, 0.5, 1.25); S.dist = clamp(S.dist + cam.zoom * 0.012, 9, 30); }
+  /* CAMÉRA FIXE : seul le zoom (molette / pincement) reste au joueur ; yaw et inclinaison ne bougent plus */
+  if (S.mode === 'play') S.dist = clamp(S.dist + cam.zoom * 0.012, 9, 30);
   S.yaw = lerp(S.yaw, S.yawT, damp(10, dt));
   const inside = zones[S.zone] && zones[S.zone].interior;
   if (S.mode === 'title') {
@@ -1419,12 +1445,12 @@ function update(dt) {
   } else if (S.mode === 'ending' && fin) {
     fin.update(dt);   /* ACTE VI : la caméra appartient à la séquence de fin */
   } else if (S.wardrobe) {
-    tmpV.set(P.x, 1.0, P.z); S.camT.lerp(tmpV, damp(6, dt));
+    tmpV.set(P.x, P.gy + 1.0, P.z); S.camT.lerp(tmpV, damp(6, dt));
     const yaw = P.face + 0.35, d = 5.2, pitch = 0.22;
     camera.position.set(S.camT.x + Math.sin(yaw) * Math.cos(pitch) * d - Math.cos(yaw) * 1.3, S.camT.y + Math.sin(pitch) * d + 0.2, S.camT.z + Math.cos(yaw) * Math.cos(pitch) * d + Math.sin(yaw) * 1.3);
     camera.lookAt(S.camT.x - Math.cos(yaw) * 1.3, S.camT.y, S.camT.z + Math.sin(yaw) * 1.3);
   } else {
-    const focus = S.mode === 'dialog' && S.talkTo ? tmpV.set((P.x + S.talkTo.x) / 2, 0.8, (P.z + S.talkTo.z) / 2) : tmpV.set(P.x, 0.8, P.z);
+    const focus = S.mode === 'dialog' && S.talkTo ? tmpV.set((P.x + S.talkTo.x) / 2, (P.gy + heightAt(S.talkTo.x, S.talkTo.z)) / 2 + 0.8, (P.z + S.talkTo.z) / 2) : tmpV.set(P.x, P.gy + 0.8, P.z);   /* ALTITUDE : la cible de caméra suit le sol */
     S.camT.lerp(focus, damp(6, dt));
     const d = S.mode === 'dialog' ? Math.min(S.dist, 11) : inside ? Math.min(S.dist, 13) : S.dist + (S.boss ? 5 : 0);
     const pitch = S.mode === 'dialog' ? 0.62 : S.pitch;
@@ -1432,9 +1458,9 @@ function update(dt) {
     camera.lookAt(S.camT);
   }
   if (S.shake > 0) { camera.position.x += (Math.random() - 0.5) * S.shake; camera.position.y += (Math.random() - 0.5) * S.shake; S.shake = Math.max(0, S.shake - dt * 1.6); }
-  audio.listener(P.x, P.z, S.yaw + Math.PI);
+  audio.listener(P.x, P.z, S.yaw + Math.PI, P.gy);
   sky.position.copy(camera.position);
-  sun.position.set(S.camT.x + 22, 34, S.camT.z + 14); sun.target.position.copy(S.camT);
+  sun.position.set(S.camT.x + 22, S.camT.y + 33.2, S.camT.z + 14); sun.target.position.copy(S.camT);
 
   /* -------- ambiance -------- */
   S.restore = lerp(S.restore, S.restoreT, damp(0.8, dt));
@@ -1453,7 +1479,7 @@ function update(dt) {
   sun.intensity = (1.7 + r * 1.0) * amb.sun; sun.color.set('#ffc6b0').lerp(new THREE.Color('#fff1d6'), r);
   tint.set('#a3a0bd').lerp(new THREE.Color('#ffffff'), 0.35 + r * 0.65);
   if (A.tint) tint.lerp(new THREE.Color(A.tint), 0.25);
-  world.M.grass.color.copy(tint); world.M.foliage.color.copy(tint); world.M.tuft.color.copy(tint);
+  world.M.grass.color.copy(tint); world.M.foliage.color.copy(tint); world.M.tuft.color.copy(tint); if (world.M.terrain) world.M.terrain.color.copy(tint);   /* ALTITUDE : maillage de relief */
   ambient.mat.opacity = th === 'interieur' ? 0 : 0.35 + r * 0.6;
   ambient.mat.color.set(A.amb || (th === 'pics' || th === 'phare_vents' ? '#eef4ff' : th === 'moulins' ? '#d8ccff' : th === 'sanctuaire' || th === 'lande' ? '#c9b6ff' : th === 'foret' || th === 'canopee' || th === 'phare_verre' || th === 'temple' || th === 'greve' || th === 'recifs' || th === 'grotte' || th === 'lac' || th === 'phare_abysses' /* ACTE IV */ ? '#bff3ff' : '#ffc4dc')).multiplyScalar(1.4);
   if (!opening.musicLock && Math.floor(t) !== Math.floor(t - dt)) music(S.mode === 'title' ? 'title' : S.victoryUntil > performance.now() ? 'victoire' : S.mode === 'ending' && S.endMusic ? S.endMusic /* ACTE VI */ : S.boss && S.boss.state !== 'dead' ? (S.boss.phase === 3 ? 'boss3' : S.boss.phase === 2 ? 'boss2' : 'boss') : (zones[S.zone] && zones[S.zone].music) || th, S.mode === 'title' ? 0.6 : r);
@@ -1463,12 +1489,13 @@ function update(dt) {
   if (zscene) zscene.update(dt, t);   /* ACTE VI */
   Object.values(warpMeshes).forEach((g) => { if (g.visible) { g.userData.cr.rotation.y += dt; g.userData.cr.position.y = 1.3 + Math.sin(t * 2) * 0.12; } });
   const wv = Object.values(world.views).find((v) => v.e.t === 'wisp');
-  if (wv && st.world.picked[wv.e.id] && S.mode !== 'title') { wv.g.visible = true; if (wv.g.parent !== scene) scene.add(wv.g); wv.g.position.set(P.x - Math.sin(P.face) * 1.1 + Math.sin(t * 1.3) * 0.3, 0.6 + Math.sin(t * 2.1) * 0.15, P.z - Math.cos(P.face) * 1.1); }
+  if (wv && st.world.picked[wv.e.id] && S.mode !== 'title') { wv.g.visible = true; if (wv.g.parent !== scene) scene.add(wv.g); if (!wv.lifted) { wv.lifted = true; lift.add(wv.g); } wv.g.position.set(P.x - Math.sin(P.face) * 1.1 + Math.sin(t * 1.3) * 0.3, 0.6 + Math.sin(t * 2.1) * 0.15, P.z - Math.cos(P.face) * 1.1); }
   for (let i = 0; i < ambient.n; i++) {
     const pp = ambient.pos, sd = ambient.seed[i];
     pp[i * 3 + 1] -= dt * (0.35 + (sd % 1) * 0.3); pp[i * 3] += Math.sin(t * 0.8 + sd) * dt * 0.6 + dt * 0.4; pp[i * 3 + 2] += Math.cos(t * 0.6 + sd) * dt * 0.4;
     if (pp[i * 3 + 1] < -0.5) { pp[i * 3 + 1] = 8 + Math.random() * 2; pp[i * 3] = S.camT.x + (Math.random() - 0.5) * 50; pp[i * 3 + 2] = S.camT.z + (Math.random() - 0.5) * 50; }
   }
+  ambient.pts.position.y = S.camT.y - 0.8;   /* ALTITUDE : les poussières suivent la hauteur de la caméra */
   ambient.pts.geometry.attributes.position.needsUpdate = true;
   sparks.update(dt);
   if (S.mode !== 'title') hud.update();
@@ -1481,7 +1508,14 @@ function frame(now) {
   let dt = Math.min(0.05, (now - last) / 1000); last = now;
   if (S.hitstop > 0) { S.hitstop -= dt; dt *= 0.08; }
   update(dt);
-  if (useBloom) composer.render(); else renderer.render(scene, camera);
+  /* ALTITUDE : pose les objets dynamiques sur le relief le temps du rendu, et règle le trou de visibilité autour de Lyra (et du PNJ en dialogue) */
+  lift.apply();
+  try {
+    hole.cfg.enabled = !NOHOLE && ['play', 'dialog', 'screen', 'grapple', 'glide', 'dead'].includes(S.mode);
+    hole.setTarget(S.mode === 'dialog' && S.talkTo ? { x: S.talkTo.x, y: heightAt(S.talkTo.x, S.talkTo.z), z: S.talkTo.z } : null);
+    hole.update(camera, { x: P.x, y: P.gy + P.y, z: P.z });
+    if (useBloom) composer.render(); else renderer.render(scene, camera);
+  } finally { lift.restore(); }
   if (!qualityChecked && S.mode === 'play') {
     fpsAcc += dt; fpsN++;
     if (fpsAcc > 4) {
@@ -1511,7 +1545,7 @@ $('#loader').hidden = true;
 requestAnimationFrame(frame);
 platform.onChange(() => { if (S.mode === 'title' && screens.current === 'title') screens.title(); });
 document.addEventListener('visibilitychange', () => { if (document.hidden && S.mode !== 'title' && !S.leaving) { if (S.mode === 'play') { screens.menu('options'); S.mode = 'screen'; setTouch(false); } saveTo('auto'); } });
-addEventListener('pagehide', () => { if (S.mode !== 'title' && !S.leaving) { packPosition(); saves.write('auto', st, regionName(), { cloud: false }); } });
+addEventListener('pagehide', () => { if (S.mode !== 'title' && !S.leaving && !HIDDEN) { packPosition(); saves.write('auto', st, regionName(), { cloud: false }); } });
 { let hov = null, hovT = 0; document.addEventListener('pointerover', (ev) => { if (ev.pointerType !== 'mouse') return; const b = ev.target.closest && ev.target.closest('button, .choice, .btn, [data-a], [data-q]'); if (!b || b === hov || b.disabled) return; hov = b; const n = performance.now(); if (n - hovT < 70) return; hovT = n; snd('uiHover', { vol: 0.6 }); }); }
 document.querySelectorAll('[data-ui]').forEach((b) => b.addEventListener('click', () => { if (S.mode !== 'play') return; const tab = b.dataset.ui; screens.menu(tab); S.mode = 'screen'; setTouch(false); audio.sfx('ui'); }));
 
@@ -1526,4 +1560,5 @@ window.__lumen = {
   give: (id, n) => giveItem(id, n),
   findTarget, WARPS, canStand: (x, z) => canStand(x, z), completion, interact: () => interact(false), interactBack: () => interact(true), target: () => S.target, saveTo, openGate, a3: A3,
   fin, zscene, startEnding,   /* ACTE VI : audit de ciblage et tests */
+  lift, hole, heightAt, CAM_YAW, CAM_PITCH, worldY: (o) => lift.worldY(o),   /* ALTITUDE : tests (y logique = au-dessus du sol ; worldY = y rendu) */
 };

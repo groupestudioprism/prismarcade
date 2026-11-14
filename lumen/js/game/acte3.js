@@ -11,6 +11,7 @@
 import * as THREE from 'three';
 import { liftEnt, placeEnt, freeSocles } from '../logic.js';
 import { W, lerp, damp } from '../engine/util.js';
+import { lift as altLift } from '../world/lift.js';   /* ALTITUDE (le nom « lift » est pris par la fonction Porter) */
 
 /* Ambiances (fusionnées dans AMB de main.js) */
 export const DESERT_AMB = {
@@ -53,7 +54,7 @@ export function createAct3(G, X) {
   const hold = new THREE.Group();
   const holdMat = new THREE.MeshBasicMaterial({ color: new THREE.Color('#ffe2a0').multiplyScalar(1.8), transparent: true, opacity: 0.9 });
   const holdMesh = new THREE.Mesh(new THREE.OctahedronGeometry(0.26, 0), holdMat); holdMesh.scale.y = 1.5; hold.add(holdMesh);
-  hold.visible = false; scene.add(hold);
+  hold.visible = false; scene.add(hold); altLift.add(hold, () => P.gy || 0);
 
   /* ---------- Tempêtes de sable ---------- */
   const storm = { phase: 'calm', t: 38, warned: false, k: 0 };

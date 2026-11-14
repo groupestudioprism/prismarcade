@@ -4,6 +4,7 @@
    barres des ennemis et du boss, invite d'action.
    ========================================================= */
 import * as THREE from 'three';
+import { heightAt } from '../altitude.js';
 import { $, esc, fmt } from '../engine/util.js';
 import { icon } from './icons.js';
 import { ITEMS } from '../data/items.js';
@@ -20,7 +21,7 @@ export function createHud(G) {
   let last = {};
 
   function project(x, y, z) {
-    v3.set(x, y, z).project(G.camera);
+    v3.set(x, y + heightAt(x, z), z).project(G.camera);   /* ALTITUDE : y est relatif au sol */
     return { x: (v3.x * 0.5 + 0.5) * innerWidth, y: (-v3.y * 0.5 + 0.5) * innerHeight, ok: v3.z < 1 };
   }
   const api = {

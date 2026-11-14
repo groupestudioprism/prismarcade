@@ -8,6 +8,7 @@
    ========================================================= */
 import * as THREE from 'three';
 import { hash, T, W } from '../engine/util.js';
+import { heightAt } from '../altitude.js';   /* ALTITUDE : la vie ambiante suit le relief */
 
 /* ---- système de points mou (taille et opacité par point) ---- */
 function pointCloud(N, additive) {
@@ -69,7 +70,7 @@ export function createLife(scene, isl, zones, opts = {}) {
     // émetteurs : cheminées (fumée) et foyers (braises)
     (props || []).forEach((pr) => {
       if (pr.zi !== zi) return; const u = pr.g.userData;
-      if (u.smoke) emitters.push({ kind: 'smoke', x: pr.g.position.x + u.smoke.x, y: pr.g.position.y + u.smoke.y, z: pr.g.position.z + u.smoke.z });
+      if (u.smoke) emitters.push({ kind: 'smoke', x: pr.g.position.x + u.smoke.x, y: pr.g.position.y - heightAt(pr.g.position.x, pr.g.position.z) + u.smoke.y,   /* ALTITUDE : put() ajoute le relief */ z: pr.g.position.z + u.smoke.z });
       if (u.flames && u.halo2) emitters.push({ kind: 'ember', x: pr.g.position.x, y: 1.0, z: pr.g.position.z, c: u.halo2.material.color.getHexString() === 'ffffff' ? '#ffb36a' : '#' + u.halo2.material.color.getHexString() });
     });
     seed();
@@ -93,7 +94,7 @@ export function createLife(scene, isl, zones, opts = {}) {
   }
   let birdN = 0, px = 0;
 
-  const put = (P, i, x, y, z, s, a, c) => { P.pos[i * 3] = x; P.pos[i * 3 + 1] = y; P.pos[i * 3 + 2] = z; P.size[i] = s; P.alpha[i] = a; P.col[i * 3] = c.r; P.col[i * 3 + 1] = c.g; P.col[i * 3 + 2] = c.b; };
+  const put = (P, i, x, y, z, s, a, c) => { P.pos[i * 3] = x; P.pos[i * 3 + 1] = y + heightAt(x, z); P.pos[i * 3 + 2] = z; P.size[i] = s; P.alpha[i] = a; P.col[i * 3] = c.r; P.col[i * 3 + 1] = c.g; P.col[i * 3 + 2] = c.b; };
   const smokeC = C('#e9e2f0');
   const parts = []; // fumée et braises vivantes
   function emit(dt) {
@@ -131,7 +132,7 @@ export function createLife(scene, isl, zones, opts = {}) {
       let da = want - b.a; da = Math.atan2(Math.sin(da), Math.cos(da)); b.a += da * Math.min(1, dt * 2.5) + Math.sin(t * 3 + b.ph) * dt * 1.2;
       const sp = Math.min(d, 1) * b.sp * 1.6; b.x += Math.sin(b.a) * sp * dt; b.z += Math.cos(b.a) * sp * dt; b.y += ((b.ty || 1) + Math.sin(t * 4 + b.ph) * 0.25 - b.y) * Math.min(1, dt * 1.2);
       const flap = 0.2 + Math.abs(Math.sin(t * 16 + b.ph)) * 1.0;
-      dummy.position.set(b.x, b.y, b.z); dummy.rotation.set(0, b.a, 0); dummy.scale.setScalar(1); dummy.updateMatrix();
+      dummy.position.set(b.x, b.y + heightAt(b.x, b.z), b.z); dummy.rotation.set(0, b.a, 0); dummy.scale.setScalar(1); dummy.updateMatrix();
       const m = dummy.matrix.clone();
       bfly[0].setMatrixAt(i, m.clone().multiply(new THREE.Matrix4().makeRotationZ(flap))); bfly[1].setMatrixAt(i, m.clone().multiply(new THREE.Matrix4().makeRotationZ(-flap)).multiply(new THREE.Matrix4().makeScale(-1, 1, 1)));
     }
@@ -140,7 +141,7 @@ export function createLife(scene, isl, zones, opts = {}) {
     for (let i = 0; i < birdN; i++) {
       const a = t * (0.12 + i * 0.015) * (i % 2 ? 1 : -1) + i * 1.3, rad = 16 + i * 4.5, y = 13 + (i % 3) * 3 + Math.sin(t * 0.5 + i) * 0.8;
       const bx = center[0] + Math.cos(a) * rad, bz = center[1] + Math.sin(a) * rad * 0.8;
-      dummy.position.set(bx, y, bz); dummy.rotation.set(0, Math.atan2((i % 2 ? 1 : -1) * -Math.sin(a), (i % 2 ? 1 : -1) * Math.cos(a) * 0.8), 0); dummy.scale.setScalar(1.1); dummy.updateMatrix();
+      dummy.position.set(bx, y + heightAt(center[0], center[1]), bz); dummy.rotation.set(0, Math.atan2((i % 2 ? 1 : -1) * -Math.sin(a), (i % 2 ? 1 : -1) * Math.cos(a) * 0.8), 0); dummy.scale.setScalar(1.1); dummy.updateMatrix();
       const fl = Math.sin(t * 7 + i * 2) * 0.5;
       birds[0].setMatrixAt(i, dummy.matrix.clone().multiply(new THREE.Matrix4().makeRotationZ(fl)));
       birds[1].setMatrixAt(i, dummy.matrix.clone().multiply(new THREE.Matrix4().makeRotationZ(-fl)).multiply(new THREE.Matrix4().makeScale(-1, 1, 1)));
@@ -153,9 +154,9 @@ export function createLife(scene, isl, zones, opts = {}) {
       if (f.k < 0 && !f.m.visible) { const c = waterNow[Math.floor(Math.random() * waterNow.length)]; f.x = W(c[0]) + (Math.random() - 0.5); f.z = W(c[1]) + (Math.random() - 0.5); const a = Math.random() * 6; f.dx = Math.cos(a) * 0.9; f.dz = Math.sin(a) * 0.9; f.t = 0; f.m.visible = true; }
       if (f.m.visible) {
         f.t += dt * 1.1; const k = f.t;
-        f.m.position.set(f.x + f.dx * k, -0.1 + Math.sin(k * Math.PI) * 0.9, f.z + f.dz * k); f.m.rotation.set(Math.cos(k * Math.PI) * 0.9, Math.atan2(f.dx, f.dz), 0);
-        const rg = rings[i]; rg.position.set(f.x + f.dx * (k < 0.5 ? 0 : 1), -0.04, f.z + f.dz * (k < 0.5 ? 0 : 1));
-        if (k >= 1) { f.m.visible = false; f.k = 4 + Math.random() * 7; rg.userData.r = 0; rg.position.set(f.x + f.dx, -0.04, f.z + f.dz); }
+        f.m.position.set(f.x + f.dx * k, -0.1 + heightAt(f.x, f.z) + Math.sin(k * Math.PI) * 0.9, f.z + f.dz * k); f.m.rotation.set(Math.cos(k * Math.PI) * 0.9, Math.atan2(f.dx, f.dz), 0);
+        const rg = rings[i]; rg.position.set(f.x + f.dx * (k < 0.5 ? 0 : 1), -0.04 + heightAt(f.x, f.z), f.z + f.dz * (k < 0.5 ? 0 : 1));
+        if (k >= 1) { f.m.visible = false; f.k = 4 + Math.random() * 7; rg.userData.r = 0; rg.position.set(f.x + f.dx, -0.04 + heightAt(f.x, f.z), f.z + f.dz); }
       }
       const rg = rings[i]; if (rg.userData.r !== undefined) { rg.userData.r += dt * 1.4; const q = rg.userData.r; rg.visible = true; rg.scale.setScalar(1 + q * 3); rg.material.opacity = Math.max(0, 0.6 * (1 - q)); if (q > 1) { rg.userData.r = undefined; rg.visible = false; } }
     });

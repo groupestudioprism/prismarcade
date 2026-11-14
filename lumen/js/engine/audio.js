@@ -58,7 +58,7 @@ export const audio = {
   music,
   ambience: SAFE((spec) => { if (A.ctx) { ambInit(); } setAmbience(spec, false); }),
   bossPhase(n) { music(n >= 3 ? 'boss3' : n >= 2 ? 'boss2' : 'boss', 1); },
-  listener: (x, z, yaw) => { L.on = true; L.x = x; L.z = z; L.yaw = yaw || 0; },
+  listener: (x, z, yaw, y) => { L.on = true; L.x = x; L.z = z; L.yaw = yaw || 0; L.y = y || 0; },   /* ALTITUDE : y = sol sous l'auditeur */
   /* diagnostic / tests */
   info: () => Object.assign({ state: A.ctx ? A.ctx.state : 'none', voices: A.active, low: A.low }, musicInfo(), { ambience: ambienceInfo() }),
   names: () => names(),

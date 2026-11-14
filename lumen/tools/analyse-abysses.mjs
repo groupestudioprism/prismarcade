@@ -13,7 +13,7 @@ import { buildIsland, evaluate, reachCells, walkable, ORDER } from '../js/logic.
 const nb = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 
 export function analyseRoom(zone, stages = [], final = null, opts = {}) {
-  const z = { ox: 0, oy: 0, map: zone.map, ents: zone.ents.map((e) => Object.assign({}, e)), doors: zone.doors || [], barrier: zone.barrier };
+  const z = { ox: 0, oy: 0, map: zone.map, ents: zone.ents.map((e) => Object.assign({}, e)), doors: zone.doors || [], barrier: zone.barrier, hmap: zone.hmap, h: zone.h };
   const isl = buildIsland({ zones: [z], bridges: [] });
   const devs = isl.ents.filter((e) => e.rot && ['lantern', 'mirror', 'relay', 'valve'].includes(e.t));
   const socles = isl.ents.filter((e) => e.t === 'socle');

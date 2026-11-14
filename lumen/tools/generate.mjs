@@ -172,7 +172,7 @@ function attempt(spec, seed) {
    Résultat : sols (numéros de configuration), carryFree (une solution existe SANS rien déplacer), connected (tous les
    socles et objets restent accessibles à pied pour toute répartition, depuis opts.entry). */
 export function analyse(rows, ents, gates, opts = {}) {
-  const zone = { ox: 0, oy: 0, map: rows, ents: ents.map((e) => Object.assign({}, e)), barrier: opts.barrier, socles: opts.socles };
+  const zone = { ox: 0, oy: 0, map: rows, ents: ents.map((e) => Object.assign({}, e)), barrier: opts.barrier, socles: opts.socles, hmap: opts.hmap, h: opts.h };   /* ALTITUDE : relief facultatif de la salle */
   const isl = buildIsland({ zones: [zone], bridges: [] });
   const rots = isl.ents.filter((e) => e.rot);
   const states = (e) => (isMirrorLike(e) ? [0, 1] : ORDER);
@@ -230,8 +230,8 @@ export function analyse(rows, ents, gates, opts = {}) {
 }
 
 /* Accessibilité à pied depuis l'entrée (toutes portes ouvertes ; poteaux de grappin compris) */
-export function reach(rows, ents, from, barrier, socles) {
-  const isl = buildIsland({ zones: [{ ox: 0, oy: 0, map: rows, ents, barrier, socles }], bridges: [] });
+export function reach(rows, ents, from, barrier, socles, hmap, h) {   /* ALTITUDE : hmap/h facultatifs */
+  const isl = buildIsland({ zones: [{ ox: 0, oy: 0, map: rows, ents, barrier, socles, hmap, h }], bridges: [] });
   Object.values(isl.gates).forEach((g) => (g.open = true));
   return reachCells(isl, [from]);
 }
@@ -317,7 +317,7 @@ export function generate(spec, { seed = 1, maxTries = 4000, log = false } = {}) 
    zone = { map, ents, doors, entry } ; stages = [ids de portes dans l'ordre] ; final = id de la porte finale.
    ========================================================= */
 export function analyseStages(zone, stages, final) {
-  const z = { ox: 0, oy: 0, map: zone.map, ents: zone.ents.map((e) => Object.assign({}, e)), doors: zone.doors || [], barrier: zone.barrier };
+  const z = { ox: 0, oy: 0, map: zone.map, ents: zone.ents.map((e) => Object.assign({}, e)), doors: zone.doors || [], barrier: zone.barrier, hmap: zone.hmap, h: zone.h };   /* ALTITUDE */
   const isl = buildIsland({ zones: [z], bridges: [] });
   const rots = isl.ents.filter((e) => e.rot);
   const states = (e) => (isMirrorLike(e) ? [0, 1] : ORDER);
