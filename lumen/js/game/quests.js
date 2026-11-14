@@ -50,7 +50,7 @@ export function createQuests(G) {
     isStepDone(id) {
       const s = api.step(id); if (!s) return false;
       switch (s.type) {
-        case 'talk': return false;
+        case 'talk': return !!(s.doneIf && st().seen[s.doneIf]);   // déjà fait autrement (ex. on est déjà allé sur l'île suivante)
         case 'flag': return !!st().flags[s.flag];
         case 'reach': return G.zoneId() === s.zone || !!(st().seen[s.zone]);
         default: { const p = api.progress(id); return p && p.n >= p.of; }
