@@ -36,7 +36,7 @@ export function createInput(canvas, opts = {}) {
   addEventListener('keyup', (ev) => { const k = ev.key.toLowerCase(); keys[k] = false; const dg = /^(?:Digit|Numpad)([0-9])$/.exec(ev.code || ''); if (dg) keys[dg[1]] = false; if (k === 'k') attackHeld = false; });
   addEventListener('blur', () => { Object.keys(keys).forEach((k) => (keys[k] = false)); attackHeld = false; if (opts.onBlur) opts.onBlur(); });
 
-  /* souris : clic court = attaque ; clic droit = spéciale ; molette = zoom (le glisser ne tourne plus la caméra) */
+  /* souris : clic court = attaque ; clic droit = spéciale ; molette = zoom (le glisser est sans effet) */
   let drag = null;
   canvas.addEventListener('contextmenu', (ev) => ev.preventDefault());
   canvas.addEventListener('pointerdown', (ev) => {

@@ -172,8 +172,12 @@ export function buildWorld(scene, isl, def, opts = {}) {
     if (wallTheme) {
       const hgt = z.interior ? 2.6 : 2.9;
       const lowRow = z.oy + z.map.length - 1;   // mur sud abaissé : la caméra voit l'intérieur
+      /* CAMÉRA FIXE : un mur qui a du sol juste au nord (face sud, côté caméra) cacherait tout ce qui est posé sur la rangée devant lui
+         (receveur, vanne, socle, coffre, PNJ) : il est abaissé en muret. Les murs de fond et de côté gardent leur hauteur. */
+      const lowFront = (x, y) => { const n = terr(x, y - 1); return !!n && n !== '#' && n !== ' '; };
+      const wallH = (x, y) => (z.interior ? (y === lowRow ? 0.45 : hgt) : lowFront(x, y) ? 0.95 : hgt);
       instanced(G, wallGeo, z.interior ? M.rock : M.rock, rocks, (o, [x, y]) => {
-        const hh = z.interior && y === lowRow ? 0.45 : hgt;
+        const hh = wallH(x, y);
         o.position.set(W(x), hh / 2 - 0.02, W(y)); o.scale.set(1, hh, 1);
         if (z.interior) return C(((x + y) % 3 === 0) ? '#d9c9a8' : '#efe4cf');
         return C(th.rock).offsetHSL(0, 0, (hash(x, y, 17) - 0.5) * 0.1);
@@ -194,12 +198,12 @@ export function buildWorld(scene, isl, def, opts = {}) {
       else {
         // cristaux sur les murs du sanctuaire
         const tips = rocks.filter(([x, y]) => hash(x, y, 40) < 0.18);
-        instanced(G, new THREE.OctahedronGeometry(0.35, 0), glow('#9f7aff', 1.6), tips, (o, [x, y]) => { o.position.set(W(x) + (hash(x, y, 41) - 0.5), 3.05, W(y) + (hash(x, y, 42) - 0.5)); o.scale.set(0.7, 1.6 + hash(x, y, 43), 0.7); o.rotation.y = hash(x, y, 44) * 3; }, { receive: false });
-        instanced(G, new THREE.BoxGeometry(T * 1.04, 0.18, T * 1.04), mat('#7a74a0'), rocks, (o, [x, y]) => { o.position.set(W(x), 2.9, W(y)); });
+        instanced(G, new THREE.OctahedronGeometry(0.35, 0), glow('#9f7aff', 1.6), tips, (o, [x, y]) => { o.position.set(W(x) + (hash(x, y, 41) - 0.5), wallH(x, y) + 0.15, W(y) + (hash(x, y, 42) - 0.5)); o.scale.set(0.7, 1.6 + hash(x, y, 43), 0.7); o.rotation.y = hash(x, y, 44) * 3; }, { receive: false });
+        instanced(G, new THREE.BoxGeometry(T * 1.04, 0.18, T * 1.04), mat('#7a74a0'), rocks, (o, [x, y]) => { o.position.set(W(x), wallH(x, y), W(y)); });
         // liseré lumineux au pied des murs, pilastres et dalles runiques : le donjon se lit mieux
         const rim = themeOf(z) === 'temple' ? '#7fe6ff' : '#b39cff';
         instanced(G, new THREE.BoxGeometry(T * 1.03, 0.1, T * 1.03), glow(rim, 1.1), rocks, (o, [x, y]) => { o.position.set(W(x), 0.06, W(y)); }, { receive: false });
-        instanced(G, new THREE.BoxGeometry(0.4, hgt, 0.4), mat('#8d86b4'), rocks.filter(([x, y]) => hash(x, y, 150) < 0.3), (o, [x, y]) => { const sx = isLand(x + 1, y) && terr(x + 1, y) !== '#' ? 1 : isLand(x - 1, y) && terr(x - 1, y) !== '#' ? -1 : 0, sz = sx ? 0 : (terr(x, y + 1) !== '#' ? 1 : -1); o.position.set(W(x) + sx * 0.95, hgt / 2, W(y) + sz * 0.95); }, { cast: true });
+        instanced(G, new THREE.BoxGeometry(0.4, hgt, 0.4), mat('#8d86b4'), rocks.filter(([x, y]) => hash(x, y, 150) < 0.3 && !lowFront(x, y)), (o, [x, y]) => { const sx = isLand(x + 1, y) && terr(x + 1, y) !== '#' ? 1 : isLand(x - 1, y) && terr(x - 1, y) !== '#' ? -1 : 0, sz = sx ? 0 : (terr(x, y + 1) !== '#' ? 1 : -1); o.position.set(W(x) + sx * 0.95, hgt / 2, W(y) + sz * 0.95); }, { cast: true });
         instanced(G, new THREE.BoxGeometry(1.1, 0.02, 1.1), glow(rim, 0.9), cells.filter(([x, y]) => terr(x, y) === '.' && hash(x, y, 151) < 0.12), (o, [x, y]) => { o.position.set(W(x), 0.005, W(y)); o.rotation.y = Math.PI / 4; }, { receive: false });
       }
     } else {
