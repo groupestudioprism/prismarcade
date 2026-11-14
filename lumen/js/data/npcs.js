@@ -348,19 +348,19 @@ export const NPCS = {
         say: [
           'Une barque venue de l’Aube… Alors le phare brille de nouveau. Je m’appelle Ambre, et je garde Vitrebourg depuis qu’Orin nous a quittés.',
           FIA('Ici, les arbres sont en verre ! Regarde comme ils renvoient mes couleurs !'),
-          'Ils étaient plus beaux avant la Brume. Le Temple de Verre, au sud, filtrait la lumière du soleil à travers ses vitraux. Maintenant, il ne laisse plus passer que du gris.',
+          'Ils étaient plus beaux avant la Brume. Le Temple de Verre, haut sur le flanc de la montagne, filtrait la lumière du soleil à travers ses vitraux. Maintenant, il ne laisse plus passer que du gris.',
           'Chez nous, on apprend les couleurs avant de savoir lire. Un vitrail ne laisse passer que sa propre couleur. Rouge, vert et bleu mélangés donnent le blanc ; deux d’entre eux donnent le jaune, le magenta ou le cyan.',
-          'À l’est du village, trois salles de vitraux te l’apprendront. Quand tu auras réussi, la route de la Lisière te sera ouverte. Le Temple, lui, demande une vraie lame pour couper les ronces cristallines.',
+          'Un sentier monte à l’est du village : trois salles de vitraux, accrochées au flanc de la montagne, te l’apprendront. Au nord, la porte de la Lisière s’ouvre déjà pour toi. Plus haut, le Temple demande une vraie lame pour couper les ronces cristallines.',
         ],
         do: [{ step: 'q_verre' }, { open: 'b_vitres' }, { open: 'b_lisiere' }],
       },
       {
         if: (q) => S(q, 'q_verre', 'vitraux'),
-        say: ['Les salles de vitraux sont à l’est, au bout de la grand-rue. Un vitrail jaune transforme la lumière blanche en jaune. Le relais à anneaux, lui, mélange ce qu’il reçoit.', FIA('Rouge plus vert, ça fait jaune ! Je le savais déjà. Presque.')],
+        say: ['Les salles de vitraux sont à l’est : le sentier monte au bout de la grand-rue, puis tourne vers le nord, de salle en salle. Un vitrail jaune transforme la lumière blanche en jaune. Le relais à anneaux, lui, mélange ce qu’il reçoit.', FIA('Rouge plus vert, ça fait jaune ! Je le savais déjà. Presque.')],
       },
       {
         if: (q) => q.quest('q_verre') === 'active' && !q.flag('boss_verre'),
-        say: ['Le Temple de Verre est au sud, après la Lisière. Un Gardien de verre protège ce qu’il reste du fragment du Prisme. Prends de bonnes potions : Opaline en vend.', 'Les créatures de verre craignent les coups lourds. Un marteau, ou une lame bien trempée.'],
+        say: ['Le Temple de Verre est tout en haut du flanc ouest : traverse la Lisière, franchis la haie, puis suis le sentier du Portique qui contourne le Temple par le nord. Un Gardien de verre protège ce qu’il reste du fragment du Prisme. Prends de bonnes potions : Opaline en vend.', 'Les créatures de verre craignent les coups lourds. Un marteau, ou une lame bien trempée.'],
       },
       {
         if: (q) => S(q, 'q_verre', 'retour'),
@@ -390,7 +390,7 @@ export const NPCS = {
       },
       {
         if: (q) => q.quest('q_phare_verre') === 'active',
-        say: ['Le pont du Belvédère descend vers la Canopée, au sud. Là-haut, les poteaux de verre se répondent deux par deux. Tourne-toi vers celui d’en face, et laisse le câble faire le reste.', 'Le Phare est tout au bout. Il aime la patience : ses trois couleurs viennent de trois salles, et les portes ne s’ouvrent qu’une à une.'],
+        say: ['La porte du Belvédère s’ouvre vers la Canopée, au nord, et la montagne continue de monter. Là-haut, les poteaux de verre se répondent deux par deux. Tourne-toi vers celui d’en face, et laisse le câble faire le reste.', 'Le Phare est tout au bout. Il aime la patience : ses trois couleurs viennent de trois salles, et les portes ne s’ouvrent qu’une à une.'],
       },
       {
         if: (q) => q.quest('q_phare_verre') === 'done',
@@ -398,7 +398,7 @@ export const NPCS = {
       },
       {
         if: () => true,
-        say: ['Vitrebourg te remercie. Le belvédère, tout au bout des salles de vitraux, est ouvert : de là, un pont descend vers la Canopée.'],
+        say: ['Vitrebourg te remercie. Le belvédère, tout en haut des salles de vitraux, est ouvert : de là, la porte du nord mène à la Canopée, et l’escalier de la Cascade te ramène au village sans détour.'],
       },
     ],
   },
@@ -471,7 +471,7 @@ export const NPCS = {
         say: [
           'Cinq éclats, bien clairs. Laisse-moi chauffer le verre… Voilà.',
           'Un grappin de lumière, tel que le dessinait Orin. Mode d’emploi : un poteau de verre, un vide, un autre poteau. Tiens-toi à côté du premier, tournée vers le second, et agis. Le poteau d’en face te ramènera aussi.',
-          'Le pont au sud du Belvédère est ouvert. Bonne ascension, et ne regarde pas en bas.',
+          'La porte au nord du Belvédère est ouverte. Bonne ascension, et ne regarde pas en bas.',
         ],
         do: [{ take: 'eclat_verre', n: 5 }, { give: 'grappin' }, { open: 'b_canopee' }, { step: 'q_phare_verre' }],
       },

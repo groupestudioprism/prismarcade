@@ -11,6 +11,7 @@ import { CREATURES } from '../world/creatures.js';
 import '../world/creatures-desert.js';   /* ACTE III : scarabée et scorpion s'ajoutent à CREATURES */
 import { T, W, rand, randi, angleTo, damp, lerp } from '../engine/util.js';
 import { updateBossZenith } from './boss-zenith.js';   /* ACTE VI */
+import { lift } from '../world/lift.js';   /* ALTITUDE */
 
 export function createCombat(G) {
   const enemies = [];
@@ -18,7 +19,7 @@ export function createCombat(G) {
   const fx = [];          // effets temporaires (traînées, ondes, cercles d'alerte)
   const pickups = [];     // pièces et matériaux tombés
   const deadAt = {};      // clé d'apparition → instant de la mort (réapparition)
-  const group = new THREE.Group(); G.scene.add(group);
+  const group = new THREE.Group(); G.scene.add(group); lift.addGroup(group);   /* ALTITUDE : ennemis, projectiles, effets et butin sont posés sur le relief au rendu (y = au-dessus du sol) */
   let clock = 0;
 
   /* ---------- Matériaux d'effets ---------- */

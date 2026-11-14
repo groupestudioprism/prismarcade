@@ -1,3 +1,4 @@
+import { heightAt } from '../altitude.js';
 /* =========================================================
    LUMEN — son : noyau (contexte, bus, limiteur, voix, outils)
    Chaîne : sources → bus de catégorie → master → limiteur → sortie
@@ -66,13 +67,13 @@ export const now = () => (A.ctx ? A.ctx.currentTime : 0);
 export function dest(bus, o = {}) {
   const ctx = A.ctx; let node = bus;
   let g = o.vol == null ? 1 : o.vol, pan = o.pan || 0;
-  if (o.x != null && o.z != null && L.on) { const dx = o.x - L.x, dz = o.z - L.z, d = Math.hypot(dx, dz); const c = Math.cos(L.yaw), s = Math.sin(L.yaw); pan = clamp((-dx * c + dz * s) / 14, -1, 1) * (d > 1 ? 1 : d); g *= 1 / (1 + d * d / 120); if (d > 40) g *= 0.3; }
+  if (o.x != null && o.z != null && L.on) { const dx = o.x - L.x, dz = o.z - L.z, d = Math.hypot(dx, dz, heightAt(o.x, o.z) - (L.y || 0));   /* ALTITUDE : un son d'une autre terrasse porte moins loin */ const c = Math.cos(L.yaw), s = Math.sin(L.yaw); pan = clamp((-dx * c + dz * s) / 14, -1, 1) * (d > 1 ? 1 : d); g *= 1 / (1 + d * d / 120); if (d > 40) g *= 0.3; }
   if (g < 0.01) return null;
   if (g !== 1) { const n = ctx.createGain(); n.gain.value = g; n.connect(node); node = n; }
   if (pan && ctx.createStereoPanner) { const p = ctx.createStereoPanner(); p.pan.value = clamp(pan, -1, 1); p.connect(node); node = p; }
   return node;
 }
-export const L = { on: false, x: 0, z: 0, yaw: 0 };
+export const L = { on: false, x: 0, z: 0, y: 0, yaw: 0 };
 
 /* Oscillateur à enveloppe. o : {wave, vol, a, d (durée), r, slide, to, cut, q, detune, bus, rev, prio, t0, pan} */
 export function tone(f, dur, o = {}) {

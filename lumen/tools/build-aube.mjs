@@ -262,7 +262,7 @@ const island = {
   ending: 'Le phare de l’Aube brille à nouveau. Un fragment rouge du Grand Prisme flotte au-dessus de la flamme : la route vers la Forêt de Verre s’éclaire au loin.',
   zones: Z.map((z) => {
     const o = { id: z.id, region: z.region, title: z.title, num: z.num || 0, secret: !!z.secret, ox: z.ox, oy: z.oy, spawn: z.area ? z.spawn : z.entry, entryGate: z.entryGate, barrier: z.barrier, hint: z.hint, seed: z.seed, map: z.map, ents: z.ents || [] };
-    ['area', 'theme', 'interior', 'dungeon', 'props', 'npcs', 'chests', 'pickups', 'spawns', 'doors', 'warp', 'exit', 'combatRooms'].forEach((k) => { if (z[k] !== undefined) o[k] = z[k]; });
+    ['h', 'hmap', /* ALTITUDE */ 'area', 'theme', 'interior', 'dungeon', 'props', 'npcs', 'chests', 'pickups', 'spawns', 'doors', 'warp', 'exit', 'combatRooms'].forEach((k) => { if (z[k] !== undefined) o[k] = z[k]; });
     return o;
   }),
   bridges,

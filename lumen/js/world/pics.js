@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import { haloSprite } from './gfx.js';
 import { glow } from './build.js';
 import { T, W } from '../engine/util.js';
+import { lift } from './lift.js';   /* ALTITUDE */
 
 const mat = (hex, o = {}) => new THREE.MeshStandardMaterial(Object.assign({ color: hex, flatShading: true, roughness: 0.9 }, o));
 const PORTAL_COLORS = ['#7fe6ff', '#ff8ae6'];
@@ -155,7 +156,7 @@ export function initPics(ctx) {
   });
 
   /* ---------- voile du planeur ---------- */
-  const glider = new THREE.Group(); glider.visible = false; scene.add(glider);
+  const glider = new THREE.Group(); glider.visible = false; scene.add(glider); lift.add(glider, () => (glider.userData.P && glider.userData.P.gy) || 0);
   {
     const cloth = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 1.7, 6, 3), new THREE.MeshStandardMaterial({ color: '#efeaff', emissive: '#9f88ff', emissiveIntensity: 0.35, side: THREE.DoubleSide, flatShading: true }));
     cloth.rotation.x = -Math.PI / 2 + 0.28; cloth.position.set(0, 3.0, -0.2); glider.add(cloth); glider.userData.cloth = cloth;
@@ -172,14 +173,14 @@ export function initPics(ctx) {
     const r2 = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.05, 6, 28), new THREE.MeshBasicMaterial({ color: c.clone().multiplyScalar(1.6), transparent: true, opacity: 0.8 })); r2.rotation.x = Math.PI / 2; r2.position.y = 0.16; g.add(r2);
     const col = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.85, 3.6, 18, 1, true), new THREE.MeshBasicMaterial({ color: c.clone().multiplyScalar(1.6), transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false })); col.position.y = 1.8; g.add(col);
     const hl = haloSprite(color, 3, 0.55); hl.position.y = 0.4; g.add(hl);
-    g.userData = { r1, r2, col }; g.visible = false; scene.add(g); return g;
+    g.userData = { r1, r2, col }; g.visible = false; scene.add(g); lift.add(g); return g;
   }
   state.portals = PORTAL_COLORS.map(makePortal);
   function setPortals(list) {
     state.portals.forEach((g, i) => { const p = list && list[i]; g.visible = !!p; if (p) g.position.set(p.x, 0, p.z); });
   }
   function setGlide(on, P, t) {
-    glider.visible = !!on;
+    glider.visible = !!on; glider.userData.P = P;
     if (on) { glider.position.set(P.x, P.y, P.z); glider.rotation.y = P.face; glider.userData.cloth.rotation.z = Math.sin(t * 6) * 0.05; }
   }
 

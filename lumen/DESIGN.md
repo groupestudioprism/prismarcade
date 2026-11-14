@@ -83,7 +83,7 @@ Une nuit, une ombre sans forme, **la Brume**, a enveloppé le Grand Prisme, qui 
 | Action | Clavier et souris | Manette (PC) | Tactile |
 |---|---|---|---|
 | Se déplacer | ZQSD / WASD / flèches | Stick gauche | Joystick à gauche |
-| Tourner la caméra | Glisser avec la souris | Stick droit | Glisser à droite |
+| Caméra | Fixe (nord en haut, aucune rotation) | Fixe | Fixe |
 | Zoom | Molette | Gâchettes | Pincer |
 | Interagir (tourner, ramasser, parler) | E / Espace | A | Bouton d'action |
 | Interaction inverse (tourner dans l'autre sens) | R | X | Appui long |
@@ -289,7 +289,7 @@ Les maillages statiques sont fusionnés (maisons, meubles, personnages, nuages),
 
 ### Interface (`css/lumen.css`)
 Panneaux en verre fumé teinté (dégradé violet profond, liseré clair en haut), accents rose et or, boîte de dialogue avec filet dégradé, vignette douce (désactivée en « mouvement réduit »), titre qui scintille, bannières en dégradé. Lisible sur téléphone.
-- **Caméra** : vue de trois quarts au-dessus du personnage, rotation libre, zoom limité. Plan large lorsqu'un phare s'allume.
+- **Caméra** : vue de trois quarts au-dessus du personnage, **fixe** (lacet 0 : le haut de l’écran est le nord, −z ; inclinaison 0,95 rad), aucune rotation, zoom limité (9 à 30). Plan large lorsqu'un phare s'allume.
 
 ## 12. Son et musique
 Tout est **synthétisé en direct** (Web Audio, aucun fichier, aucune musique protégée). Code : `js/engine/audio.js` (façade) et `js/audio/` (`core.js` contexte/bus/limiteur, `music.js`, `sfx.js`, `ambience.js`). L'API est décrite dans `COORDINATION.md`.
@@ -421,3 +421,233 @@ Canopée (can1..can4) : vides franchis par paires de poteaux de grappin (portée
 - **Créatures :** crabe-lanterne (chargeur, faible aux coups lourds), méduse-reflet (à distance, résiste à la lumière), anguille d’ombre (rapide, faible à la lumière), sentinelle de corail (bouclier), boss Gardien des Marées (deux phases).
 - **Vérification :** `tools/analyse-abysses.mjs` explore l’espace des états (réglage de tous les objets × zone de marche de Lyra) : solution, aucune impasse, aucun faisceau qui sort, objets tous manœuvrables. `tools/build-abysses.mjs` assemble l’île et écrit `js/islands/abysses.js`.
 - **Route :** les Abysses s’atteignent **après l’Acte III** (`acte3_fini`) : Yaël (Désert), Calixte (Havre-Aube) ; retour par Lagon vers le Désert, Vitrebourg ou Havre-Aube. Tessel (Forêt) ne propose plus que le Désert.
+
+
+## Relief : altitude, caméra fixe, trou de visibilité (implémenté, socle moteur)
+
+**Données.** Une zone peut avoir `h` (niveau de base, défaut 0) et `hmap` (tableau de chaînes, une par ligne de `map`, un caractère par case : `0-9a-z` = niveau 0 à 35 ; espace, `.` et `_` = 0). Absence = 0 partout : les îles existantes sont inchangées (même pas de maillage relief). `bridge.h` : nombre ou tableau (sinon le pont est interpolé entre les terres de ses extrémités). 1 niveau = `HU` = 0,75 unité ; une case = 2 unités ; **marche maximale `MAX_STEP` = 1 niveau** : |Δ| ≤ 1 est franchissable (rampe, marche), au-delà c’est une falaise (non franchissable, dessinée en mur de roche).
+**Hauteur.** `heightAt(x, z)` (js/altitude.js) : continue, interpolation bilinéaire entre les centres de cases voisines ; un échantillon de l’autre côté d’une falaise ou d’un vide est remplacé par le niveau de la case propriétaire (la falaise reste franche). Elle sert au terrain, au joueur (`P.gy`), PNJ, ennemis, projectiles, objets au sol, coffres, faisceaux, ponts, ombres, audio, caméra (cible = `P.gy + 0,8`). `stepOk` (logique) = connexité ; `reachCells` et tous les outils (`reachlib`, `verify`, `reach`, `coherence`, `generate`) l’utilisent : une case entourée de cases trop hautes est inaccessible.
+**Convention « lift ».** Le y logique d’un objet dynamique est sa hauteur au-dessus du sol local ; juste avant le rendu `lift.apply()` ajoute `heightAt`, juste après `lift.restore()` l’enlève. Le code de jeu n’a donc pas à connaître l’altitude. Le contenu statique a l’altitude cuite dans `buildWorld`.
+**Terrain.** `world/relief.js` : maillage par zone, sommets colorés, cases plates = 1 quad, cases en pente = 4 ; murs de terre sous le vide, murs de roche facettés sur les falaises, masse de roche sous la montagne.
+**Caméra.** Fixe : `CAM_YAW = 0`, `CAM_PITCH = 0,95`. La souris, le tactile et la manette ne la tournent plus (molette / pincer = zoom borné). `S.yaw`/`S.yawT` restent utilisables en interne (cinématiques, tests).
+**Trou de visibilité.** `world/hole.js` : un patch `onBeforeCompile` posé une fois sur tous les matériaux Mesh (instanciés/fusionnés compris ; pas les shaders propres, Points, Sprites) ; les fragments qui sont devant Lyra (profondeur + `margin`) et au-dessus de ses pieds (`foot`), dans un disque d’écran, sont écartés par tramage. Aucun coût de géométrie, marche avec `?low&nobloom`. Réglages `hole.cfg` : `radius` 2,3 (unités monde projetées), `margin` 0,55, `foot` 0,8, `alpha` 0,92 ; `?nohole` le désactive. Un second trou suit le PNJ en dialogue. Les intérieurs restent corrects (le sol devant le joueur n’est jamais percé).
+**Test.** `node tools/build-test-montagne.mjs` écrit `js/islands/test-montagne.js` (île cachée, hors `ISLANDS`, jamais sauvegardée) ; `?ile=test-montagne`. `tests/qa_altitude.py`.
+
+## Forêt de Verre : la montagne (implémenté, branche `montagne-foret`)
+
+L'île 2 n'est plus un archipel de salles : c'est UNE montagne (`layout: 'montagne-1'`, 16 zones extérieures, altitude 0 à 13, soit 9,75 u). Caméra fixe, nord en haut : on monte vers le nord. Tout le contenu (zones, PNJ, quêtes, coffres, éclats, boss, drapeaux `acte2_fini`, `boss_verre`, fragment vert) est conservé avec les mêmes identifiants ; l'ordre des étapes de quête est inchangé (les sauvegardes stockent l'indice d'étape).
+
+Plan par altitude (niveau = 0,75 u) :
+| Niv. | Zone | Rôle |
+|---|---|---|
+| 0 à 2 | Vitrebourg | village au pied de la montagne, trois bandes (bas 0, place 1, haut 2) ; Auberge de la Rosée au sud |
+| 1,5 à 5 (niv. 2 à 8) | Lisière du Verre | quatre terrasses reliées par des escaliers ; haie de ronces en travers de la route, roches, cerfs de verre |
+| 3, 4, 5 | salles des vitraux f1, f2, f3 | un vitrail par palier, portes `fg1` à `fg3` |
+| 6 | Belvédère | cristal de voyage, palier d'orientation |
+| 7 | Branches basses (can1) | début de la Canopée, grappin |
+| 8, 11, 12 | Branches hautes, Passerelle, Nid de lumière | passerelles de cime `fc0`..`fc2`, seuls ponts restants |
+| 8 à 10 | Sentier du Portique puis Temple de Verre | flanc ouest : la route vers le boss `boss_verre` |
+| 13 | Phare de Verre | sommet, énigmes `ph_*`, fragment vert |
+
+Choix de construction. Les salles d'origine gardent leur carte et leurs énigmes ; `tools/build-foret.mjs` les fait pivoter (`rotateZone`, dans `tools/areas-montagne.mjs`) pour que l'entrée soit au sud et la sortie au nord, puis revérifie chaque énigme par force brute. Les ponts entre zones sont remplacés par des portes de barrière (`kind: 'barrier'`) : la montagne est continue, la progression est fermée par les portes d'origine (`b_vitres`, `b_lisiere`, `b_temple`, `fg1`..`fg3`, `b_canopee`). La porte `b_vitres` est posée sur l'unique goulot (case 30,5 du village) ; un test vérifie qu'il n'y a aucun chemin autour.
+
+Ce qui est propre à la montagne (mécanique et rythme) :
+1. Raccourci de la Cascade, qui s'ouvre vers le bas : résoudre le 3e vitrail (`fg3`) ouvre `rac_cime` (lien `gateLinks`) et un escalier de 39 cases descend du Belvédère au village. La montée se fait en étapes, la redescente est un cadeau. Un test vérifie que le raccourci est fermé tant que `fg3` ne l'est pas.
+2. Chaque palier a son rythme : terrasses à escaliers (Lisière), salles à énigme de lumière (vitraux), grappin sur les cimes, puis boss latéral.
+3. Brume et ciel dépendent de l'altitude (`P.gy`) : mer de brume proche au pied, air clair et lointain en haut.
+4. Falaises et murs en verre vert-bleu clair (`cliff`/`wall` dans le thème), plus des parois sombres au-dessus du vide.
+5. Boussole du Phare dans le HUD (`#peak-gauge` : « Phare · N niveaux à gravir · alt. X »). Avec une caméra fixe à 17 u de distance et un sol visible de 6 cases au nord de Lyra, voir le Phare depuis le village est physiquement impossible : la boussole le remplace.
+6. Carte : plan teinté par l'altitude, lignes de falaise, et « coupe de la montagne » (profil des altitudes avec la position de Lyra), lisible sur téléphone (la grande carte tient dans l'écran). Cristal de voyage « Portique » ajouté.
+
+Sauvegardes : `world.layout` marque la nouvelle géographie. Une partie sans marque (ancienne Forêt) est chargée, Lyra est replacée à l'arrivée de sa zone (qui existe toujours), le point de reprise invalide est ramené à l'auberge.
+
+Changements moteur (minimes) : `relief.js` lit des couleurs optionnelles `th.cliff` / `th.wall` ; `main.js` : `gateLinks`, relayout au chargement, toasts de barrière, HUD, carte, brume. Aucun changement de règles Firestore.
+
+Tests : `tests/qa_montagne_foret.py` (montée réelle village → Phare au clavier avec grappin, altitude croissante, falaise bloquante, raccourci, trou de visibilité en trois points), `qa_foret_full.py` (3 transitions à pied), `qa_saves.py` (anciennes Forêts), bibliothèque `tests/qa_walk.py`.
+
+
+## Formes des îles (PROPOSITION de conception, rien n'est implémenté)
+
+**Pourquoi.** Aujourd'hui Aube, Désert, Abysses, Pics et Zénith suivent le même schéma : un village en haut à gauche, une ligne de zones carrées de 11×11 reliées par des ponts, un donjon carré, un phare carré. La caméra est désormais fixe (nord en haut, inclinaison 0,95 rad) et le relief existe (`zone.h`, `hmap`, falaises, escaliers). Il faut en profiter pour que **chaque île se distingue sur trois plans** (exigence du créateur) :
+
+- **(a) Visuel** : palette, matériaux, ciel / brume / lumière, décor, silhouette, ambiance sonore ;
+- **(b) Carte** : forme et organisation spatiales, usage de l'altitude (ni la ligne de zones carrées actuelle, ni la montagne de la Forêt) ;
+- **(c) Logique** : mécanique centrale propre, énigmes et rythme de progression distincts (pas de simples variantes « miroirs et lanternes »).
+
+**Règles caméra fixe pour tout dessin de carte** (issues de l'audit `tests/qa_camera_fixe.py`) :
+
+1. Le haut de l'écran est le **nord**. Ce qui est au sud d'un objet important le cache : on met les objets clés (receveurs, vannes, socles, coffres, PNJ, boss) **à l'écart du bord sud** des falaises, murs et bâtiments, ou on abaisse ce bord (le moteur abaisse déjà à 0,95 les murs de donjon qui ont du sol au nord, `lowFront` dans `world/build.js`).
+2. **Monter vers le nord est gratuit** : un relief qui s'élève vers le haut de l'écran ne cache jamais ce qui est devant (les faces de falaise tournées au sud sont même très lisibles). Un relief qui s'élève vers le sud est à éviter, ou à réserver à du décor bas.
+3. Les falaises « vers le sud » (la face visible) sont les plus belles : y placer les cascades, les statues, les vitraux. Les faces nord sont invisibles : y cacher les secrets à condition de signaler l'accès.
+4. Les grands cercles et spirales passent bien (aucun axe privilégié), les longs couloirs est-ouest aussi ; les couloirs nord-sud longs sont moins lisibles (on avance « dans » l'écran).
+5. Une île = une **silhouette reconnaissable sur la carte** (G.drawMap) : prévoir aussi un tracé de carte propre.
+
+### Tableau comparatif des 6 îles (la Forêt est la montagne, refaite par une autre équipe)
+
+| | Aube | Forêt (montagne, autre équipe) | Désert | Abysses | Pics | Zénith |
+|---|---|---|---|---|---|---|
+| **Forme** | **Croissant** : deux cornes autour d'une baie ouverte au sud | Montagne à lacets | **Canyon en spirale** qui descend vers un temple | **Anneau** autour d'un lac-cratère | **Delta de vent** : plateaux flottants en éventail | **Sablier** : deux plateaux reliés par un col à portails |
+| **Altitude** | 0 à 3 niveaux, cornes qui se relèvent doucement | Montée continue, sommet = phare | Du bord (9) vers le centre (0) : on **descend** | Berge 2 à 4, lac 0, grottes dans la berge | 0 au sud, jusqu'à 14 au nord (le vent « descend » vers nous) | Plateaux à 8, col à 3, tours à 14 |
+| **Palette / ciel** | Rose, or, blanc ; aube qui monte | Vert verre, turquoise, brume | Ocre, rouge brique, ciel blanc brûlé | Bleu nuit, turquoise, magenta bioluminescent | Gris-bleu, blanc neige, orange des drapeaux | Blanc, or, nuages ; Brume noire à l'horizon |
+| **Matière du décor** | Pierre blanche, cerisiers, eau calme | Verre, troncs de verre | Grès, sable, cactus, voiles | Corail, nacre, eau réfléchissante | Pierre grise, neige, bois, toile | Marbre, or, miroirs, vitraux |
+| **Mécanique signature** | Ponts d'aube (la lumière pose des ponts) | Couleurs mélangées (vitraux, combinateurs) | Sable et tempêtes : le terrain change dans le temps | Eau : niveau, reflet vertical, Fia | Vent : planer, courants, minuteries | Portails : espace replié |
+| **Rythme** | Linéaire, doux, tutoriel | Montée par paliers | Boucle : descendre, remonter par un autre bord | Tour de l'anneau, 2 sens possibles | Éventail : 3 branches libres, puis réunion | Deux grandes salles + col, très dense |
+| **Village / phare** | Village à l'ouest (corne ouest) / phare à l'extrémité est | Village au pied / phare au sommet | Cité au bord haut nord-est / phare au centre bas, lit un faisceau vers le ciel | Grève au sud / phare au nord sur la berge, face au lac | Col au sud (bas) / phare tout au nord (haut) | Porte au sud / phare au nord, boss dans le col |
+| **Son** | Harpe, cloche, oiseaux | Carillon de verre | Vent chaud, tambour sourd, échos | Gouttes, basses profondes | Sifflement, cordes, drapeaux | Chœur, orgue, silence |
+| **Ennemis** | Brumes de base | Éclats de verre | Scarabées de sable, spectres d'écho | Crabes-lanternes, méduses | Givrelins, bourrasques, bouquetins | Ombres d'or |
+| **Boss** | Colosse de Brume (rocher qui se dresse) | Gardien de Verre | Gardien d'échos (dans l'arène du fond de la spirale) | Gardien des Marées (arène avec niveaux d'eau) | Grand Meunier (au sommet du moulin) | Ombre du Prisme |
+
+Aucune ligne du tableau n'est identique d'une colonne à l'autre : forme, profil d'altitude, palette, mécanique et boss sont tous différents.
+
+---
+
+### Aube : « Le Croissant » (archipel en croissant ouvert au sud)
+
+**Identité visuelle.** Pierre blanche rosée, cerisiers, toits d'ardoise claire ; eau calme et lagon peu profond dans la baie ; le ciel passe du violet de l'éteint à l'or de l'aube, et **le soleil se lève réellement au bout de la baie** (ciel du bas de l'écran). Ambiance sonore : harpe, cloche de port, mouettes. C'est l'île la plus douce et la plus lumineuse.
+
+**Carte.** Deux cornes de terre (ouest et est) qui encadrent une baie ouverte vers le bas de l'écran ; la corne ouest porte le village, la corne est le phare ; entre les deux, au nord, le ventre du croissant porte la Lande et le Sanctuaire (donjon). Les ponts de lumière traversent la baie.
+
+```
+          N
+    . . . . . . . . . . . . . .
+   .  [Lande]--[Sanctuaire]     .      ventre : niveau 2-3
+  .  /   (boss Colosse)    \     .
+ .  /                       \     .
+ [Village]               [Rivage]     cornes : niveau 1-2
+ [ Havre ]   ~ ~ baie ~ ~   [Jardins]-->[Ruines]--[PHARE]
+  \  ponts d'aube (lumière)  /          pointe est : niveau 3
+   ~~~~~~~~~~~ mer / lever du soleil ~~~~~~~~~
+          S
+Profil O->E : 1 1 2 2 | 2 3 3 (ventre) | 2 1 1 2 3 (corne est)
+```
+
+**Mécanique signature : les ponts d'aube.** Un récepteur allumé ne « ouvre » plus une barrière : il **pose un pont de lumière** dont la longueur suit le faisceau ; le pont existe tant que le faisceau le touche. On construit donc son chemin à travers la baie. Introduit la lumière en douceur (lanternes, miroirs, prismes, relais existants, c'est le socle pédagogique) mais avec une logique propre : le faisceau est à la fois la solution et le chemin.
+**Trois types d'énigmes propres.** (1) *Traversée* : le pont dure le temps du faisceau, il faut garder un relais allumé derrière soi ; (2) *Pont à deux sens* : un miroir doit servir deux faisceaux (aller et retour) pour franchir la baie dans les deux sens ; (3) *Lever de soleil* : une lentille fixe sur la corne est reçoit le soleil à heure fixe (cycle court de 90 s, sans pénalité) qui allume un cristal qu'aucune lanterne ne peut atteindre.
+**Ennemis / boss.** Voiles de brume lentes, lanceurs de brume (existants) ; boss Colosse de Brume dans le Sanctuaire (existant), arène ronde dégagée au nord du ventre.
+**Placement.** Village corne ouest (altitude 1), phare pointe est (altitude 3, on le voit de la baie) ; les receveurs de la baie sont posés sur des plots côté nord des îlots (pas de falaise au sud d'eux).
+**Existant / à refaire.** Existe : zones z1..z9 (carrés), phare, havre, lande, sanctuaire, intérieurs, énigmes vérifiées par `build-aube.mjs`. À refaire : carte (zones non carrées, plots), `hmap`, terrain de la baie, ponts à durée, cycle de soleil, nouveau tracé de carte. **Effort : élevé (≈ 6 jours)** : l'île est la plus « données » de toutes (énigmes générées par `build-aube.mjs`, vérifiées à la main par solutions), il faut refaire le générateur et les solutions.
+
+---
+
+### Désert : « Le Canyon » (spirale qui descend vers un temple enseveli)
+
+**Identité visuelle.** Ocre, rouge brique, grès jaune, ciel blanc brûlé, brume de chaleur, voiles de poussière ; temples à demi enterrés, obélisques, voiles tendues entre les falaises. Ambiance : vent chaud, tambour sourd, échos qui répondent. Contraste fort avec l'Aube (pas d'eau, pas de verdure, ombres dures).
+
+**Carte.** Un canyon de 3 zones de large qui s'enroule en spirale de l'extérieur vers le centre : on **descend** du bord (niveau 9, la Cité) jusqu'au fond (niveau 0, le Temple enseveli), la falaise de la spirale est la paroi visible. Un second chemin, étroit (grappin / porté), remonte par le bord intérieur vers le phare.
+
+```
+          N
+   [Cité 9]========[Dunes 8]========\
+     ||                              ||        entrée à l'est (bord haut)
+     ||   ====[Oasis 6]======\       ||
+     ||   ||                  ||      ||
+     ||   ||   [TEMPLE 0]     ||      ||      centre : arène du boss
+     ||   ||   (boss, phare)  ||      ||
+     ||   \=====[Ruines 3]====/      ||
+     \======[Vestibule 5]============/
+          S
+Profil le long de la spirale : 9 9 8 8 7 6 6 5 4 3 3 2 1 0 (puis remontée par le grappin)
+```
+
+**Mécanique signature : le sable change le terrain.** Un cycle de tempête (≈ 3 min) **recouvre et découvre** des cases : socles ensevelis, passages bas, lames. L'état du puzzle dépend du moment. Le joueur apprend à poser un porteur (miroir, prisme, lame) avant la tempête et à s'abriter.
+**Trois types d'énigmes propres.** (1) *Marée de sable* : un socle n'est accessible qu'après la tempête, le faisceau doit être prêt avant ; (2) *Écho* : un miroir posé « répète » le faisceau 3 secondes plus tard (relais retardé) pour viser deux receveurs en alternance ; (3) *Abri-éclaireur* : pendant la tempête les faisceaux portent moins loin, on place des relais de proche en proche (porter, existant).
+**Ennemis / boss.** Scarabées blindés (existant ou à créer), spectres d'écho qui répètent le coup précédent ; Gardien d'échos (existant), arène circulaire au fond de la spirale, sol plat 15×15.
+**Placement.** Cité au bord haut (nord-est, niveau 9) : les maisons y sont au nord des allées ; phare au fond (centre, niveau 0) : un faisceau doré monte du puits, visible de partout ; la falaise intérieure tournée au sud sert de décor (fresques).
+**Existant / à refaire.** Existe : 11 zones, porter / lames / socles, tempêtes (`desert-props.js`), boss et énigmes vérifiées par `build-desert.mjs`. À refaire : carte en spirale (nouveau découpage en zones non carrées avec `hmap` décroissant), cycle qui modifie le terrain (aujourd'hui seule la portée des faisceaux change), relais retardé (réutilise `hold` de l'Acte V). **Effort : moyen-élevé (≈ 5 jours).**
+
+---
+
+### Abysses : « L'Anneau du Lac » (couronne autour d'un lac-cratère)
+
+**Identité visuelle.** Bleu nuit, turquoise, magenta bioluminescent ; corail, nacre, algues qui flottent ; eau réfléchissante au centre (le ciel y est inversé), grottes violettes dans la berge. Pas de soleil direct : une lueur venue **du fond du lac**. Ambiance : gouttes, grave profond, bulles, chant de baleine.
+
+**Carte.** Une berge annulaire (largeur 2 à 3 zones) autour d'un lac circulaire de 24 cases de diamètre. L'anneau monte de 2 à 4 niveaux d'est en ouest (pour que la face sud des falaises soit lisible) ; les grottes sont des tunnels dans la berge nord, le phare est sur la berge nord face au lac. On peut faire le tour dans les deux sens : un côté mène à la Grève, l'autre aux Grottes.
+
+```
+            N
+        ____[PHARE]____
+     .-'   grottes     '-.        berge nord : niveau 4
+    /  [Grottes][Récifs]  \
+   [Lac1]  ~~~~~~~~~~~~  [Lac3]   flancs : niveau 2-3
+    \      ~  LAC  ~      /
+     '-.   ~~~~~~~~~~   .-'
+        '--[GRÈVE]----'          berge sud : niveau 1 (village)
+            S
+Profil coupe N-S : 4 | 0 0 0 0 (lac) | 1
+```
+
+**Mécanique signature : l'eau.** Le niveau du lac monte et descend avec des vannes (existant), mais surtout **le reflet vertical** : un faisceau qui touche l'eau est renvoyé vers le haut, Lyra (Fia, orbe) est une source mobile. Le lac central est le « plateau » du puzzle : en changeant le niveau, on change quelles berges sont des îlots, et l'orientation des reflets.
+**Trois types d'énigmes propres.** (1) *Marée* : monter l'eau pour aller sur un îlot, la baisser pour qu'un faisceau passe sous une arche ; (2) *Reflet* : un faisceau qui frappe l'eau remonte, on utilise l'eau comme un miroir à l'envers pour atteindre un receveur en hauteur (berge nord) ; (3) *Orbe voyageuse* : Fia posée sur un socle est une lanterne ; on la déplace d'un socle à l'autre en nageant le tour de l'anneau.
+**Ennemis / boss.** Crabes-lanternes, méduses-reflet, anguilles, sentinelles de corail (existants) ; Gardien des Marées (existant), arène dont le niveau d'eau change entre phases.
+**Placement.** Grève au sud (bas de l'écran, niveau 1), phare au nord sur la berge haute : on voit le phare à travers le lac. Éviter tout receveur sous la lèvre sud des grottes.
+**Existant / à refaire.** Existe : grève, récifs, îlots, 3 salles du lac, grottes, phare, eau (`mech/eau.js`), Orbe et vannes, énigmes de `build-abysses.mjs` + `analyse-abysses.mjs`. À refaire : géométrie en anneau, hmap de la berge, lac central vraiment circulaire, deuxième sens de parcours. **Effort : élevé (≈ 6 jours)** : le simulateur d'états `analyse-abysses.mjs` suppose les zones carrées.
+
+---
+
+### Pics du Vent : « Le Delta » (plateaux flottants en éventail, le vent descend vers le sud)
+
+**Identité visuelle.** Pierre gris-bleu, neige poudreuse, bois et toile orange (drapeaux, moulins, voiles), ciel haut et clair ; **les courants d'air sont visibles** (rubans blancs, fanions). Les plateaux sont des îlots de pierre suspendus avec une fine brume dessous. Ambiance : sifflement continu qui change avec l'altitude, cordes, clochettes de vent. Ce n'est pas une montagne qu'on gravit (c'est la Forêt) mais un **fleuve d'air** qu'on suit.
+
+**Carte.** Une source de vent au nord (haut) qui se divise en trois branches qui se déploient vers le sud en delta ; chaque branche est une chaîne de plateaux de plus en plus bas. L'altitude **monte vers le nord** (le col, village, est au sud, bas ; le phare au nord, haut) : rien ne cache les cibles. On « descend » le vent en planant, on remonte par les ponts à plateformes.
+
+```
+                  N
+              [PHARE 14]                 source du vent
+              /   |    \
+         [P 11] [P 11] [P 11]            3 branches libres
+         /  |      |      |  \
+      [P 8][P 8] [Moulin 9] [P 8][P 8]   le Moulin (boss) au centre
+        \   |      |      |   /
+     [P 5][P 5]  [P 5]  [P 5][P 5]
+              \  |  |  /
+              [COL 0-1]                   village, au sud
+                  S
+Profil N->S : 14 11 8 5 1  (≈ 3 niveaux par palier, planer vers le bas)
+```
+
+**Mécanique signature : le vent.** Planer (existant) devient la manière normale de se déplacer ; chaque branche a un **courant** de direction fixe qui porte (ou freine) le planeur. Les relais temporisés (existants) sont remplacés par des **girouettes** : le faisceau est dévié par une girouette tant qu'elle tourne, selon le sens du vent (nord → sud).
+**Trois types d'énigmes propres.** (1) *Courant* : choisir la branche et le point de départ pour atterrir sur le bon plateau (planer dépend de la direction du vent) ; (2) *Girouette* : un miroir monté sur girouette ne renvoie la lumière que dans le sens du vent (la solution change quand on ouvre un volet) ; (3) *Minuterie en chaîne* : trois relais à retardement à allumer dans l'ordre pendant une descente en planeur (existant, mais présenté comme parcours chronométré).
+**Ennemis / boss.** Givrelins, bourrasques (pousse Lyra, existant), bouquetins qui chargent vers le sud (existant), veilleurs de givre ; boss Grand Meunier (existant) au Moulin central, arène plate au milieu du delta.
+**Placement.** Col (village) au sud, niveau 0-1 ; phare au nord, niveau 14 : on le voit en haut de l'écran, au loin. Les plateaux ne portent aucun mur au sud des cibles (falaise = face visible, jamais décor haut).
+**Existant / à refaire.** Existe : 13 zones, pierres de vent, corniches, relais temporisés, boss, `timed.mjs`. À refaire : disposition en éventail avec ponts « de vent » et chaînes de pierres de vent, hmap par plateau, girouettes (nouvelle entité), carte. **Effort : moyen (≈ 4 jours)** : les pierres de vent et le planer fournissent déjà la logique.
+
+---
+
+### Zénith : « Le Sablier » (deux plateaux reliés par un col à portails)
+
+**Identité visuelle.** Marbre blanc, or, vitraux, nuages sous les pieds, Brume noire à l'horizon ; symétrie parfaite (miroirs géants, colonnes, rosaces), ciel doré. Ambiance : orgue, chœur, silence solennel, écho long. C'est l'île la plus architecturale et la plus symétrique : le contraire du Désert.
+
+**Carte.** Deux plateaux circulaires symétriques (haut au nord : phare et salle du boss ; bas au sud : porte et jardins) reliés par un col étroit (la Grande Salle) où les portails de lumière replient l'espace. L'altitude des plateaux est 8 ; le col est à 3 : on descend dans la salle puis on remonte (la tension monte avant le phare). Deux tours aux flancs (niveau 14) portent les balises.
+
+```
+                N
+          .-----------.
+         /  [PHARE]    \              plateau nord : niveau 8
+        |   boss        |
+         \  tours T1 T2/
+          '-.       .-'
+             \  [GRANDE SALLE]/        col : niveau 3, portails
+             /  (⇄ portails ⇄)\
+          .-'       '-.
+         /  [JARDINS]   \              plateau sud : niveau 8
+        |   [PORTE] ⌂    |            village à l'entrée
+         \_____________ /
+                S
+Profil N->S : 8 8 | 3 3 | 8 8   (sablier ; tours à 14 sur les flancs)
+```
+
+**Mécanique signature : les portails (espace replié).** Les portails de lumière relient deux points : un faisceau qui entre ressort par le jumeau. Dans cette version, **les plateaux eux-mêmes sont reliés par portails** : un faisceau lancé dans le plateau sud peut sortir dans le plateau nord. On résout les énigmes des deux plateaux en même temps via un seul rayon qui traverse le col ; un miroir mal placé au sud éteint un receveur au nord.
+**Trois types d'énigmes propres.** (1) *Rayon traversant* : un faisceau doit passer par deux portails pour atteindre un receveur du plateau opposé ; (2) *Symétrie* : un miroir posé au sud crée son double au nord (les plateaux sont symétriques) : il faut les caler en miroir ; (3) *Portail du joueur* : Lyra emprunte le portail qu'un faisceau vient d'ouvrir (touche V existante) pour atteindre une tour.
+**Ennemis / boss.** Ombres d'or (existant), lancers de lances de lumière (existant) ; boss Ombre du Prisme (existant, 3 phases) dans l'arène ronde du plateau nord.
+**Placement.** Porte et village au sud (entrée basse de l'écran), phare au nord, boss sur le plateau nord autour du phare ; les deux tours aux flancs.
+**Existant / à refaire.** Existe : 8 zones, portails (`mech/portails.js`), boss, séquence de fin 50 s, énigmes vérifiées (`audit_zenith.py`). À refaire : disposition en sablier (zones non carrées, plateaux circulaires, col), puzzles symétriques et rayon traversant, hmap. **Effort : moyen-élevé (≈ 5 jours)** : le moteur de portails existe, il faut un nouvel agencement et de nouvelles énigmes à valider.
+
+---
+
+### Ordre de réalisation conseillé
+
+1. **Pics** (le moins coûteux : le vent et le planer existent), 2. **Zénith** (portails existants), 3. **Désert** (nouveau cycle de sable), 4. **Abysses** et 5. **Aube** (générateurs/solveurs à refaire). Dans chaque cas : d'abord la carte (zones + `hmap`) avec `tools/reach.mjs` et `tests/qa_camera_fixe.py` (aucune cible clé masquée), ensuite les énigmes avec leur solveur, puis le visuel (palette, ciel, son).
+
+### Audit « caméra fixe » (réalisé, voir HANDOFF.md)
+
+Constaté : les murs de donjon (2,9 u) cachaient entièrement tout ce qui était posé sur la rangée devant le mur sud (Abysses : 13 objets clés ; Zénith : un panneau). Corrigé : un mur dont la case nord est du sol est abaissé à 0,95 (`lowFront`). Le trou de visibilité rend Lyra visible partout (0 bloqueur non troué sur les cinq îles) ; les PNJ derrière un étal ou une maison restent visibles pendant le dialogue (second trou).

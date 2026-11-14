@@ -16,7 +16,7 @@ const PRESS = {
 
 export function createInput(canvas, opts = {}) {
   const keys = {}, queue = new Set();
-  const cam = { dx: 0, dy: 0, zoom: 0 };
+  const cam = { zoom: 0 };   /* CAMÉRA FIXE : plus de rotation ; seul le zoom (molette, pincement) subsiste */
   const joy = { active: false, id: null, x: 0, y: 0, ox: 0, oy: 0 };
   let enabled = false, attackHeld = false, attackHeldT = 0;
   const touch = matchMedia('(pointer: coarse)').matches || new URLSearchParams(location.search).has('touch');
@@ -36,7 +36,7 @@ export function createInput(canvas, opts = {}) {
   addEventListener('keyup', (ev) => { const k = ev.key.toLowerCase(); keys[k] = false; const dg = /^(?:Digit|Numpad)([0-9])$/.exec(ev.code || ''); if (dg) keys[dg[1]] = false; if (k === 'k') attackHeld = false; });
   addEventListener('blur', () => { Object.keys(keys).forEach((k) => (keys[k] = false)); attackHeld = false; if (opts.onBlur) opts.onBlur(); });
 
-  /* souris : clic court = attaque ; glisser = caméra ; clic droit = spéciale ; molette = zoom */
+  /* souris : clic court = attaque ; clic droit = spéciale ; molette = zoom (le glisser est sans effet) */
   let drag = null;
   canvas.addEventListener('contextmenu', (ev) => ev.preventDefault());
   canvas.addEventListener('pointerdown', (ev) => {
@@ -56,7 +56,7 @@ export function createInput(canvas, opts = {}) {
     if (!drag || drag.id !== ev.pointerId) return;
     const dx = ev.clientX - drag.x, dy = ev.clientY - drag.y;
     drag.moved += Math.abs(dx) + Math.abs(dy);
-    if (drag.moved > 8) { cam.dx += dx; cam.dy += dy; if (!drag.touch) attackHeld = false; }
+    if (drag.moved > 8 && !drag.touch) attackHeld = false;
     drag.x = ev.clientX; drag.y = ev.clientY;
   });
   const up = (ev) => {
@@ -66,6 +66,15 @@ export function createInput(canvas, opts = {}) {
   };
   canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', () => { drag = null; attackHeld = false; });
   canvas.addEventListener('wheel', (ev) => { ev.preventDefault(); cam.zoom += ev.deltaY; }, { passive: false });
+
+  /* pincement à deux doigts (côté droit de l'écran) = zoom */
+  let pinch = null;
+  const pinchDist = (ev) => { const a = ev.touches[0], b = ev.touches[1]; return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY); };
+  const pinchOk = (ev) => ev.touches.length >= 2 && ev.touches[0].clientX > innerWidth * 0.3 && ev.touches[1].clientX > innerWidth * 0.3;
+  canvas.addEventListener('touchstart', (ev) => { if (enabled && pinchOk(ev)) { pinch = pinchDist(ev); drag = null; } }, { passive: true });
+  canvas.addEventListener('touchmove', (ev) => { if (pinch !== null && ev.touches.length >= 2) { const d = pinchDist(ev); cam.zoom += (pinch - d) * 2.2; pinch = d; } }, { passive: true });
+  const pinchEnd = (ev) => { if (ev.touches.length < 2) pinch = null; };
+  canvas.addEventListener('touchend', pinchEnd); canvas.addEventListener('touchcancel', pinchEnd);
 
   /* joystick tactile */
   const joyEl = document.getElementById('joy'), knob = document.getElementById('knob');
@@ -123,7 +132,7 @@ export function createInput(canvas, opts = {}) {
     take(a) { if (queue.has(a)) { queue.delete(a); return true; } return false; },
     clear() { queue.clear(); },
     attackHeld: () => attackHeld,
-    camera() { const c = { dx: cam.dx, dy: cam.dy, zoom: cam.zoom }; cam.dx = cam.dy = cam.zoom = 0; return c; },
+    camera() { const c = { dx: 0, dy: 0, zoom: cam.zoom }; cam.zoom = 0; return c; },
     keyDown: (k) => !!keys[k],
   };
 }

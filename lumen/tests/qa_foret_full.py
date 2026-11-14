@@ -1,5 +1,6 @@
 import sys; sys.path.insert(0,__import__('os').path.dirname(__import__('os').path.abspath(__file__)))
 from qa_lib import *
+from qa_walk import *
 import shutil; shutil.rmtree('/tmp/qa_prof_foret', ignore_errors=True)
 q=QA('foret-complet', profile='/tmp/qa_prof_foret'); q.load()
 J=q.js
@@ -12,11 +13,22 @@ q.reloaded()
 J('arrivée Forêt',"T.info()+' '+T.q('q_verre')","active:parler")
 J('Ambre 1',"T.talkTo('ambre')")
 J('ponts ouverts',"JSON.stringify({vitres:__lumen.G.isGateOpen('b_vitres'),lis:__lumen.G.isGateOpen('b_lisiere'),q:T.q('q_verre')})")
+# marche RÉELLE au clavier sur les escaliers de la montagne (3 transitions : village -> Lisière, escalier de bande, Lisière -> sentier du Portique)
+_ZI=json.loads(q.ev("JSON.stringify(Object.fromEntries(__lumen.G.zones.map(z=>[z.id,[z.ox,z.oy]])))"))
+q.js('ronces coupées pour la marche',"""(()=>{const L=__lumen,I=L.isl,zi=L.G.zones.findIndex(z=>z.id==='lisiere'); for(let y=0;y<I.h;y++)for(let x=0;x<I.w;x++) if(I.terrain[y][x]==='r'&&I.zoneAt[y][x]===zi){I.terrain[y][x]=',';L.world.removeCell('r',x,y);L.st.world.cut[x+','+y]=1} L.openGate('b_temple',true); L.tpZone('vitrebourg',[12,7]); return 'ok'})()""")
+_lg=[]
+_r=walk_cells(q,(_ZI['lisiere'][0]+15,_ZI['lisiere'][1]+26),maxms=120000,log=_lg)
+q.step('marche clavier 1 : village -> porte de la Lisière -> Lisière (altitude monte)',lambda:[_r,_lg],lambda r:r[0][0] is True and r[1][-1][0]=='lisiere')
+_r=walk_cells(q,(_ZI['lisiere'][0]+15,_ZI['lisiere'][1]+14),maxms=120000,log=_lg)
+q.step('marche clavier 2 : escaliers entre les bandes de la Lisière',lambda:[_r,q.ev("__lumen.P.gy")],lambda r:r[0][0] is True and r[1]>=2.9)
+_r=walk_cells(q,(_ZI['sentier_t'][0]+21,_ZI['sentier_t'][1]+1),maxms=180000,log=_lg)
+q.step('marche clavier 3 : Lisière -> sentier du Portique (porte du Portique)',lambda:[_r,_lg[-1]],lambda r:r[0][0] is True and r[1][0]=='sentier_t' and r[1][1]>=7.0)
+q.js('retour au village',"(()=>{__lumen.tpZone('vitrebourg',[12,7]);return 'ok'})()")
 for n in ['opaline','silex','galet']:
     J('boutique '+n,f"T.shopBuy('{n}')")
 for n in ['silex','perle','ficus','tessel','galet','opaline','mousse']:
     J('dialogue '+n,f"(async()=>{{__lumen.G.screens.close();return await T.talkTo('{n}')}})()")
-J('énigmes f1..f3',"""(async()=>{const L=__lumen,o=[];for(const [z,g] of [['f1','fg1'],['f2','fg2'],['f3','fg3']]){L.tpZone(z);await T.tick(300);o.push(g+':'+T.solve(g));}return o.join(' ')+' '+T.q('q_verre')})()""","active:lisiere")
+J('énigmes f1..f3',"""(async()=>{const L=__lumen,o=[];for(const [z,g] of [['f1','fg1'],['f2','fg2'],['f3','fg3']]){L.tpZone(z);await T.tick(300);o.push(g+':'+T.solve(g));}return o.join(' ')+' '+T.q('q_verre')})()""","fg3:true")
 J('belvédère + warp',"(async()=>{const L=__lumen;L.tpZone('belv');await T.tick(600);return L.G.zoneId()+' '+JSON.stringify(L.st.world.warps)})()")
 J('lisière: ennemis',"(async()=>{const L=__lumen;L.tpZone('lisiere',[15,3]);await T.tick(1000);const t={};L.combat.enemies.forEach(e=>t[e.type]=(t[e.type]||0)+1);return JSON.stringify(t)+' '+T.q('q_verre')})()","active:temple")
 J('lisière: combats (éclat de verre)',"(async()=>{const L=__lumen;const k=await T.cutAndKill(['eclat'],20000);return k+' eclats='+(L.st.inv.eclat_verre||0)+' givre='+(L.st.inv.givre_foret||0)})()")

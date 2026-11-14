@@ -13,6 +13,8 @@ import { ENEMIES } from '../js/data/enemies.js';
 import { UNLOCK_NAMES, OUTFITS, ACCESSORIES, HAIR_COLORS, CLOAK_COLORS, TRIMS } from '../js/data/looks.js';
 import { SAVE_VERSION } from '../js/game/state.js';
 import { buildIsland, postLinks, ventLinks } from '../js/logic.js';   /* ACTE V */
+import { levelAt, MAX_STEP } from '../js/altitude.js';   /* ALTITUDE */
+import testMontagne from '../js/islands/test-montagne.js';
 
 const err = [], warn = [];
 const E = (m) => err.push(m), Wn = (m) => warn.push(m);
@@ -205,6 +207,30 @@ for (const I of ISLANDS) {
   const after = new Set(links());
   for (const k of before) if (!after.has(k)) E(`${I.id} : un coffre bouche l’atterrissage du lien ${k}`);
   for (const e of isl.ents) if ((e.t === 'post' || e.t === 'vent') && isl.solid.has(e.x + ',' + e.y)) E(`${I.id} : un coffre sur ${e.id}`);
+}
+
+/* ---------- ALTITUDE : relief (hmap / h) bien formé ---------- */
+for (const I of [...ISLANDS, testMontagne]) {
+  const isl = buildIsland(I);
+  for (const z of I.zones) {
+    if (z.hmap) {
+      if (z.hmap.length !== z.map.length) E(`${I.id}/${z.id} : hmap a ${z.hmap.length} lignes, map en a ${z.map.length}`);
+      z.hmap.forEach((r, y) => { if (z.map[y] && r.length < z.map[y].length) E(`${I.id}/${z.id} : hmap ligne ${y} trop courte (${r.length} < ${z.map[y].length})`); if (/[^0-9a-z ._]/.test(r)) E(`${I.id}/${z.id} : hmap ligne ${y} contient un caractère invalide (0-9, a-z, espace, point ou _ seulement)`); });
+    }
+    if (!isl.alt) continue;
+    /* un bâtiment ou un meuble de plus d'une case doit reposer sur un sol de niveau constant */
+    (z.props || []).forEach((p) => {
+      const lv = new Set();
+      for (let j = 0; j < (p.h || 1); j++) for (let i = 0; i < (p.w || 1); i++) lv.add(levelAt(isl, z.ox + p.x + i, z.oy + p.y + j));
+      if (lv.size > 1) Wn(`${I.id}/${z.id} : ${p.t} ${p.id || ''} (${p.x}, ${p.y}) posé sur un sol de niveaux différents (${[...lv].join(', ')}) : prévoir une terrasse plate dessous`);
+    });
+  }
+  /* ponts : pente maximale d'une case à l'autre (et jusqu'aux sols) */
+  (I.bridges || []).forEach((b) => {
+    if (!isl.alt) return;
+    const lv = b.cells.map(([x, y]) => levelAt(isl, x, y));
+    for (let i = 1; i < lv.length; i++) if (Math.abs(lv[i] - lv[i - 1]) > MAX_STEP + 1e-6) E(`${I.id} : pont ${b.gate} trop raide entre ses cases ${i - 1} et ${i} (${lv[i - 1]} → ${lv[i]}, pas max ${MAX_STEP})`);
+  });
 }
 
 /* ---------- Objets inobtenables ---------- */

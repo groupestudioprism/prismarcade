@@ -13,11 +13,22 @@ import zenith from './islands/zenith.js';   /* ACTE VI */
 
 export const ISLANDS = [aube, foret, desert /* ACTE III */, abysses /* ACTE IV */, pics /* ACTE V */, zenith /* ACTE VI */];
 
+/* Îles de TEST (jamais dans ISLANDS : ni voyage, ni carte, ni complétion, ni sauvegarde de l'île courante).
+   Chargeables seulement par l'adresse ?ile=test-montagne (ou ?island=test-montagne) ; le module n'est même pas téléchargé sinon. */
+export const HIDDEN_ISLANDS = [];
+{
+  const q = typeof location !== 'undefined' ? new URLSearchParams(location.search) : null;
+  const want = q && (q.get('ile') || q.get('island'));
+  if (want === 'test-montagne') HIDDEN_ISLANDS.push((await import('./islands/test-montagne.js')).default);
+}
+
 /* Données propres à chaque île, utilisées par le moteur (point de repos, ville, voyage).
    home : lit où l'on se repose et où l'on réapparaît · town : zone du village · title : nom affiché
    finale : bannière une fois la balise allumée · actEndFlag : drapeau (posé par un dialogue) qui affiche l'écran de fin d'acte
    restoreBoss : la défaite du boss compte dans la restauration des couleurs de l'île */
 export const ISLAND_META = {
+  /* ALTITUDE : île de démonstration du relief (tools/build-test-montagne.mjs) */
+  'test-montagne': { home: { zone: 'base', cell: [10, 17] }, town: 'base', title: 'Montagne d’essai', inn: 'au Refuge', warp: 'base', first: null, finale: { title: 'Le sommet brille', sub: 'Essai terminé' }, actEndFlag: 'test_fini' },
   /* ACTE IV */
   abysses: { home: { zone: 'auberge_a', cell: [6, 7] }, town: 'greve', title: 'Les Abysses Miroirs', inn: 'au Coquillage', warp: 'greve', boss: 'boss_marees', first: 'q_abysses', restoreBoss: true, smith: 'Varech',
     finale: { title: 'Le Phare des Abysses brille', sub: 'Retourne voir Marée à la Grève' }, actEndFlag: 'acte4_fini' },

@@ -3,14 +3,15 @@
    node tools/verify.mjs
    ========================================================= */
 import { ISLANDS } from '../js/levels.js';
-import { buildIsland, evaluate, walkable, reachCells } from '../js/logic.js';
+import testMontagne from '../js/islands/test-montagne.js';   /* ALTITUDE : île de test, vérifiée avec les autres */
+import { buildIsland, evaluate, walkable, reachCells, stepOk } from '../js/logic.js';   /* ALTITUDE */
 import { analyse, analyseStages } from './generate.mjs';
 import { analysePuzzles } from './analyse-abysses.mjs';   /* ACTE IV */
 import { analyseTimed } from './timed.mjs';   /* ACTE V */
 
 let fail = 0;
 const bad = (m) => { console.log('  ✗ ' + m); fail++; };
-for (const def of ISLANDS) {
+for (const def of [...ISLANDS, testMontagne]) {
   console.log(`${def.name}`);
   let devices = 0;
   for (const z of def.zones) {
@@ -20,7 +21,7 @@ for (const def of ISLANDS) {
     }
     if (z.area && !z.ents.some((e) => e.rot)) continue;   // zone d'aventure sans énigme de lumière
     if (z.stages) {   // énigme à plusieurs étapes (Phare de Verre)
-      const r = analyseStages({ map: z.map, ents: z.ents, doors: z.doors, entry: z.spawn }, z.stages, z.final);
+      const r = analyseStages({ map: z.map, ents: z.ents, doors: z.doors, entry: z.spawn, hmap: z.hmap, h: z.h }, z.stages, z.final);
       devices += r.rots;
       if (r.escape) bad(`${z.title} : un faisceau sort de la zone`);
       if (r.shortcut) bad(`${z.title} : la balise peut s'allumer portes fermées`);
@@ -39,7 +40,7 @@ for (const def of ISLANDS) {
       continue;
     }
     const opt = z.ents.filter((e) => e.optional).map((e) => e.gate);
-    const an = analyse(z.map, z.ents, gates, { barrier: z.barrier, socles: z.socles, entry: z.entry || z.spawn });
+    const an = analyse(z.map, z.ents, gates, { barrier: z.barrier, socles: z.socles, entry: z.entry || z.spawn, hmap: z.hmap, h: z.h });
     devices += an.rots.length;
     if (an.escape) bad(`${z.title} : un faisceau sort de la zone`);
     if (!an.sols.length) bad(`${z.title} : aucune solution`);
@@ -60,7 +61,7 @@ for (const def of ISLANDS) {
   const seen = new Set();   /* ACTE IV : vannes réversibles : on réunit les deux niveaux */
   [0, 1].forEach((v) => { Object.values(isl.valves || {}).forEach((e) => (e.state = v)); reachCells(isl, starts).forEach((k) => seen.add(k)); });
   isl.ents.filter((e) => ['shard', 'page', 'wisp'].includes(e.t)).forEach((e) => { if (!seen.has(e.x + ',' + e.y)) bad(`objet ${e.t} inaccessible (${e.x}, ${e.y})`); });
-  isl.ents.filter((e) => e.rot).forEach((e) => { if (![[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => seen.has((e.x + dx) + ',' + (e.y + dy)))) bad(`objet orientable hors de portée (${e.x}, ${e.y})`); });
+  isl.ents.filter((e) => e.rot).forEach((e) => { if (![[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => seen.has((e.x + dx) + ',' + (e.y + dy)) && stepOk(isl, e.x + dx, e.y + dy, e.x, e.y))) bad(`objet orientable hors de portée (${e.x}, ${e.y})`); });
   def.zones.forEach((z) => { if (!seen.has((z.ox + z.spawn[0]) + ',' + (z.oy + z.spawn[1]))) bad(`arrivée de ${z.title} inaccessible`); });
   const count = (t) => isl.ents.filter((e) => e.t === t).length;
   const main = def.zones.filter((z) => !z.secret && !z.area).length, sec = def.zones.filter((z) => z.secret).length;

@@ -316,7 +316,7 @@ h4 { margin: 16px 0 8px; font: 700 12px var(--font); letter-spacing: .14em; text
 .bestiary li { padding: 10px 12px; border-radius: 12px; background: rgba(255,255,255,.05); }
 .bestiary em { float: right; font-style: normal; color: var(--gold); font-weight: 700; }
 .bestiary small { display: block; color: var(--mut); font-size: 12px; margin-top: 3px; }
-#bigmap { width: 100%; height: auto; border-radius: 16px; background: radial-gradient(circle at 50% 40%, rgba(80,70,140,.5), rgba(0,0,0,.35)); }
+#bigmap { width: 100%; height: auto; max-height: calc(100vh - 120px); object-fit: contain; border-radius: 16px; background: radial-gradient(circle at 50% 40%, rgba(80,70,140,.5), rgba(0,0,0,.35)); }
 
 .opts { display: grid; gap: 6px; max-width: 620px; }
 .opt-group { padding: 14px 16px; border-radius: 16px; background: rgba(255,255,255,.05); }

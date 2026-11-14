@@ -1,7 +1,7 @@
 /* LUMEN — contrôle d'accessibilité d'une île (partagé par build-*.mjs et reach.mjs).
    Toutes les portes et tous les ponts sont ouverts ; le grappin relie les poteaux (logic.js : postLinks).
    « cut » = ronces et roches fissurées franchissables (lame / marteau obtenus). */
-import { buildIsland, reachCells, postLinks, ventLinks } from '../js/logic.js';
+import { buildIsland, reachCells, postLinks, ventLinks, stepOk } from '../js/logic.js';   /* ALTITUDE : stepOk */
 
 export function checkIsland(def, town) {
   const isl = buildIsland(def);
@@ -13,7 +13,8 @@ export function checkIsland(def, town) {
   const bothValves = (opts) => { const u = new Set(); [0, 1].forEach((v) => { Object.values(isl.valves || {}).forEach((e) => (e.state = v)); reachCells(isl, starts, opts).forEach((k) => u.add(k)); }); Object.values(isl.valves || {}).forEach((e) => (e.state = 0)); return u; };
   const free = bothValves({ cut: false }), cut = bothValves({ cut: true });
   const problems = [], notes = [];
-  const near = (set, x, y) => [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => set.has((Math.floor(x) + a) + ',' + (Math.floor(y) + b)));
+  /* ALTITUDE : une case voisine ne compte que si on peut y passer à la case de l'objet (|Δh| ≤ pas) */
+  const near = (set, x, y) => [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => set.has((Math.floor(x) + a) + ',' + (Math.floor(y) + b)) && stepOk(isl, Math.floor(x) + a, Math.floor(y) + b, Math.floor(x), Math.floor(y)));
   const check = (label, x, y) => {
     if (!near(cut, x, y)) problems.push(`${label} (${x}, ${y}) INACCESSIBLE même avec lame, marteau et grappin`);
     else if (!near(free, x, y)) notes.push(`${label} (${x}, ${y}) derrière des ronces ou des roches (arme requise)`);
@@ -28,7 +29,7 @@ export function checkIsland(def, town) {
   });
   isl.ents.forEach((e) => {
     if (['shard', 'page', 'wisp'].includes(e.t)) check(`${e.t} ${e.id}`, e.x, e.y);
-    if (e.rot) { const ok = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => cut.has((e.x + a) + ',' + (e.y + b))); if (!ok) problems.push(`objet orientable ${e.id} hors de portée (${e.x}, ${e.y})`); }
+    if (e.rot) { const ok = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => cut.has((e.x + a) + ',' + (e.y + b)) && stepOk(isl, e.x + a, e.y + b, e.x, e.y)); if (!ok) problems.push(`objet orientable ${e.id} hors de portée (${e.x}, ${e.y})`); }
     if (e.t === 'post' || e.t === 'vent') {
       const links = (e.t === 'vent' ? ventLinks : postLinks)(isl, e);
       if (!links.length) problems.push(`poteau ${e.id} (${e.x}, ${e.y}) sans liaison`);

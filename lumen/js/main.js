@@ -9,7 +9,10 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { ISLANDS, ISLAND_META, UPCOMING } from './levels.js';
+import { ISLANDS, HIDDEN_ISLANDS, ISLAND_META, UPCOMING } from './levels.js';
+import { heightAt, setActiveIsland, hasRelief, stepOk, MAX_STEP, HU } from './altitude.js';   /* ALTITUDE */
+import { lift } from './world/lift.js';
+import { hole } from './world/hole.js';
 import { buildIsland, evaluate, rotate, walkable, snapshot, restore, COLORS, BLOCK_TERRAIN, DIRS, postLinks, glideFrom /* ACTE IV */, clearTimers /* ACTE V */ } from './logic.js';
 import { orbAct } from './mech/eau.js';   /* ACTE IV */
 /* ACTE V : Les Pics du Vent */
@@ -44,11 +47,15 @@ import { globalCompletion } from './game/completion.js';
 
 const params = new URLSearchParams(location.search);
 /* Une page = une île : le voyage enregistre l'île d'arrivée puis recharge la page (voir switchIsland). */
-const DEF = ISLANDS.find((i) => i.id === (params.get('ile') || store.get('lumen.island', 'aube'))) || ISLANDS[0], IID = DEF.id;
+/* Îles de test (HIDDEN_ISLANDS) : chargeables par ?ile=test-montagne (ou ?island=…), jamais proposées au joueur ni mémorisées. */
+const ASKED = params.get('ile') || params.get('island');
+const DEF = (ASKED && HIDDEN_ISLANDS.find((i) => i.id === ASKED)) || ISLANDS.find((i) => i.id === (ASKED || store.get('lumen.island', 'aube'))) || ISLANDS[0], IID = DEF.id;
 const META = ISLAND_META[IID];
+const HIDDEN = HIDDEN_ISLANDS.includes(DEF);   /* île de test : jamais de sauvegarde, jamais de voyage */
 const settings = Object.assign({ quality: 'auto', master: 1, sfx: 1, music: 0.8, ambience: 0.8, voice: 0.9, muted: platform.muted() }, store.get('lumen.settings', {}));
 audio.set({ master: settings.master, sfx: settings.sfx, music: settings.music, ambience: settings.ambience, voice: settings.voice, muted: settings.muted });
 const TOUCH0 = matchMedia('(pointer: coarse)').matches || params.has('touch');
+const NOHOLE = params.has('nohole');   /* ALTITUDE : désactive le trou de visibilité (comparaisons, tests) */
 let LOW = settings.quality === 'low' || params.has('low') || (settings.quality === 'auto' && TOUCH0 && Math.min(screen.width, screen.height) < 500);
 
 /* =========================================================
@@ -127,6 +134,7 @@ Object.assign(AMB, DESERT_AMB);   /* ACTE III */
    Monde
    ========================================================= */
 const isl = buildIsland(DEF);
+setActiveIsland(isl);   /* ALTITUDE : heightAt(x, z) lit le relief de cette île */
 isl.frozenTimers = false;   /* ACTE V : relais temporisés actifs en jeu (les outils d’analyse les figent) */
 const zones = DEF.zones;
 const zoneIndex = Object.fromEntries(zones.map((z, i) => [z.id, i]));
@@ -173,7 +181,8 @@ const WARPS_BY = {
   ],
   foret: [
     { id: 'vitrebourg', name: 'Fontaine de Vitrebourg', zone: 'vitrebourg', cell: [15, 12], arrive: [15, 15], r: 4.6, where: 'Vitrebourg' },
-    { id: 'vitraux', name: 'Cristal des Vitraux', zone: 'f1', cell: [1, 8], arrive: [2, 7], r: 2.2, where: 'Les Salles de Vitraux' },
+    { id: 'vitraux', name: 'Cristal des Vitraux', zone: 'f1', cell: [5, 8], arrive: [5, 9], r: 2.2, where: 'Les Salles de Vitraux' },
+    { id: 'portique', name: 'Cristal du Portique', zone: 'sentier_t', cell: [4, 26], arrive: [3, 26], r: 2.2, where: 'Le Sentier du Portique', mesh: true },   /* MONTAGNE */
     { id: 'belvedere', name: 'Cristal du Belvédère', zone: 'belv', cell: [3, 5], arrive: [4, 5], r: 2.2, where: 'Le Belvédère de Verre', needs: () => isl.gates.fg3 && isl.gates.fg3.open, mesh: true },
     { id: 'temple', name: 'Hall du Temple', zone: 'temple', cell: [15, 4], arrive: [15, 6], r: 2.2, where: 'Le Temple de Verre', needs: (st) => st.flags.boss_verre, mesh: true },
     { id: 'canopee', name: 'Cristal de la Canopée', zone: 'can1', cell: [3, 3], arrive: [4, 4], r: 2.2, where: 'La Canopée', mesh: true },
@@ -210,7 +219,7 @@ const WARPS = WARPS_BY[IID] || [];
 const warpMeshes = {};
 WARPS.filter((w) => w.mesh).forEach((w) => {
   const z = zones[zoneIndex[w.zone]];
-  const g = new THREE.Group(); g.position.set(W(z.ox + w.cell[0]), 0, W(z.oy + w.cell[1]));
+  const g = new THREE.Group(); g.position.set(W(z.ox + w.cell[0]), heightAt(W(z.ox + w.cell[0]), W(z.oy + w.cell[1])), W(z.oy + w.cell[1]));
   const base = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 1, 0.4, 8), world.M.stone); base.position.y = 0.2; g.add(base);
   const cr = new THREE.Mesh(new THREE.OctahedronGeometry(0.45, 0), new THREE.MeshStandardMaterial({ color: '#bff3ff', emissive: '#7fdcff', emissiveIntensity: 1.5, flatShading: true }));
   cr.position.y = 1.3; cr.scale.y = 1.5; g.add(cr); g.userData.cr = cr; g.visible = false;
@@ -223,8 +232,11 @@ WARPS.filter((w) => w.mesh).forEach((w) => {
 const ev = bus();
 let st = newState();
 let slot = 'auto';
-const P = { x: 0, y: 0, z: 0, vx: 0, vz: 0, face: 0, alive: true, dodging: false, dodgeT: 0, dodgeCD: 0, iframes: 0, swing: null, swingCD: 0, combo: 0, comboT: 0, chargeT: 0, spinT: 0, hurtT: 0, kbx: 0, kbz: 0, regenT: 0, buffRegen: 0 };
-const S = { mode: 'title', zone: -1, zoneT: 0, time: 0, yaw: 0.35, yawT: 0.35, pitch: 0.92, dist: TOUCH0 ? 12 : 17, camT: new THREE.Vector3(), shake: 0, hitstop: 0, restore: 0, restoreT: 0, wardrobe: false, finale: null, talkTo: null, boss: null, hints: {}, lastSave: 0, ambT: null };
+const P = { x: 0, y: 0, gy: 0, z: 0, vx: 0, vz: 0, face: 0, alive: true, dodging: false, dodgeT: 0, dodgeCD: 0, iframes: 0, swing: null, swingCD: 0, combo: 0, comboT: 0, chargeT: 0, spinT: 0, hurtT: 0, kbx: 0, kbz: 0, regenT: 0, buffRegen: 0 };
+/* CAMÉRA FIXE : le jeu normal regarde toujours vers le nord (haut de l'écran = nord = −z). Plus aucune rotation par le joueur ;
+   S.yaw / S.yawT restent utilisables en interne (cinématiques, tests) et la conversion des commandes les respecte. */
+const CAM_YAW = 0, CAM_PITCH = 0.95;
+const S = { mode: 'title', zone: -1, zoneT: 0, time: 0, yaw: CAM_YAW, yawT: CAM_YAW, pitch: CAM_PITCH, dist: TOUCH0 ? 12 : 17, camT: new THREE.Vector3(), shake: 0, hitstop: 0, restore: 0, restoreT: 0, wardrobe: false, finale: null, talkTo: null, boss: null, hints: {}, lastSave: 0, ambT: null };
 const G = {
   scene, camera, isl, zones, def: DEF, P, audio, emit: ev.emit, on: ev.on, upcoming: UPCOMING.filter((u) => u.num > DEF.num && !ISLANDS.some((i) => i.num === u.num)), meta: META /* ACTE IV */,   /* ACTE V : filtre des îles à venir */
   get st() { return st; },
@@ -266,8 +278,8 @@ G.setQuality = (q) => { settings.quality = q; store.set('lumen.settings', settin
 G.saveSettings = () => { Object.assign(settings, audio.get()); store.set('lumen.settings', settings); };
 G.pageList = () => Object.keys(DEF.pages).map((id) => ({ id, title: DEF.pages[id].title, found: isl.ents.some((e) => e.t === 'page' && e.page === id && st.world.picked[e.id]) || !!st.world.picked['page_' + id] }));
 G.helpHtml = () => input.touch
-  ? '<p><b>Joystick</b> (gauche) : marcher · <b>glisser à droite</b> : caméra</p><p><b>⚔</b> attaque (maintenir : coup chargé) · <b>✦</b> Onde de lumière · <b>⤳</b> esquive · <b>✋</b> interagir (appui long : sens inverse) · <b>♥</b> objet rapide</p>'
-  : '<p><b>ZQSD / WASD / flèches</b> : marcher · <b>glisser la souris</b> : caméra · <b>molette</b> : zoom</p><p><b>Clic gauche / K</b> : attaque (maintenir : coup chargé) · <b>Clic droit / L</b> : Onde de lumière · <b>Espace / Maj</b> : esquive</p><p><b>E</b> : interagir · <b>R</b> : tourner dans l’autre sens · <b>F</b> : objet rapide · <b>I</b> inventaire · <b>J</b> journal · <b>M</b> carte · <b>C</b> personnage · <b>Échap</b> : menu</p>';
+  ? '<p><b>Joystick</b> (gauche) : marcher · <b>pincer</b> : zoom (la caméra est fixe, le haut de l’écran est le nord)</p><p><b>⚔</b> attaque (maintenir : coup chargé) · <b>✦</b> Onde de lumière · <b>⤳</b> esquive · <b>✋</b> interagir (appui long : sens inverse) · <b>♥</b> objet rapide</p>'
+  : '<p><b>ZQSD / WASD / flèches</b> : marcher · <b>molette</b> : zoom (caméra fixe : le haut de l’écran est le nord)</p><p><b>Clic gauche / K</b> : attaque (maintenir : coup chargé) · <b>Clic droit / L</b> : Onde de lumière · <b>Espace / Maj</b> : esquive</p><p><b>E</b> : interagir · <b>R</b> : tourner dans l’autre sens · <b>F</b> : objet rapide · <b>I</b> inventaire · <b>J</b> journal · <b>M</b> carte · <b>C</b> personnage · <b>Échap</b> : menu</p>';
 
 /* =========================================================
    Lyra et Fia
@@ -275,13 +287,15 @@ G.helpHtml = () => input.touch
 const hero = new Lyra(lookToModel(st.look));   // nouveau modèle de Lyra (facetté, contours noirs, Fia intégrée)
 scene.add(hero.root);
 hero.root.traverse((o) => { if (o.isMesh && !o.userData.noShadow) o.castShadow = true; });
+G.lift = lift; G.hole = hole;
+lift.add(hero.root, () => P.gy);   /* ALTITUDE : P.y = hauteur au-dessus du sol, P.gy = sol sous Lyra (mis à jour chaque image) */
 const fia = new THREE.Mesh(new THREE.SphereGeometry(0.13, 12, 8), glow('#fff0c2', 5)); scene.add(fia);
 fia.visible = false;   // Fia fait désormais partie du modèle de Lyra
-const fiaLight = new THREE.PointLight(0xffd9a0, LOW ? 0 : 6, 8, 2); scene.add(fiaLight);
+const fiaLight = new THREE.PointLight(0xffd9a0, LOW ? 0 : 6, 8, 2); scene.add(fiaLight); lift.add(fiaLight);
 const chargeRing = new THREE.Mesh(new THREE.RingGeometry(0.9, 1.1, 32), new THREE.MeshBasicMaterial({ color: new THREE.Color('#9fe9ff').multiplyScalar(2), transparent: true, opacity: 0, depthWrite: false }));
-chargeRing.rotation.x = -Math.PI / 2; scene.add(chargeRing);
+chargeRing.rotation.x = -Math.PI / 2; scene.add(chargeRing); lift.add(chargeRing);
 const selRing = new THREE.Mesh(new THREE.TorusGeometry(0.98, 0.045, 6, 40), new THREE.MeshBasicMaterial({ color: new THREE.Color(0xffc861).multiplyScalar(2.6), transparent: true, opacity: 0.9 }));
-selRing.rotation.x = Math.PI / 2; selRing.visible = false; scene.add(selRing);
+selRing.rotation.x = Math.PI / 2; selRing.visible = false; scene.add(selRing); lift.add(selRing);
 G.applyLook = () => { hero.build(lookToModel(st.look)); hero.root.traverse((o) => { if (o.isMesh && !o.userData.noShadow) o.castShadow = true; }); updateWeaponModel(); };
 function updateWeaponModel() { const w = ITEMS[st.equip.weapon]; hero.setWeapon(w ? w.model : null); }
 
@@ -296,10 +310,10 @@ zones.forEach((z, zi) => (z.npcs || []).forEach((n) => {
   const x = W(z.ox + n.x), zz = W(z.oy + n.y);
   c.root.position.set(x, 0, zz);
   c.root.rotation.y = n.face === 'N' ? Math.PI : n.face === 'E' ? Math.PI / 2 : n.face === 'W' ? -Math.PI / 2 : 0;
-  world.zoneGroups[zi].add(c.root);
+  world.zoneGroups[zi].add(c.root); lift.add(c.root);
   const mk = new THREE.Group();
   const gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.22, 0), new THREE.MeshBasicMaterial({ color: new THREE.Color('#ffc861').multiplyScalar(2.4) }));
-  gem.scale.y = 1.6; mk.add(gem); mk.visible = false; world.zoneGroups[zi].add(mk);
+  gem.scale.y = 1.6; mk.add(gem); mk.visible = false; world.zoneGroups[zi].add(mk); lift.add(mk);
   npcs.push({ id: n.id, d, c, zi, x, z: zz, hx: x, hz: zz, face: c.root.rotation.y, baseFace: c.root.rotation.y, wander: n.wander || 0, counter: !!n.counter, mk, gem, wt: rand(1, 4), tx: x, tz: zz, talking: false });
 }));
 function npcMarkers() {
@@ -321,6 +335,7 @@ function applyWorld() {
   Object.values(isl.gates).forEach((g) => (g.open = false));
   clearTimers(isl);   /* ACTE V */
   restore(isl, { dev: st.world.dev, gates: st.world.gates, pos: st.world.moved });   /* ACTE III : objets portés */
+  Object.entries(DEF.gateLinks || {}).forEach(([from, to]) => { if (isl.gates[from] && isl.gates[from].open) to.forEach((id) => { if (isl.gates[id]) { isl.gates[id].open = true; st.world.gates[id] = 1; } }); });   /* MONTAGNE : portes liées (le raccourci de la Cascade s’ouvre avec le 3e vitrail) */
   Object.keys(st.world.cut).forEach((k) => { const [x, y] = k.split(',').map(Number); isl.terrain[y][x] = ','; world.removeCell('r', x, y); });
   Object.keys(st.world.broken).forEach((k) => { const [x, y] = k.split(',').map(Number); isl.terrain[y][x] = ','; world.removeCell('c', x, y); });
   Object.values(world.views).forEach((v) => { if (v.head && v.target) v.head.rotation.y = v.target(); if (v.pick) v.g.visible = !st.world.picked[v.e.id]; });
@@ -374,7 +389,7 @@ function reEvaluate() {
 }
 /* Ponts vers les donjons (Sanctuaire de Brume, Temple de Verre) : ils se déploient quand Lyra
    arrive au bout du chemin, devant l'arche (après avoir franchi la haie de ronces). */
-const APPROACH_BRIDGES = { b_sanct: 'Le pont du Sanctuaire se déploie', b_temple: 'Le pont du Temple se déploie', b_temple_d: 'Le pont du Temple enseveli se déploie' /* ACTE III */, b_moulins: 'Le pont du Moulin se déploie', b_so2: 'Le pont de la Dalle se déploie', b_so4: 'Le pont du Souffle court se déploie' /* ACTE V */, b_salle: 'Le grand escalier de la Grande Salle se déploie' /* ACTE VI */ };
+const APPROACH_BRIDGES = { b_sanct: 'Le pont du Sanctuaire se déploie', b_temple: 'Le portique du Temple s’ouvre', b_temple_d: 'Le pont du Temple enseveli se déploie' /* ACTE III */, b_moulins: 'Le pont du Moulin se déploie', b_so2: 'Le pont de la Dalle se déploie', b_so4: 'Le pont du Souffle court se déploie' /* ACTE V */, b_salle: 'Le grand escalier de la Grande Salle se déploie' /* ACTE VI */ };
 function approachBridges() {
   Object.keys(APPROACH_BRIDGES).forEach((id) => {
     const g = isl.gates[id]; if (!g || g.open) return;
@@ -388,6 +403,7 @@ function openGate(id, quiet) {
   const g = isl.gates[id]; if (!g || g.open) return;
   g.open = true; st.world.gates[id] = 1;
   world.setGateView(g, true, false);
+  ((DEF.gateLinks || {})[id] || []).forEach((l) => { const lg = isl.gates[l]; if (lg && !lg.open) { lg.open = true; st.world.gates[l] = 1; world.setGateView(lg, true, false); hud.toast('✦', 'Un raccourci s’ouvre vers le bas', 'La descente jusqu’au village est libre.'); } });   /* MONTAGNE */
   if (!quiet) { audio.sfx(g.look === 'door' ? 'door' : 'chest'); g.cells.forEach(([x, y]) => sparks.burst(new THREE.Vector3(W(x), 0.6, W(y)), g.look === 'seal' ? '#b39cff' : '#9fe9ff', 10, 2.5, 2)); }
   quests.check();
 }
@@ -395,6 +411,7 @@ function onGateOpened(id) {
   const g = isl.gates[id];
   world.setGateView(g, true, false);
   st.world.gates[id] = 1;
+  ((DEF.gateLinks || {})[id] || []).forEach((l) => { const lg = isl.gates[l]; if (lg && !lg.open) { lg.open = true; st.world.gates[l] = 1; world.setGateView(lg, true, false); setTimeout(() => hud.toast('✦', 'Un raccourci s’ouvre vers le bas', 'L’escalier de la Cascade descend jusqu’au village.'), 2600); } });   /* MONTAGNE */
   if (id === 'end') { S.restoreT = 1; if (fin) startEnding(false); else startFinale(); quests.check(); return; }   /* ACTE VI : séquence de fin du jeu */
   if (id === 'sd_light') { audio.chord([523, 659, 784]); hud.toast('✦', 'La barrière de cristal se dissout', 'Le Sanctuaire révèle un passage.'); reward('g:sanct:light', 80, 25); quests.check(); return; }
   if ((DEF.stageGates || []).includes(id)) {   // portes d'étape (Branches basses, Phare de Verre)
@@ -408,7 +425,7 @@ function onGateOpened(id) {
   if (kind === 'main') {
     audio.chord([523, 659, 784]); audio.sfx('puzzle_solved');
     const z = zones.find((zz) => zz.ents.some((e) => e.gate === id && !e.optional));
-    hud.toast('✦', `${z ? z.title : 'Énigme'} : résolue`, 'Un pont de lumière se forme.');
+    hud.toast('✦', `${z ? z.title : 'Énigme'} : résolue`, g.kind === 'bridge' ? 'Un pont de lumière se forme.' : 'La barrière de cristal se dissout.');
     reward('g:' + IID + ':' + id, 120, 40); gainXp(25);
   } else if (kind === 'secret') {
     audio.chord([587, 740, 880, 1175]); snd('secret'); hud.toast('✧', 'Un passage secret s’ouvre', 'Un pont mène à une chambre cachée.'); reward('o:' + IID + ':' + id, 60, 20); gainXp(15);
@@ -594,7 +611,7 @@ function packPosition() {
   syncGates();
 }
 async function saveTo(s) {
-  if (S.leaving) return null;   // voyage en cours : l'état est déjà écrit
+  if (S.leaving || HIDDEN) return null;   // voyage en cours : l'état est déjà écrit ; île de test : on ne touche pas aux sauvegardes du joueur   // voyage en cours : l'état est déjà écrit
   packPosition();
   const r = await saves.write(s, st, regionName());
   S.lastSave = S.time;
@@ -638,7 +655,7 @@ G.travelTo = async (id, zone, cell) => {
 G.startFrom = async (state, s = 'auto', legacy = false, noIntro = false) => {
   audio.unlock();
   if (opening.gate(state, s, legacy, noIntro)) return;   // intro : fondu / cinématique d'ouverture, puis rappel avec noIntro
-  const want = state ? ((state.player && state.player.island) || 'aube') : legacy || !state ? 'aube' : IID;
+  const want = HIDDEN ? IID : state ? ((state.player && state.player.island) || 'aube') : legacy || !state ? 'aube' : IID;
   if (want !== IID && ISLANDS.some((i) => i.id === want)) { switchIsland(want, s, state ? 'resume' : legacy ? 'legacy' : 'new'); return; }
   screens.close();
   slot = s;
@@ -652,11 +669,20 @@ G.startFrom = async (state, s = 'auto', legacy = false, noIntro = false) => {
   // position
   const zi = zoneIndex[st.player.zone] !== undefined ? zoneIndex[st.player.zone] : zoneIndex[META.town];
   const z = zones[zi];
+  /* MONTAGNE : une partie enregistrée dans l'ancienne géographie de l'île (sans marque `layout`) n'a plus de coordonnées valables :
+     on replace Lyra à l'arrivée de sa zone (elle existe toujours) et on vérifie le point de reprise */
+  const relayout = !!(DEF.layout && st.world.layout !== DEF.layout && !fresh);
+  if (DEF.layout) st.world.layout = DEF.layout;
+  if (relayout) {
+    st.player.x = null;
+    const rz = st.player.respawn && zoneIndex[st.player.respawn.zone] !== undefined ? zones[zoneIndex[st.player.respawn.zone]] : null;
+    if (!rz || !canStand(W(rz.ox + st.player.respawn.cell[0]), W(rz.oy + st.player.respawn.cell[1]))) st.player.respawn = { zone: META.home.zone, cell: META.home.cell };
+  }
   if (st.player.x !== null && st.player.x !== undefined && canStand(st.player.x, st.player.z)) { P.x = st.player.x; P.z = st.player.z; P.face = st.player.face || 0; }
   else { const c = fresh ? META.home.cell : z.spawn; P.x = W(z.ox + c[0]); P.z = W(z.oy + c[1]); P.face = 0; }
   const s0 = calcStats(st); st.player.hp = Math.min(Math.max(1, st.player.hp), s0.maxHp); st.player.en = Math.min(st.player.en, s0.maxEn);
   P.alive = true; P.vx = P.vz = 0; P.swing = null; P.dodging = false;
-  S.zone = -1; S.camT.set(P.x, 0.8, P.z); S.yaw = S.yawT = 0.35; S.mode = 'play';
+  S.zone = -1; S.camT.set(P.x, heightAt(P.x, P.z) + 0.8, P.z); S.yaw = S.yawT = CAM_YAW; S.pitch = CAM_PITCH; S.mode = 'play';
   platform.startSession();
   hud.show(true); setTouch(true); input.enable(true); input.clear();
   // arrivée sur une autre île (voyage) : sa quête principale démarre toute seule (sinon Ambre n'ouvre jamais les ponts)
@@ -694,8 +720,14 @@ function intro() {
 /* =========================================================
    Déplacements et collisions
    ========================================================= */
-function canStand(x, z, r = 0.34) {
-  for (const [ox, oz] of [[-r, -r], [r, -r], [-r, r], [r, r]]) if (!walkable(isl, Math.round((x + ox) / T), Math.round((z + oz) / T))) return false;
+function canStand(x, z, r = 0.34, fx, fz) {
+  const cx = Math.round(x / T), cy = Math.round(z / T);
+  for (const [ox, oz] of [[-r, -r], [r, -r], [-r, r], [r, r]]) {
+    const ax = Math.round((x + ox) / T), ay = Math.round((z + oz) / T);
+    if (!walkable(isl, ax, ay)) return false;
+    if (isl.alt && (ax !== cx || ay !== cy) && !stepOk(isl, cx, cy, ax, ay)) return false;   /* ALTITUDE : falaise = mur (|Δh| > pas) */
+  }
+  if (isl.alt && fx !== undefined) { const ox = Math.round(fx / T), oy = Math.round(fz / T); if ((ox !== cx || oy !== cy) && !stepOk(isl, ox, oy, cx, cy)) return false; }   /* évite de traverser une falaise en un grand pas (esquive) */
   return true;
 }
 G.canStand = canStand;
@@ -756,7 +788,7 @@ function groundAt() {
   const th = themeOf(z);
   return z && z.interior ? 'bois' : th === 'temple' || th === 'sanctuaire' || th === 'grotte' || th === 'lac' || th === 'phare_abysses' /* ACTE IV */ || th === 'moulins' /* ACTE V */ ? 'pierre' : th === 'pics' || th === 'phare_vents' ? 'neige' /* ACTE V */ : th === 'foret' || th === 'canopee' || th === 'phare_verre' ? 'verre' : th === 'lande' || th === 'desert' || th === 'cite' || th === 'ruines' ? 'terre' : th === 'temple_sable' || th === 'phare_sable' ? 'pierre' : 'herbe';   /* ACTE III */
 }
-function teleport(x, z) { P.x = x; P.z = z; P.vx = P.vz = 0; S.camT.set(x, 0.8, z); S.zone = -1; }
+function teleport(x, z) { P.x = x; P.z = z; P.vx = P.vz = 0; S.camT.set(x, heightAt(x, z) + 0.8, z); S.zone = -1; }
 function fade(cb) { const f = $('#fade'); f.classList.add('on'); setTimeout(() => { cb && cb(); f.classList.remove('on'); }, 450); }
 
 /* =========================================================
@@ -765,7 +797,8 @@ function fade(cb) { const f = $('#fade'); f.classList.add('on'); setTimeout(() =
 function cellCenter(z, c) { return [W(z.ox + c[0]), W(z.oy + c[1])]; }
 function findTarget(all) {   /* ACTE VI : all → renvoie tous les candidats (audit) */
   const cands = [];
-  const d = (x, z) => Math.hypot(x - P.x, z - P.z);
+  /* ALTITUDE : une cible sur une autre terrasse (écart de plus de deux niveaux) est hors d'atteinte */
+  const d = (x, z) => Math.hypot(x - P.x, z - P.z) + (isl.alt && Math.abs(heightAt(x, z) - heightAt(P.x, P.z)) > 2 * HU + 0.05 ? 99 : 0);
   const push = (dist, max, o) => { if (dist < max) cands.push(Object.assign({ dist }, o)); };
   const zi = S.zone, z = zones[zi];
   // objets de lumière
@@ -882,12 +915,13 @@ function updateGrapple(dt) {
   }
   P.x = lerp(g.from.x, g.to.x, e); P.z = lerp(g.from.z, g.to.z, e); P.y = Math.sin(Math.PI * e) * 1.15;
   // câble : de la main de Lyra à la tête du poteau d'arrivée (visuel de world/ si disponible, sinon secours)
-  const a = tmpV.set(P.x, P.y + 1.3, P.z);
+  const hkH = heightAt(g.hook.x, g.hook.z);   /* ALTITUDE : le câble relie les hauteurs réelles */
+  const a = tmpV.set(P.x, P.gy + P.y + 1.3, P.z);
   if (world.grappleLine) {
-    world.grappleLine(a.clone(), new THREE.Vector3(g.hook.x, 2.95, g.hook.z), cast, pull);
+    world.grappleLine(a.clone(), new THREE.Vector3(g.hook.x, 2.95 + hkH, g.hook.z), cast, pull);
     if (!g.pulled && pull > 0.02) { g.pulled = true; audio.sfx('grapple_pull'); }
   } else {
-    const b = new THREE.Vector3(lerp(P.x, g.hook.x, cast), lerp(P.y + 1.3, 2.25, cast), lerp(P.z, g.hook.z, cast));
+    const b = new THREE.Vector3(lerp(P.x, g.hook.x, cast), lerp(P.gy + P.y + 1.3, 2.25 + hkH, cast), lerp(P.z, g.hook.z, cast));
     const len = a.distanceTo(b); rope.visible = len > 0.05; rope.position.copy(a).lerp(b, 0.5); rope.scale.set(1, Math.max(0.01, len), 1); rope.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize());
     ropeTip.visible = true; ropeTip.position.copy(b); ropeTip.rotation.y += dt * 8;
   }
@@ -1082,7 +1116,7 @@ function dodge() {
    ========================================================= */
 function startFinale() {
   const b = isl.ents.find((e) => e.t === 'beacon');
-  S.finale = { t: 0, at: new THREE.Vector3(W(b.x), 2, W(b.y)), from: { yaw: S.yaw, dist: S.dist, pitch: S.pitch } };
+  S.finale = { t: 0, at: new THREE.Vector3(W(b.x), 2 + heightAt(W(b.x), W(b.y)), W(b.y)), from: { yaw: S.yaw, dist: S.dist, pitch: S.pitch } };
   S.mode = 'cutscene'; setTouch(false); hud.prompt('');
   audio.chord([392, 494, 587, 784, 988], 0.4);
   const first = platform.reward('g:' + IID + ':end', 120, 40);
@@ -1111,7 +1145,9 @@ G.drawMap = (cv) => {
   const outdoor = zones.filter((z) => !z.interior);
   let x0 = 1e9, y0 = 1e9, x1 = 0, y1 = 0;
   outdoor.forEach((z) => { x0 = Math.min(x0, z.ox); y0 = Math.min(y0, z.oy); x1 = Math.max(x1, z.ox + z.map[0].length); y1 = Math.max(y1, z.oy + z.map.length); });
-  const s = Math.min((cv.width - 20) / (x1 - x0), (cv.height - 20) / (y1 - y0)), ox = (cv.width - (x1 - x0) * s) / 2 - x0 * s, oy = (cv.height - (y1 - y0) * s) / 2 - y0 * s;
+  const MNT = !!(isl.alt && DEF.layout);   /* MONTAGNE : plan teinté par l'altitude à gauche, coupe de la montagne à droite */
+  const AW = MNT ? Math.round(cv.width * 0.52) : cv.width;
+  const s = Math.min((AW - 20) / (x1 - x0), (cv.height - 20) / (y1 - y0)), ox = (AW - (x1 - x0) * s) / 2 - x0 * s, oy = (cv.height - (y1 - y0) * s) / 2 - y0 * s;
   g.clearRect(0, 0, cv.width, cv.height);
   const seen = (zi) => st.seen[zones[zi].id];
   for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
@@ -1120,6 +1156,8 @@ G.drawMap = (cv) => {
     if (t === '=') { const gt = isl.gates[isl.gateCell[x + ',' + y]]; if (!gt.open) continue; g.fillStyle = '#e8b65a'; }
     else { if (zi < 0 || !seen(zi) || zones[zi].interior) continue; const th = themeOf(zones[zi]); g.fillStyle = t === '#' || t === 'T' ? 'rgba(255,255,255,.18)' : t === '~' ? '#5fa8e8' : t === 'H' ? 'rgba(240,198,107,.55)' : t === ',' ? 'rgba(232,214,180,.6)' : t === 'r' ? '#3f5a32' : t === 'x' ? '#9fe9ff' : th === 'sanctuaire' ? 'rgba(160,140,220,.5)' : th === 'temple' ? 'rgba(120,190,220,.5)' : th === 'foret' || th === 'canopee' || th === 'phare_verre' ? 'rgba(110,210,180,.55)' : th === 'zenith' || th === 'jardins' || th === 'salle' || th === 'phare_zenith' ? 'rgba(240,214,150,.6)' : th === 'lande' ? 'rgba(180,200,120,.5)' : zones[zi].secret ? 'rgba(216,180,254,.5)' : 'rgba(150,220,140,.55)'; }
     g.fillRect(ox + x * s, oy + y * s, s + 0.5, s + 0.5);
+    if (MNT && t !== '=') { const lv = isl.hgt[y][x] || 0; g.fillStyle = `rgba(255,255,255,${(lv / 14 * 0.42).toFixed(3)})`; g.fillRect(ox + x * s, oy + y * s, s + 0.5, s + 0.5);
+      const ls = isl.hgt[y + 1] && isl.terrain[y + 1][x] !== ' ' && isl.terrain[y + 1][x] !== '=' ? isl.hgt[y + 1][x] : null; if (ls !== null && lv - ls >= 2) { g.fillStyle = 'rgba(20,40,60,.8)'; g.fillRect(ox + x * s, oy + (y + 1) * s - Math.max(1, s * 0.3), s + 0.5, Math.max(1.5, s * 0.3)); } }
     if (t === 'c' && st.player.abilities.vision && seen(zi)) { g.fillStyle = '#ffe2a0'; g.fillRect(ox + x * s + s * 0.25, oy + y * s + s * 0.25, s * 0.5, s * 0.5); }
   }
   g.font = '600 13px Inter, sans-serif'; g.textAlign = 'center';
@@ -1129,11 +1167,47 @@ G.drawMap = (cv) => {
   WARPS.forEach((w) => { if (!st.world.warps[w.id]) return; const z = zones[zoneIndex[w.zone]]; g.fillStyle = '#9fe9ff'; g.font = '700 16px Inter'; g.fillText('✦', ox + (z.ox + w.cell[0] + 0.5) * s, oy + (z.oy + w.cell[1] + 0.9) * s); });
   const qt = quests.tracked(), stp = qt ? quests.step(qt) : null;
   if (stp && stp.zone && zoneIndex[stp.zone] !== undefined) { const z = zones[zoneIndex[stp.zone]]; const npc = stp.npc && npcs.find((n) => n.id === stp.npc); let mx, my; if (npc && !zones[npc.zi].interior) { mx = npc.x / T; my = npc.z / T; } else { mx = z.ox + z.map[0].length / 2; my = z.oy + z.map.length / 2; } g.fillStyle = '#ffc861'; g.font = '800 22px Inter'; g.fillText('◆', ox + (mx + 0.5) * s, oy + (my + 0.9) * s); }
+  if (MNT) mountainProfile(g, cv, AW, x0, x1, outdoor, seen);
   // Lyra
   const inside = zones[S.zone] && zones[S.zone].interior;
   const px = inside ? (zones[S.zone].id === 'auberge_in' ? W(5) : W(23)) / T : P.x / T, py = inside ? 4 : P.z / T;
   g.fillStyle = '#fff'; g.beginPath(); g.arc(ox + (px + 0.5) * s, oy + (py + 0.5) * s, Math.max(4, s * 0.8), 0, 7); g.fill(); g.strokeStyle = '#3e3f9c'; g.lineWidth = 2.5; g.stroke();
 };
+
+
+/* MONTAGNE : coupe (vue de face, depuis le sud) : silhouette du massif par colonne, niveaux, zones visitées et position de Lyra */
+function mountainProfile(g, cv, AW, x0, x1, outdoor, seen) {
+  const X0 = AW + 24, X1 = cv.width - 14, Y0 = 56, Y1 = cv.height - 44, MAXL = 14;
+  const lvl = (y) => Y1 - (y / MAXL) * (Y1 - Y0);
+  const sx = (X1 - X0) / (x1 - x0);
+  g.save();
+  g.fillStyle = 'rgba(0,0,0,.28)'; g.fillRect(AW + 8, 8, cv.width - AW - 16, cv.height - 16);
+  g.font = '700 17px Inter, sans-serif'; g.textAlign = 'left'; g.fillStyle = '#e8f6f4'; g.fillText('Coupe de la montagne', AW + 20, 34);
+  // graduations d'altitude
+  g.font = '600 13px Inter, sans-serif'; g.fillStyle = 'rgba(255,255,255,.75)'; g.strokeStyle = 'rgba(255,255,255,.16)'; g.lineWidth = 1;
+  for (let l = 0; l <= MAXL; l += 2) { g.beginPath(); g.moveTo(X0, lvl(l)); g.lineTo(X1, lvl(l)); g.stroke(); g.fillText(String(l), X0 - 22, lvl(l) + 4); }
+  // silhouette : pour chaque colonne, le niveau le plus haut ; couleur de la zone qui porte ce sommet
+  for (let x = x0; x < x1; x++) {
+    let best = -1, bz = -1; for (let y = 0; y < isl.h; y++) { const t = isl.terrain[y][x]; if (!t || t === ' ' || t === '=') continue; const zi = isl.zoneAt[y][x]; if (zi >= 0 && zones[zi].interior) continue; const lv = isl.hgt[y][x] || 0; if (lv > best) { best = lv; bz = zi; } }
+    if (best < 0) continue;
+    const vis = bz >= 0 && seen(bz);
+    g.fillStyle = vis ? 'rgba(120,214,190,.9)' : 'rgba(150,170,190,.32)';
+    g.fillRect(X0 + (x - x0) * sx, lvl(best), sx + 0.6, Y1 - lvl(best) + 1);
+    g.fillStyle = vis ? 'rgba(255,255,255,.55)' : 'rgba(255,255,255,.18)'; g.fillRect(X0 + (x - x0) * sx, lvl(best), sx + 0.6, 2);
+  }
+  // paliers : un repère par zone visitée à son altitude moyenne
+  g.font = '700 13px Inter, sans-serif'; g.textAlign = 'center';
+  const lab = { vitrebourg: 'Vitrebourg', lisiere: 'Lisière', f2: 'Vitraux', belv: 'Belvédère', temple: 'Temple', sentier_t: 'Portique', can1: 'Canopée', can3: 'Passerelle', phare_f: 'Phare' };
+  outdoor.forEach((z) => { const zi = zoneIndex[z.id]; if (!lab[z.id] || !seen(zi)) return; let sum = 0, n = 0, mx = 0; z.map.forEach((row, ly) => { for (let lx = 0; lx < row.length; lx++) if (row[lx] !== ' ') { sum += isl.hgt[z.oy + ly][z.ox + lx] || 0; n++; } }); mx = z.ox + z.map[0].length / 2; const lv = n ? sum / n : 0;
+    g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText(lab[z.id], X0 + (mx - x0) * sx + 1, lvl(lv) - 7); g.fillStyle = '#fff'; g.fillText(lab[z.id], X0 + (mx - x0) * sx, lvl(lv) - 8); });
+  // phare au sommet
+  g.font = '700 22px Inter, sans-serif'; g.fillStyle = '#ffe9a8'; { const z = zones[zoneIndex.phare_f]; if (z) g.fillText('✦', X0 + (z.ox + z.map[0].length / 2 - x0) * sx, lvl(13) - 26); }
+  // Lyra
+  const inside = zones[S.zone] && zones[S.zone].interior;
+  if (!inside) { const lx = P.x / T, lv = isl.hgt[Math.round(P.z / T)] ? heightAt(P.x, P.z) / 0.75 : 0; g.fillStyle = '#fff'; g.strokeStyle = '#3e3f9c'; g.lineWidth = 3; g.beginPath(); g.arc(X0 + (lx + 0.5 - x0) * sx, lvl(lv), 7, 0, 7); g.fill(); g.stroke();
+    g.font = '700 15px Inter, sans-serif'; g.textAlign = 'right'; g.fillStyle = '#ffe9a8'; g.fillText(`Altitude ${Math.round(lv)} / 13`, X1, cv.height - 18); }
+  g.restore();
+}
 
 /* =========================================================
    Complétion
@@ -1214,7 +1288,7 @@ function createSparks() {
       for (let j = 0; j < count; j++) {
         const i = k; k = (k + 1) % n;
         const a = Math.random() * Math.PI * 2, el = Math.random() * 1.4 - 0.3, s = speed * (0.3 + Math.random() * 0.7);
-        pos[i * 3] = p.x; pos[i * 3 + 1] = p.y; pos[i * 3 + 2] = p.z;
+        pos[i * 3] = p.x; pos[i * 3 + 1] = p.y + heightAt(p.x, p.z); pos[i * 3 + 2] = p.z;   /* ALTITUDE : y relatif au sol */
         vel[i * 3] = Math.cos(a) * Math.cos(el) * s; vel[i * 3 + 1] = Math.sin(el) * s + up; vel[i * 3 + 2] = Math.sin(a) * Math.cos(el) * s;
         col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b; life[i] = l * (0.6 + Math.random() * 0.6); grav[i] = g;
       }
@@ -1331,8 +1405,8 @@ function update(dt) {
     } else { P.vx = lerp(P.vx, tx, damp(14, dt)); P.vz = lerp(P.vz, tz, damp(14, dt)); }
     const kx = P.kbx * dt, kz = P.kbz * dt; P.kbx *= Math.exp(-9 * dt); P.kbz *= Math.exp(-9 * dt);
     const nx = P.x + P.vx * dt + kx, nz = P.z + P.vz * dt + kz;
-    if (canStand(nx, P.z)) P.x = nx; else { P.vx = 0; P.kbx = 0; }
-    if (canStand(P.x, nz)) P.z = nz; else { P.vz = 0; P.kbz = 0; }
+    if (canStand(nx, P.z, 0.34, P.x, P.z)) P.x = nx; else { P.vx = 0; P.kbx = 0; }
+    if (canStand(P.x, nz, 0.34, P.x, P.z)) P.z = nz; else { P.vz = 0; P.kbz = 0; }
     const sp = Math.hypot(P.vx, P.vz);
     if (sp > 0.6 && !P.dodging) { P.stepT = (P.stepT || 0) - dt; if (P.stepT <= 0) { audio.step(groundAt()); P.stepT = sp > 6.5 ? 0.26 : 0.38; } } else P.stepT = 0;
     if (sp > 0.3 && !P.swing && !P.dodging) P.face += angleTo(P.face, Math.atan2(P.vx, P.vz)) * damp(12, dt);
@@ -1356,6 +1430,10 @@ function update(dt) {
     if (S.time - S.lastSave > 60) saveTo('auto');
     // salles de combat : barrière fermée tant que des créatures vivent
   }
+  /* ALTITUDE : sol sous Lyra (pendant le grappin / le plané, interpolé entre départ et arrivée pour ne pas « sauter » sur une falaise) */
+  { const gg = (S.mode === 'grapple' && S.grap) || (S.mode === 'glide' && S.glide);
+    if (gg && gg.dur) { const kk = Math.min(1, gg.t / gg.dur), ee = kk * kk * (3 - 2 * kk); P.gy = lerp(heightAt(gg.from.x, gg.from.z), heightAt(gg.to.x, gg.to.z), ee); }
+    else P.gy = heightAt(P.x, P.z); }
   /* -------- combats -------- */
   if (S.mode === 'grapple') updateGrapple(dt);
   if (S.mode === 'glide') mech.updateGlide(dt, t);   /* ACTE V */
@@ -1401,7 +1479,8 @@ function update(dt) {
   });
   /* -------- caméra -------- */
   const cam = input.camera();
-  if (S.mode === 'play') { S.yawT -= cam.dx * 0.006; S.pitch = clamp(S.pitch + cam.dy * 0.003, 0.5, 1.25); S.dist = clamp(S.dist + cam.zoom * 0.012, 9, 30); }
+  /* CAMÉRA FIXE : seul le zoom (molette / pincement) reste au joueur ; yaw et inclinaison ne bougent plus */
+  if (S.mode === 'play') S.dist = clamp(S.dist + cam.zoom * 0.012, 9, 30);
   S.yaw = lerp(S.yaw, S.yawT, damp(10, dt));
   const inside = zones[S.zone] && zones[S.zone].interior;
   if (S.mode === 'title') {
@@ -1411,20 +1490,22 @@ function update(dt) {
     const F = S.finale; F.t += dt;
     const k = Math.min(1, F.t / 4.5), e = k * k * (3 - 2 * k);
     S.camT.lerp(F.at, damp(2, dt));
-    const yaw = F.from.yaw + e * 1.6, dist = lerp(F.from.dist, 30, e), pitch = lerp(F.from.pitch, 0.55, e);
+    /* CAMÉRA FIXE : le tour de caméra de la finale est purement visuel (S.yaw n'est jamais touché) ; il revient en douceur au plan fixe avant de rendre la main */
+    const bk = Math.max(0, Math.min(1, (F.t - 5.1) / 1.3)), back = bk * bk * (3 - 2 * bk), ee = e * (1 - back);
+    const yaw = F.from.yaw + ee * 1.6, dist = lerp(F.from.dist, 30, ee), pitch = lerp(F.from.pitch, 0.55, ee);
     camera.position.set(S.camT.x + Math.sin(yaw) * Math.cos(pitch) * dist, S.camT.y + Math.sin(pitch) * dist, S.camT.z + Math.cos(yaw) * Math.cos(pitch) * dist);
-    camera.lookAt(S.camT.x, S.camT.y + 2 * e, S.camT.z);
+    camera.lookAt(S.camT.x, S.camT.y + 2 * ee, S.camT.z);
     S.restoreT = 1;
     if (F.t > 6.5) { S.finale = null; S.mode = 'play'; setTouch(true); hud.banner(META.finale.title, META.finale.sub); quests.check(); npcMarkers(); }
   } else if (S.mode === 'ending' && fin) {
     fin.update(dt);   /* ACTE VI : la caméra appartient à la séquence de fin */
   } else if (S.wardrobe) {
-    tmpV.set(P.x, 1.0, P.z); S.camT.lerp(tmpV, damp(6, dt));
+    tmpV.set(P.x, P.gy + 1.0, P.z); S.camT.lerp(tmpV, damp(6, dt));
     const yaw = P.face + 0.35, d = 5.2, pitch = 0.22;
     camera.position.set(S.camT.x + Math.sin(yaw) * Math.cos(pitch) * d - Math.cos(yaw) * 1.3, S.camT.y + Math.sin(pitch) * d + 0.2, S.camT.z + Math.cos(yaw) * Math.cos(pitch) * d + Math.sin(yaw) * 1.3);
     camera.lookAt(S.camT.x - Math.cos(yaw) * 1.3, S.camT.y, S.camT.z + Math.sin(yaw) * 1.3);
   } else {
-    const focus = S.mode === 'dialog' && S.talkTo ? tmpV.set((P.x + S.talkTo.x) / 2, 0.8, (P.z + S.talkTo.z) / 2) : tmpV.set(P.x, 0.8, P.z);
+    const focus = S.mode === 'dialog' && S.talkTo ? tmpV.set((P.x + S.talkTo.x) / 2, (P.gy + heightAt(S.talkTo.x, S.talkTo.z)) / 2 + 0.8, (P.z + S.talkTo.z) / 2) : tmpV.set(P.x, P.gy + 0.8, P.z);   /* ALTITUDE : la cible de caméra suit le sol */
     S.camT.lerp(focus, damp(6, dt));
     const d = S.mode === 'dialog' ? Math.min(S.dist, 11) : inside ? Math.min(S.dist, 13) : S.dist + (S.boss ? 5 : 0);
     const pitch = S.mode === 'dialog' ? 0.62 : S.pitch;
@@ -1432,9 +1513,9 @@ function update(dt) {
     camera.lookAt(S.camT);
   }
   if (S.shake > 0) { camera.position.x += (Math.random() - 0.5) * S.shake; camera.position.y += (Math.random() - 0.5) * S.shake; S.shake = Math.max(0, S.shake - dt * 1.6); }
-  audio.listener(P.x, P.z, S.yaw + Math.PI);
+  audio.listener(P.x, P.z, S.yaw + Math.PI, P.gy);
   sky.position.copy(camera.position);
-  sun.position.set(S.camT.x + 22, 34, S.camT.z + 14); sun.target.position.copy(S.camT);
+  sun.position.set(S.camT.x + 22, S.camT.y + 33.2, S.camT.z + 14); sun.target.position.copy(S.camT);
 
   /* -------- ambiance -------- */
   S.restore = lerp(S.restore, S.restoreT, damp(0.8, dt));
@@ -1448,12 +1529,18 @@ function update(dt) {
   amb.fogNear = lerp(amb.fogNear, A.fog[0], k); amb.fogFar = lerp(amb.fogFar, A.fog[1], k);
   scene.fog.near = amb.fogNear; scene.fog.far = amb.fogFar;
   scene.fog.color.lerp(A.fogColor ? tint.set(A.fogColor) : skyU.horizon.value, k);
+  if (DEF.layout && isl.alt && S.mode !== 'title') {   /* MONTAGNE : plus on monte, plus la brume est proche et claire (mer de brume au pied, air vif en haut) */
+    const hf = Math.min(1, Math.max(0, P.gy / HU / 13));
+    scene.fog.near = amb.fogNear * (1 - 0.28 * hf); scene.fog.far = amb.fogFar * (1 - 0.2 * hf);
+    scene.fog.color.lerp(tint.set('#e2f7f5'), 0.14 * hf);
+    skyU.top.value.lerp(tint.set('#bfe6f4'), 0.25 * hf); skyU.bottom.value.lerp(tint.set('#e8f8f6'), 0.2 * hf);
+  }
   amb.hemi = lerp(amb.hemi, A.hemi, k); amb.sun = lerp(amb.sun, A.sun, k);
   hemi.color.copy(skyU.top.value).lerp(new THREE.Color('#ffffff'), 0.5); hemi.intensity = (1.05 + r * 0.4) * amb.hemi;
   sun.intensity = (1.7 + r * 1.0) * amb.sun; sun.color.set('#ffc6b0').lerp(new THREE.Color('#fff1d6'), r);
   tint.set('#a3a0bd').lerp(new THREE.Color('#ffffff'), 0.35 + r * 0.65);
   if (A.tint) tint.lerp(new THREE.Color(A.tint), 0.25);
-  world.M.grass.color.copy(tint); world.M.foliage.color.copy(tint); world.M.tuft.color.copy(tint);
+  world.M.grass.color.copy(tint); world.M.foliage.color.copy(tint); world.M.tuft.color.copy(tint); if (world.M.terrain) world.M.terrain.color.copy(tint);   /* ALTITUDE : maillage de relief */
   ambient.mat.opacity = th === 'interieur' ? 0 : 0.35 + r * 0.6;
   ambient.mat.color.set(A.amb || (th === 'pics' || th === 'phare_vents' ? '#eef4ff' : th === 'moulins' ? '#d8ccff' : th === 'sanctuaire' || th === 'lande' ? '#c9b6ff' : th === 'foret' || th === 'canopee' || th === 'phare_verre' || th === 'temple' || th === 'greve' || th === 'recifs' || th === 'grotte' || th === 'lac' || th === 'phare_abysses' /* ACTE IV */ ? '#bff3ff' : '#ffc4dc')).multiplyScalar(1.4);
   if (!opening.musicLock && Math.floor(t) !== Math.floor(t - dt)) music(S.mode === 'title' ? 'title' : S.victoryUntil > performance.now() ? 'victoire' : S.mode === 'ending' && S.endMusic ? S.endMusic /* ACTE VI */ : S.boss && S.boss.state !== 'dead' ? (S.boss.phase === 3 ? 'boss3' : S.boss.phase === 2 ? 'boss2' : 'boss') : (zones[S.zone] && zones[S.zone].music) || th, S.mode === 'title' ? 0.6 : r);
@@ -1463,12 +1550,13 @@ function update(dt) {
   if (zscene) zscene.update(dt, t);   /* ACTE VI */
   Object.values(warpMeshes).forEach((g) => { if (g.visible) { g.userData.cr.rotation.y += dt; g.userData.cr.position.y = 1.3 + Math.sin(t * 2) * 0.12; } });
   const wv = Object.values(world.views).find((v) => v.e.t === 'wisp');
-  if (wv && st.world.picked[wv.e.id] && S.mode !== 'title') { wv.g.visible = true; if (wv.g.parent !== scene) scene.add(wv.g); wv.g.position.set(P.x - Math.sin(P.face) * 1.1 + Math.sin(t * 1.3) * 0.3, 0.6 + Math.sin(t * 2.1) * 0.15, P.z - Math.cos(P.face) * 1.1); }
+  if (wv && st.world.picked[wv.e.id] && S.mode !== 'title') { wv.g.visible = true; if (wv.g.parent !== scene) scene.add(wv.g); if (!wv.lifted) { wv.lifted = true; lift.add(wv.g); } wv.g.position.set(P.x - Math.sin(P.face) * 1.1 + Math.sin(t * 1.3) * 0.3, 0.6 + Math.sin(t * 2.1) * 0.15, P.z - Math.cos(P.face) * 1.1); }
   for (let i = 0; i < ambient.n; i++) {
     const pp = ambient.pos, sd = ambient.seed[i];
     pp[i * 3 + 1] -= dt * (0.35 + (sd % 1) * 0.3); pp[i * 3] += Math.sin(t * 0.8 + sd) * dt * 0.6 + dt * 0.4; pp[i * 3 + 2] += Math.cos(t * 0.6 + sd) * dt * 0.4;
     if (pp[i * 3 + 1] < -0.5) { pp[i * 3 + 1] = 8 + Math.random() * 2; pp[i * 3] = S.camT.x + (Math.random() - 0.5) * 50; pp[i * 3 + 2] = S.camT.z + (Math.random() - 0.5) * 50; }
   }
+  ambient.pts.position.y = S.camT.y - 0.8;   /* ALTITUDE : les poussières suivent la hauteur de la caméra */
   ambient.pts.geometry.attributes.position.needsUpdate = true;
   sparks.update(dt);
   if (S.mode !== 'title') hud.update();
@@ -1476,12 +1564,32 @@ function update(dt) {
   opening.frame();   // intro : décor 3D du titre / cinématique (reprend la caméra, le ciel et les lumières)
 }
 
+/* MONTAGNE : repère du phare. À la caméra fixe on ne voit que quelques cases devant Lyra : le Phare, tout en haut, est signalé par une
+   petite boussole (direction + niveaux restants à gravir). Seulement sur les îles à relief marquées `layout` (la Forêt de Verre). */
+let peakEl = null, peakT = 0;
+function updatePeak(dt) {
+  if (!(DEF.layout && isl.alt && zoneIndex.phare_f !== undefined)) return;
+  if (!peakEl) { peakEl = document.createElement('div'); peakEl.id = 'peak-gauge'; peakEl.hidden = true; peakEl.setAttribute('aria-hidden', 'true'); peakEl.style.cssText = 'position:fixed;left:50%;top:9px;transform:translateX(-50%);z-index:6;pointer-events:none;font:700 12px Inter,system-ui,sans-serif;color:#eafffa;background:rgba(14,40,52,.55);border:1px solid rgba(160,240,220,.35);border-radius:999px;padding:3px 10px;white-space:nowrap;text-shadow:0 1px 2px rgba(0,0,0,.6)'; document.body.appendChild(peakEl); }
+  peakT -= dt; if (peakT > 0) return; peakT = 0.25;
+  const z = zones[S.zone], show = S.mode === 'play' && z && !z.interior && !$('#hud').hidden;
+  peakEl.hidden = !show; if (!show) return;
+  const pz = zones[zoneIndex.phare_f], tx = W(pz.ox + pz.map[0].length / 2), tz = W(pz.oy + pz.map.length / 2);
+  const ang = Math.atan2(tx - P.x, -(tz - P.z)), lv = Math.round(P.gy / HU), left = Math.max(0, 13 - lv);
+  peakEl.innerHTML = `<span style="display:inline-block;transform:rotate(${ang.toFixed(2)}rad);color:#ffe9a8">▲</span> ✦ Phare · ${left ? left + ' niveaux à gravir' : 'au sommet'} <span style="opacity:.7">· alt. ${lv}</span>`;
+}
 function frame(now) {
   requestAnimationFrame(frame);
   let dt = Math.min(0.05, (now - last) / 1000); last = now;
   if (S.hitstop > 0) { S.hitstop -= dt; dt *= 0.08; }
-  update(dt);
-  if (useBloom) composer.render(); else renderer.render(scene, camera);
+  update(dt); updatePeak(dt);
+  /* ALTITUDE : pose les objets dynamiques sur le relief le temps du rendu, et règle le trou de visibilité autour de Lyra (et du PNJ en dialogue) */
+  lift.apply();
+  try {
+    hole.cfg.enabled = !NOHOLE && ['play', 'dialog', 'screen', 'grapple', 'glide', 'dead'].includes(S.mode);
+    hole.setTarget(S.mode === 'dialog' && S.talkTo ? { x: S.talkTo.x, y: heightAt(S.talkTo.x, S.talkTo.z), z: S.talkTo.z } : null);
+    hole.update(camera, { x: P.x, y: P.gy + P.y, z: P.z });
+    if (useBloom) composer.render(); else renderer.render(scene, camera);
+  } finally { lift.restore(); }
   if (!qualityChecked && S.mode === 'play') {
     fpsAcc += dt; fpsN++;
     if (fpsAcc > 4) {
@@ -1511,7 +1619,7 @@ $('#loader').hidden = true;
 requestAnimationFrame(frame);
 platform.onChange(() => { if (S.mode === 'title' && screens.current === 'title') screens.title(); });
 document.addEventListener('visibilitychange', () => { if (document.hidden && S.mode !== 'title' && !S.leaving) { if (S.mode === 'play') { screens.menu('options'); S.mode = 'screen'; setTouch(false); } saveTo('auto'); } });
-addEventListener('pagehide', () => { if (S.mode !== 'title' && !S.leaving) { packPosition(); saves.write('auto', st, regionName(), { cloud: false }); } });
+addEventListener('pagehide', () => { if (S.mode !== 'title' && !S.leaving && !HIDDEN) { packPosition(); saves.write('auto', st, regionName(), { cloud: false }); } });
 { let hov = null, hovT = 0; document.addEventListener('pointerover', (ev) => { if (ev.pointerType !== 'mouse') return; const b = ev.target.closest && ev.target.closest('button, .choice, .btn, [data-a], [data-q]'); if (!b || b === hov || b.disabled) return; hov = b; const n = performance.now(); if (n - hovT < 70) return; hovT = n; snd('uiHover', { vol: 0.6 }); }); }
 document.querySelectorAll('[data-ui]').forEach((b) => b.addEventListener('click', () => { if (S.mode !== 'play') return; const tab = b.dataset.ui; screens.menu(tab); S.mode = 'screen'; setTouch(false); audio.sfx('ui'); }));
 
@@ -1525,5 +1633,6 @@ window.__lumen = {
   tpZone(id, c) { const z = zones[zoneIndex[id]]; const cc = c || z.spawn; teleport(W(z.ox + cc[0]), W(z.oy + cc[1])); },
   give: (id, n) => giveItem(id, n),
   findTarget, WARPS, canStand: (x, z) => canStand(x, z), completion, interact: () => interact(false), interactBack: () => interact(true), target: () => S.target, saveTo, openGate, a3: A3,
-  fin, zscene, startEnding,   /* ACTE VI : audit de ciblage et tests */
+  fin, zscene, startEnding, startFinale,   /* ACTE VI : audit de ciblage et tests */
+  lift, hole, heightAt, CAM_YAW, CAM_PITCH, worldY: (o) => lift.worldY(o),   /* ALTITUDE : tests (y logique = au-dessus du sol ; worldY = y rendu) */
 };

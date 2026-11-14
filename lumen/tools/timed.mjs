@@ -12,7 +12,7 @@
    La recherche est exhaustive en largeur (nombre d'actions croissant) : elle prouve qu'une solution existe et
    donne la plus courte. holdScale < 1 durcit l'énigme (marge de sécurité).
    ========================================================= */
-import { buildIsland, evaluate, walkable, escapes, ORDER } from '../js/logic.js';
+import { buildIsland, evaluate, walkable, escapes, stepOk, ORDER } from '../js/logic.js';   /* ALTITUDE : stepOk */
 
 const T_STEP = 2 / 5.8, WALK_MARGIN = 1.5, ACT_COST = 0.6, QUANT = 0.5;
 const states = (e) => (e.t === 'mirror' ? [0, 1] : ORDER);
@@ -21,7 +21,7 @@ const setv = (e, v) => { if (e.t === 'mirror') e.state = v; else if (e.t === 'la
 
 export function analyseTimed(zone, opts = {}) {
   const holdScale = opts.holdScale || 1, maxDepth = opts.maxDepth || 14, maxStates = opts.maxStates || 600000;
-  const z = { ox: 0, oy: 0, map: zone.map, ents: zone.ents.map((e) => Object.assign({}, e, e.hold ? { hold: e.hold * holdScale } : {})), doors: zone.doors || [], barrier: zone.barrier };
+  const z = { ox: 0, oy: 0, map: zone.map, ents: zone.ents.map((e) => Object.assign({}, e, e.hold ? { hold: e.hold * holdScale } : {})), doors: zone.doors || [], barrier: zone.barrier, hmap: zone.hmap, h: zone.h };
   const isl = buildIsland({ zones: [z], bridges: [] });
   const rots = isl.ents.filter((e) => e.rot);
   const holders = isl.ents.filter((e) => e.t === 'relay' && e.hold);
@@ -36,7 +36,7 @@ export function analyseTimed(zone, opts = {}) {
       const [x, y] = q.shift();
       for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
         const nx = x + dx, ny = y + dy, k = nx + ',' + ny;
-        if (d.has(k) || !walkable(isl, nx, ny)) continue;
+        if (d.has(k) || !walkable(isl, nx, ny) || !stepOk(isl, x, y, nx, ny)) continue;
         d.set(k, d.get(x + ',' + y) + 1); q.push([nx, ny]);
       }
     }

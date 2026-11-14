@@ -5,6 +5,8 @@
    ========================================================= */
 
 import { portalTwin, portalsOn } from './mech/portails.js';   /* ACTE VI */
+import { attachAltitude, stepOk } from './altitude.js';   /* ALTITUDE */
+export { stepOk };
 
 import { poolUp, poolDir, orbSource, glideLinks } from './mech/eau.js';   /* ACTE IV */
 export const DIRS = { N: [0, -1], E: [1, 0], S: [0, 1], W: [-1, 0] };
@@ -102,7 +104,9 @@ export function buildIsland(def) {
   // solid : cases bloquées par des objets posés en jeu (coffres, PNJ immobiles…)
   /* ACTE III */ // tempête de sable : portée maximale des faisceaux (null = aucune tempête) dans les zones marquées « storm »
   const stormZone = def.zones.map((z) => !!z.storm);
-  return { def, w, h, terrain, zoneAt, zoneRects, ents, entAt, gates, gateCell, socles, socleAt, stormZone, range: null, solid: new Set(), frozenTimers: true /* ACTE V : vrai pour les outils d’analyse ; le jeu le met à false */, valves, orbSocles, orb, initial: snapshot({ ents, gates, orb }) };
+  const isl = { def, w, h, terrain, zoneAt, zoneRects, ents, entAt, gates, gateCell, socles, socleAt, stormZone, range: null, solid: new Set(), frozenTimers: true /* ACTE V : vrai pour les outils d’analyse ; le jeu le met à false */, valves, orbSocles, orb, initial: snapshot({ ents, gates, orb }) };
+  attachAltitude(isl, def);   /* ALTITUDE : isl.alt, isl.hgt (niveau par case) ; île plate = isl.alt false */
+  return isl;
 }
 
 /* Copie de l'état modifiable (orientations, portes) */
@@ -360,7 +364,7 @@ export function reachCells(isl, starts, opts = {}) {
     for (const l of ledges.get(x + ',' + y) || []) { const lk = l.land.join(','); if (!seen.has(lk)) { seen.add(lk); q.push(l.land); } }
     for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
       const nx = x + dx, ny = y + dy, k = nx + ',' + ny;
-      if (!seen.has(k) && ok(nx, ny)) { seen.add(k); q.push([nx, ny]); }
+      if (!seen.has(k) && ok(nx, ny) && stepOk(isl, x, y, nx, ny)) { seen.add(k); q.push([nx, ny]); }   /* ALTITUDE : |Δh| ≤ pas */
       const p = isl.entAt[k];
       if (p && (p.t === 'post' || p.t === 'vent')) for (const l of linksOf.get(p) || []) { const lk = l.land.join(','); if (!seen.has(lk)) { seen.add(lk); q.push(l.land); } }
     }
