@@ -11,6 +11,13 @@ import * as THREE from 'three';
 import { Character } from './character.js';
 import { glassTexture } from './gfx.js';
 import { CREATURES_ABYSSES } from './creatures-abysses.js';   /* ACTE IV */
+import { setLinear } from './kit3d.js';
+import * as brumelinV2 from './models/brumelin.js';
+import * as ronceuxV2 from './models/ronceux.js';
+import * as lanceurV2 from './models/lanceur.js';
+import * as sanglierV2 from './models/sanglier.js';
+import * as gardienV2 from './models/gardien.js';
+import * as colosseV2 from './models/colosse.js';
 
 const mat = (hex, o = {}) => new THREE.MeshStandardMaterial(Object.assign({ color: hex, flatShading: true, roughness: 0.8 }, o));
 const glow = (hex, k = 2.5) => new THREE.MeshBasicMaterial({ color: new THREE.Color(hex).multiplyScalar(k) });
@@ -336,7 +343,20 @@ function colosse(tint) {
   } };
 }
 
-export const CREATURES = { brumelin, ronceux, lanceur, sanglier, gardien, colosse, ...CREATURES_ABYSSES /* ACTE IV */ };
+/* ---------- Modèles v2 (Île de l'Aube) ----------
+   Les créatures de base (sans teinte) utilisent les modèles de js/world/models/ (kit3d).
+   Les variantes teintées ou de verre des autres actes gardent les fabriques ci-dessus :
+   combat.js passe { classic: true } dès qu'une définition porte une teinte. */
+setLinear(true);
+const V2 = { brumelin: brumelinV2, ronceux: ronceuxV2, lanceur: lanceurV2, sanglier: sanglierV2, gardien: gardienV2, colosse: colosseV2 };
+const CLASSIC = { brumelin, ronceux, lanceur, sanglier, gardien, colosse };
+const withV2 = (id) => (tint, opt) => {
+  if (tint || (opt && opt.classic)) return CLASSIC[id](tint);
+  const view = V2[id].createView();
+  view.deathDur = Math.max(0.6, V2[id].model.ANIMS.DEATH.dur);   // combat.js joue la défaite sur cette durée
+  return view;
+};
+export const CREATURES = { brumelin: withV2('brumelin'), ronceux: withV2('ronceux'), lanceur: withV2('lanceur'), sanglier: withV2('sanglier'), gardien: withV2('gardien'), colosse: withV2('colosse'), ...CREATURES_ABYSSES /* ACTE IV */ };
 /* ACTE V */
 import { makeGrandMeunier } from './creatures-pics.js';
 CREATURES.grand_meunier = makeGrandMeunier(colosse);

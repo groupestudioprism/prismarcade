@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>__TITLE__</title>
+<style>
+  :root { --bg: #e9e6f5; --panel: rgba(255,255,255,.9); --line: rgba(30,20,70,.14); --text: #1f1a3d; --mut: #5e5880; --acc: #b5852a; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #17142b; --panel: rgba(34,29,62,.9); --line: rgba(255,255,255,.14); --text: #f1eeff; --mut: #b0a9d6; --acc: #e5b54f; } }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; overflow: hidden; }
+  canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  .panel { position: fixed; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; backdrop-filter: blur(8px); }
+  #side { top: 16px; left: 16px; width: 270px; max-height: calc(100% - 130px); overflow: auto; }
+  h1 { font-size: 19px; margin: 0; } h2 { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--mut); margin: 14px 0 8px; }
+  .sub { color: var(--mut); font-size: 12.5px; margin-top: 4px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  button { font: inherit; font-weight: 600; font-size: 13px; color: var(--text); background: rgba(128,128,160,.14); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; cursor: pointer; text-align: left; }
+  button.on { background: var(--acc); color: #1b1330; }
+  label { display: flex; gap: 8px; align-items: center; margin: 5px 0; } .row { display: flex; gap: 6px; flex-wrap: wrap; }
+  #info { font-size: 12.5px; color: var(--mut); } #info b { color: var(--text); }
+  #bar { left: 50%; transform: translateX(-50%); bottom: 16px; display: flex; gap: 12px; align-items: center; width: min(560px, calc(100% - 64px)); }
+  #bar input { flex: 1; accent-color: var(--acc); } #time { font-variant-numeric: tabular-nums; color: var(--mut); min-width: 96px; text-align: right; }
+  @media (max-width: 720px) { #side { top: auto; bottom: 86px; right: 16px; width: auto; max-height: 40%; } }
+</style></head>
+<body><canvas id="c"></canvas>
+<div id="side" class="panel"><h1>__NAME__</h1><div class="sub">LUMEN : les Îles Brisées · __SUB__</div>
+  <h2>Animations</h2><div class="grid" id="anims"></div>
+  <h2>Affichage</h2>
+  <label><input type="checkbox" id="outline" checked> Contour noir</label>
+  <label><input type="checkbox" id="slow"> Ralenti ×0,25</label>
+  <div class="row" style="margin-top:6px"><button data-v="front">Face</button><button data-v="side">Profil</button><button data-v="back">Dos</button><button data-v="top">Dessus</button></div>
+  <h2>Fiche</h2><div id="info"></div>
+</div>
+<div id="bar" class="panel"><button id="play">⏸</button><input type="range" id="scrub" min="0" max="1" step="0.001" value="0"><span id="time">0,00 s</span></div>
+<script type="importmap">{ "imports": { "three": "__THREE__", "three/addons/": "__ADDONS__" } }</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+const GLB = '__GLB__', META = __META__, $ = (s) => document.querySelector(s);
+const renderer = new THREE.WebGLRenderer({ canvas: $('#c'), antialias: true }); renderer.setPixelRatio(Math.min(devicePixelRatio, 2)); renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.shadowMap.enabled = true;
+const scene = new THREE.Scene(), dark = matchMedia('(prefers-color-scheme: dark)').matches; scene.background = new THREE.Color(dark ? 0x17142b : 0xe9e6f5);
+const H = META.stats.taille_m[1], R = Math.max(...META.stats.taille_m);
+const camera = new THREE.PerspectiveCamera(35, 1, 0.05, 200); camera.position.set(R * 1.1, H * 0.9, R * 2.3);
+const controls = new OrbitControls(camera, renderer.domElement); controls.target.set(0, H * 0.5, 0); controls.enableDamping = true; controls.minDistance = R * 0.7; controls.maxDistance = R * 8;
+scene.add(new THREE.HemisphereLight(0xffffff, 0xc4c0d6, 2.75)); const sun = new THREE.DirectionalLight(0xfff6e8, 1.2); sun.position.set(2.5 * R, 4 * R, 3 * R); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); const sc = sun.shadow.camera; sc.left = sc.bottom = -R * 2; sc.right = sc.top = R * 2; sc.far = R * 12; scene.add(sun);
+const ground = new THREE.Mesh(new THREE.CircleGeometry(R * 6, 48), new THREE.MeshStandardMaterial({ color: dark ? 0x3c5a3a : 0x86c96f, roughness: 1 })); ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
+let mixer, actions = {}, current, playing = true; const outlines = [];
+const bytes = Uint8Array.from(atob(GLB.split(',')[1]), (ch) => ch.charCodeAt(0));
+new GLTFLoader().parse(bytes.buffer, '', (g) => {
+  const model = g.scene; scene.add(model);
+  model.traverse((o) => { if (!o.isMesh) return; const ol = o.name.endsWith('_Outline'); o.castShadow = !ol;
+    const c = o.geometry.attributes.color; if (c && !o.geometry.userData.lin) { for (let i = 0; i < c.count * c.itemSize; i++) { const v = c.array[i]; c.array[i] = v < 0.04045 ? v * 0.0773993808 : Math.pow(v * 0.9478672986 + 0.0521327014, 2.4); } c.needsUpdate = true; o.geometry.userData.lin = true; }
+    if (ol) { o.material = new THREE.MeshBasicMaterial({ color: 0x000000 }); outlines.push(o); } });
+  mixer = new THREE.AnimationMixer(model);
+  g.animations.forEach((clip) => { const a = mixer.clipAction(clip); actions[clip.name] = a; const m = META.animations[clip.name] || {}; if (!m.loop) { a.setLoop(THREE.LoopOnce); a.clampWhenFinished = true; }
+    const b = document.createElement('button'); b.textContent = (META.labels && META.labels[clip.name]) || clip.name; b.dataset.a = clip.name; b.onclick = () => play(clip.name); $('#anims').appendChild(b); });
+  play(Object.keys(actions)[0]);
+});
+function play(name) { if (current) actions[current].stop(); current = name; const a = actions[name]; a.reset().play(); playing = true; $('#play').textContent = '⏸';
+  document.querySelectorAll('#anims button').forEach((b) => b.classList.toggle('on', b.dataset.a === name));
+  const m = META.animations[name] || {}, mv = (META.moves || {})[name] || {}; let h = `<b>${(META.labels && META.labels[name]) || name}</b> · ${a.getClip().duration.toFixed(2).replace('.', ',')} s${m.loop ? ' · en boucle' : ''}`;
+  for (const [k, v] of Object.entries(mv)) h += `<br>${k} : ${typeof v === 'object' ? JSON.stringify(v) : v}`; $('#info').innerHTML = h; }
+$('#play').onclick = () => { playing = !playing; $('#play').textContent = playing ? '⏸' : '▶'; if (playing && current && !actions[current].isRunning()) actions[current].reset().play(); };
+$('#scrub').oninput = (e) => { if (!current) return; playing = false; $('#play').textContent = '▶'; const a = actions[current]; a.paused = false; a.time = e.target.value * a.getClip().duration; mixer.update(0); a.paused = true; };
+$('#outline').onchange = (e) => outlines.forEach((o) => { o.visible = e.target.checked; });
+document.querySelectorAll('[data-v]').forEach((b) => { b.onclick = () => { const v = { front: [0, 0.5, 2.6], side: [2.6, 0.5, 0], back: [0, 0.5, -2.6], top: [0.01, 3, 0.4] }[b.dataset.v]; camera.position.set(v[0] * R, v[1] * H + (b.dataset.v === 'top' ? R : 0), v[2] * R); }; });
+const clock = new THREE.Clock();
+function frame() { requestAnimationFrame(frame); const w = innerWidth, h = innerHeight; if (renderer.domElement.width !== Math.floor(w * renderer.getPixelRatio())) { renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+  const dt = Math.min(0.05, clock.getDelta()) * ($('#slow').checked ? 0.25 : 1);
+  if (mixer && current) { const a = actions[current]; if (playing) { a.paused = false; mixer.update(dt); if (!a.isRunning() && !(META.animations[current] || {}).loop) { a.userData = (a.userData || 0) + dt; if (a.userData > 0.9) { a.userData = 0; a.reset().play(); } } } const d = a.getClip().duration; $('#scrub').value = (a.time % d) / d; $('#time').textContent = `${(a.time % (d + 1e-6)).toFixed(2).replace('.', ',')} / ${d.toFixed(2).replace('.', ',')} s`; }
+  controls.update(); renderer.render(scene, camera); }
+frame();
+</script></body></html>

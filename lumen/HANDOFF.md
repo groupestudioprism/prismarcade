@@ -338,3 +338,13 @@ Mise à jour du 06/11/2026 (session de stabilisation) :
 - Tests : `tests/qa_lyra_v2.py` ; contrôle hors jeu `node tools/lyra3d/clip.mjs all 1` (TOTAL 0) ; non-régression passée : qa_aube1, qa_death, qa_touch.
 - Méthode pour les autres personnages, mobs, boss, objets : planche de référence, modèle par code, animations, contrôle des traversées, aperçu, puis intégration.
 - Limites : rendu contrôlé en logiciel seulement ; coût des correcteurs non mesuré sur téléphone ; les armes autres que le bâton utilisent les témoins du bâton.
+
+## Annexe — CRÉATURES v2 (Île de l'Aube)
+
+- Six modèles refaits avec `js/world/kit3d.js` : `js/world/models/{brumelin,ronceux,lanceur,sanglier,gardien,colosse}.js`.
+- `js/world/creatures.js` : les fabriques sans teinte renvoient le modèle v2 ; dès qu'une définition porte une teinte
+  (variantes des autres actes, verre), `combat.js` passe `{ classic: true }` et l'ancienne fabrique sert. Le Grand Meunier garde l'ancien colosse.
+- `combat.js` : `view.deathDur` (durée de la défaite, 1,8 s pour le Colosse), `anim.block` (parade du Gardien),
+  `anim.atk` et `anim.phase` (attaques et rage du Colosse).
+- Outils et règles : `tools/models3d/README.md`. Test en jeu : `tests/qa_creatures_v2.py`.
+- Non fait : variantes teintées en v2, mesure de fluidité sur téléphone, parcours complet des six actes.

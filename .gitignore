@@ -1,0 +1,4 @@
+node_modules/
+lumen/node_modules/
+lumen/tools/models3d/out/
+__pycache__/

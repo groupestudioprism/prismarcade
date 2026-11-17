@@ -68,7 +68,7 @@ export function createCombat(G) {
         const a = (k / Math.max(1, sp.n)) * Math.PI * 2;
         let cx = sp.x + (sp.n > 1 ? Math.cos(a) * 1.2 : 0), cy = sp.y + (sp.n > 1 ? Math.sin(a) * 1.2 : 0);
         const x = W(z.ox + cx), zz = W(z.oy + cy);
-        const view = CREATURES[def.model || sp.type](def.matte ? undefined : def.tint);   /* ACTE III : matte = teinte sans variante de verre */
+        const view = CREATURES[def.model || sp.type](def.matte ? undefined : def.tint, { classic: !!def.tint });   /* ACTE III : matte = teinte sans variante de verre */
         if (def.tint && (def.model !== 'colosse' || def.matte)) tintView(view.root, def.tint, def.tintK, def.tintE);
         view.root.position.set(x, 0, zz);
         add(view.root);
@@ -95,7 +95,7 @@ export function createCombat(G) {
     // bouclier : de face, sauf arme lourde ou onde
     if (e.def.shield && !opts.heavy && !opts.onde && e.state !== 'stun' && e.state !== 'attack') {
       const toP = Math.atan2(P.x - e.x, P.z - e.z);
-      if (Math.abs(angleTo(e.face, toP)) < 1.2) { G.audio.sfx('block'); G.ui.damage(e.x, 1.8, e.z, 'Paré', 'block'); G.sparks.burst(new THREE.Vector3(e.x, 1.3, e.z), '#c9b6ff', 10, 3, 1); e.kb.x += Math.sin(toP) * -2; e.kb.z += Math.cos(toP) * -2; return 0; }
+      if (Math.abs(angleTo(e.face, toP)) < 1.2) { e.blockT = 0.35; G.audio.sfx('block'); G.ui.damage(e.x, 1.8, e.z, 'Paré', 'block'); G.sparks.burst(new THREE.Vector3(e.x, 1.3, e.z), '#c9b6ff', 10, 3, 1); e.kb.x += Math.sin(toP) * -2; e.kb.z += Math.cos(toP) * -2; return 0; }
     }
     let m = (e.def.weak[dtype] || 1) * (e.def.resist[dtype] || 1);
     if (opts.bonus && e.def.family && opts.bonus[e.def.family]) m *= opts.bonus[e.def.family];
@@ -243,7 +243,7 @@ export function createCombat(G) {
     let anim = { move: 0 };
     const faceTo = (a, k = 10) => { e.face += angleTo(e.face, a) * damp(k, dt); };
     if (e.state === 'dead') {
-      const k = e.t / 0.6;
+      const k = e.t / (e.view.deathDur || 0.6);   /* modèles v2 : durée de leur animation de défaite */
       anim = { move: 0, dead: Math.min(1, k) }; e.view.animate(dt, anim);
       if (k >= 1) { group.remove(e.view.root); return false; }
       return true;
@@ -340,6 +340,7 @@ export function createCombat(G) {
     e.view.root.position.set(e.x, 0, e.z);
     e.view.root.rotation.y = e.face;
     anim.hurt = e.hurt;
+    if (e.blockT > 0) { e.blockT -= dt; anim.block = Math.max(0, e.blockT / 0.35); }   /* parade au bouclier (Gardien v2) */
     e.view.animate(dt, anim);
     // couleur de coup
     if (e.view.mat) e.view.mat.emissiveIntensity = 0.45 + e.hurt * 1.5;
@@ -352,6 +353,7 @@ export function createCombat(G) {
     const P = G.P, d = e.def;
     if (e.hp < e.maxHp * 0.5 && e.phase === 1) { e.phase = 2; G.audio.sfx('roar'); if (G.audio.bossPhase) G.audio.bossPhase(2); G.shake(0.5); G.ui.toast('⚠', (e.def.rageName || d.name) + ' s’enrage !', 'Ses attaques s’accélèrent.');   /* ACTE III : nom du boss */ spawnAdds(2); }
     const fast = e.phase === 2 ? 0.75 : 1;
+    anim.atk = e.state === 'intro' ? 'intro' : e.atk; anim.phase = e.phase;   /* Colosse v2 : geste propre à chaque attaque, rage en phase 2 */
     switch (e.state) {
       case 'idle':
         if (dist < 10 && G.zoneIndexAt(P.x, P.z) === e.zi) { e.state = 'intro'; e.t = 0; G.audio.sfx('roar'); G.shake(0.6); G.bossStart(e); }
@@ -409,7 +411,7 @@ export function createCombat(G) {
     for (let i = 0; i < n; i++) {
       const a = Math.random() * Math.PI * 2, x = b.x + Math.cos(a) * 3, z = b.z + Math.sin(a) * 3;
       if (!G.canStand(x, z, 0.4)) continue;
-      const at = typeOverride || b.def.adds || 'brumelin', def = ENEMIES[at], view = CREATURES[def.model || at](def.matte ? undefined : def.tint); if (def.tint) tintView(view.root, def.tint); view.root.position.set(x, 0, z); add(view.root);
+      const at = typeOverride || b.def.adds || 'brumelin', def = ENEMIES[at], view = CREATURES[def.model || at](def.matte ? undefined : def.tint, { classic: !!def.tint }); if (def.tint) tintView(view.root, def.tint); view.root.position.set(x, 0, z); add(view.root);
       enemies.push({ key: 'add' + Math.random(), type: at, def, zi: b.zi, z: b.z, view, x, z, hx: x, hz: z, vx: 0, vz: 0, face: 0, hp: def.hp, maxHp: def.hp, state: 'chase', t: 0, cd: 1, hurt: 0, kb: { x: 0, z: 0 }, adds: true, tag: tag || null, seen: true, wanderT: 1 });
       G.sparks.burst(new THREE.Vector3(x, 0.6, z), '#b39cff', 20, 3, 2);
     }
