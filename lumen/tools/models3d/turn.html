@@ -1,0 +1,29 @@
+<!DOCTYPE html><html><body style="margin:0;background:#fff">
+<script type="importmap">{"imports":{"three":"/vendor/three.module.min.js","three/addons/":"/vendor/addons/"}}</script>
+<script type="module">
+/* Planche de contrôle : ?m=<id> [&poses=ANIM:t[:s|f|b],…] [&z=zoom] [&cy=hauteur visée] [&cx=] [&w=demi-hauteur en m]
+   Sans « poses » : 6 vues de la pose de repos (face, dos, gauche, droite, 3/4, dessus). */
+import * as THREE from 'three';
+import { applyPose, sample } from '/js/world/kit3d.js';
+THREE.ColorManagement.enabled = false;
+const q = new URLSearchParams(location.search), { model } = await import(`/js/world/models/${q.get('m')}.js`);
+const W = 2000, H = 1240, cw = W / 3, ch = H / 2;
+const r = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true }); r.setSize(W, H); r.outputColorSpace = THREE.LinearSRGBColorSpace; document.body.appendChild(r.domElement);
+r.setClearColor(0xffffff); r.autoClear = false; r.setScissorTest(true);
+const sc = new THREE.Scene(); sc.add(new THREE.HemisphereLight(0xffffff, 0xe6e6f0, 2.6)); const d = new THREE.DirectionalLight(0xffffff, 0.9); d.position.set(1.5, 3, 2.5); sc.add(d);
+const { root, nodes } = model.build(model.PALETTE); sc.add(root);
+const cache = {}, pose = (anim, time) => { const S = cache[anim] || (cache[anim] = sample(model, anim)); const f = S.frames[Math.min(S.frames.length - 1, Math.round(time * 30))]; const p = {}; for (const [j, v] of Object.entries(f.j)) { const R = model.REST[j]; p[j] = { r: v.r.map((x, i) => x - R.r[i]), p: v.p.map((x, i) => x - R.p[i]), s: Array.isArray(v.s) ? v.s.map((x) => x / (R.s || 1)) : v.s / (R.s || 1) }; } applyPose(model, nodes, p); };
+const poses = (q.get('poses') || '').split(',').filter(Boolean).map((s) => s.split(':'));
+const box = new THREE.Box3().setFromObject(root), size = box.getSize(new THREE.Vector3());
+const zoom = parseFloat(q.get('z') || '1'), half = parseFloat(q.get('w') || (Math.max(size.y, size.x, size.z) * 0.62).toFixed(3)), cy = parseFloat(q.get('cy') || (size.y / 2).toFixed(3)), cx = parseFloat(q.get('cx') || '0');
+const VW = { f: [0, 0, 1], b: [0, 0, -1], s: [1, 0.1, 0.25], l: [1, 0, 0], r: [-1, 0, 0], t: [0, 1, 0.55], q: [-0.7, 0.25, 1] };
+const views = [VW.f, VW.b, VW.l, VW.r, VW.q, VW.t];
+r.clear();
+for (let i = 0; i < 6; i++) {
+  let v = views[i]; if (poses.length) { if (!poses[i]) break; pose(poses[i][0], parseFloat(poses[i][1])); v = VW[poses[i][2] || 'q']; }
+  const hh = half / zoom, cam = new THREE.OrthographicCamera(-hh * cw / ch, hh * cw / ch, hh, -hh, 0.1, 50);
+  cam.position.set(cx + v[0] * 10, cy + v[1] * 10, v[2] * 10); cam.lookAt(cx, cy, 0);
+  const x = (i % 3) * cw, y = H - ch - Math.floor(i / 3) * ch; r.setViewport(x, y, cw, ch); r.setScissor(x, y, cw, ch); r.render(sc, cam);
+}
+window.done = true;
+</script></body></html>
