@@ -936,6 +936,7 @@ function unstickPlayer() {
 }
 function interact(back) {
   const t = S.target; if (!t) return;
+  if (t.kind !== 'npc' && t.kind !== 'sign' && t.kind !== 'bed' && t.kind !== 'ledge' && t.kind !== 'post') P.useT = 1.2;   // geste « utiliser un objet » (prisme, clé, porte, coffre…)
   switch (t.kind) {
     case 'device': {
       if (back && t.e.carry && A3.lift(t.e)) break;   /* ACTE III : R = porter */
@@ -1378,7 +1379,7 @@ function update(dt) {
   const s = calcStats(st), p = st.player;
   if (S.mode === 'play' && P.alive) {
     st.playTime += dt;
-    P.swingCD -= dt; P.dodgeCD -= dt; P.iframes -= dt; P.hurtT -= dt; P.spinT -= dt;
+    P.swingCD -= dt; P.dodgeCD -= dt; P.iframes -= dt; P.hurtT -= dt; P.spinT -= dt; P.useT = (P.useT || 0) - dt;
     if (input.take('dodge')) dodge();
     if (input.take('attack')) { if (P.chargeT > 0.55 && p.abilities.charge) chargeSpin(); else startSwing(); }
     if (P.buffered > 0) { P.buffered -= dt; if (!P.swing && P.swingCD <= 0) { P.buffered = 0; startSwing(); } }
@@ -1449,7 +1450,7 @@ function update(dt) {
     move: S.mode === 'play' ? Math.min(1, moving) : 0,
     swing: P.swing ? { t: P.swing.t / P.swing.dur, kind: P.swing.kind, combo: P.swing.combo } : null,
     dodge: P.dodging && S.mode !== 'grapple' ? Math.min(1, P.dodgeT / 0.36) : 0, hurt: P.hurtT > 0 ? P.hurtT / 0.4 : 0,
-    spin: P.spinT > 0 ? 1 - P.spinT / 0.45 : 0, talk: false, grapple: S.mode === 'grapple' || S.mode === 'glide', dead: !P.alive,
+    spin: P.spinT > 0 ? 1 - P.spinT / 0.45 : 0, talk: false, grapple: S.mode === 'grapple' || S.mode === 'glide', dead: !P.alive, use: P.useT > 0 ? 1 - P.useT / 1.2 : 0,
   });
   chargeRing.position.set(P.x, 0.08, P.z); chargeRing.material.opacity = P.chargeT > 0.2 ? Math.min(0.9, (P.chargeT - 0.2) * 2) : 0; chargeRing.scale.setScalar(P.chargeT > 0.55 ? 1.3 + Math.sin(t * 20) * 0.08 : 1);
   const fa = t * 1.6;

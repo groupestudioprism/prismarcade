@@ -23,7 +23,7 @@ const SAMPLES = {};
 Object.keys(ANIMS).forEach((name) => {
   const S = sample(name); let fixed = 0;
   S.frames.forEach((f, i) => {
-    Object.entries(f.j).forEach(([j, v]) => { const o = byName[j]; if (!o) return; o.position.set(...v.p); o.rotation.set(v.r[0] * D2R, v.r[1] * D2R, v.r[2] * D2R); o.scale.setScalar(v.s); });
+    Object.entries(f.j).forEach(([j, v]) => { const o = byName[j]; if (!o) return; o.position.set(...v.p); o.rotation.set(v.r[0] * D2R, v.r[1] * D2R, v.r[2] * D2R); (Array.isArray(v.s) ? o.scale.set(...v.s) : o.scale.setScalar(v.s)); });
     const m = minY();
     const lastFrames = name === 'DEFEATED' && f.t >= 2.2;
     if (m < -0.002 || lastFrames) { const dy = lastFrames ? -m : -m; f.j.Pelvis.p[1] += dy; if (Math.abs(dy) > 0.002) fixed++; }
@@ -42,7 +42,7 @@ const rows = ['animation,time_s,joint,rot_x_deg,rot_y_deg,rot_z_deg,pos_x_m,pos_
 const summary = {};
 Object.keys(ANIMS).forEach((name) => {
   const S = SAMPLES[name];
-  S.frames.forEach((f) => JOINTS.forEach((j) => { const v = f.j[j]; rows.push([name, f.t.toFixed(3), j, ...v.r.map((x) => x.toFixed(2)), ...v.p.map((x) => x.toFixed(4)), v.s.toFixed(4)].join(',')); }));
+  S.frames.forEach((f) => JOINTS.forEach((j) => { const v = f.j[j]; rows.push([name, f.t.toFixed(3), j, ...v.r.map((x) => x.toFixed(2)), ...v.p.map((x) => x.toFixed(4)), (Array.isArray(v.s) ? v.s.map((k) => k.toFixed(3)).join('/') : v.s.toFixed(4))].join(',')); }));
   summary[name] = { duration_s: S.dur, loop: S.loop, frames: S.frames.length, fps: FPS };
 });
 fs.writeFileSync(out + '/Lyra_keyframes_30fps.csv', rows.join('\n'));
