@@ -1,0 +1,18 @@
+"""Lyra v2 dans le jeu : chargement sans erreur, poses (attente, marche, objet, coup, roulade, défaite), captures."""
+import sys; sys.path.insert(0, __import__('os').path.dirname(__import__('os').path.abspath(__file__)))
+from qa_lib import *
+q = QA('lyra-v2', viewport=(960, 540), query="?low&nobloom", noop=False); q.load()
+q.js('nouvelle partie', "T.newGame()", "play")
+q.pg.wait_for_timeout(2500); q.pg.screenshot(path='/tmp/lyra_idle.png')
+q.js('pièces du modèle', "(()=>{const n=[];__lumen.scene.traverse(o=>{if(o.name==='Flap_FL'||o.name==='Cloak_Left'||o.name==='Staff')n.push(o.name)});return n.join(',')})()", lambda r: 'Flap_FL' in r and 'Staff' in r)
+q.js('utiliser un objet', "(async()=>{__lumen.P.useT=1.2;await T.tick(500);return __lumen.P.useT>0})()", lambda r: r is True)
+q.pg.screenshot(path='/tmp/lyra_use.png')
+q.js('marche', "(async()=>{const P=__lumen.P;for(let i=0;i<25;i++){P.vx=2.2;P.vz=0;await T.tick(40);}return 'ok'})()")
+q.pg.screenshot(path='/tmp/lyra_walk.png')
+q.js('coup', "(async()=>{const P=__lumen.P;P.swing={t:0.2,dur:0.4,kind:'lame',combo:0};await T.tick(120);return 'ok'})()")
+q.pg.screenshot(path='/tmp/lyra_swing.png')
+q.js('défaite', "(async()=>{const L=__lumen;L.st.player.hp=1;L.G.hurtPlayer(500,L.P.x+1,L.P.z,{});await T.tick(2800);return L.P.alive})()", lambda r: r is False)
+q.pg.screenshot(path='/tmp/lyra_dead.png')
+print('ERRORS:', q.errs)
+q.b.close(); q.p.stop()
+sys.exit(1 if q.errs or any(r[1] != 'OK' for r in q.results) else 0)

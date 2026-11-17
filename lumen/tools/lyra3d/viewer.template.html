@@ -41,7 +41,7 @@
 <canvas id="c"></canvas>
 <div id="side" class="panel">
   <h1>Lyra <span>&amp;</span> Fia</h1>
-  <div style="color:var(--mut);font-size:12.5px;margin-top:4px">LUMEN : les Îles Brisées · modèle low-poly facetté</div>
+  <div style="color:var(--mut);font-size:12.5px;margin-top:4px">LUMEN : les Îles Brisées · modèle v2 d&rsquo;après la planche de référence</div>
   <h2>Animations</h2>
   <div class="anims" id="anims"></div>
   <h2>Affichage</h2>
@@ -52,8 +52,6 @@
   <div class="row" style="margin-top:6px"><button data-v="front">Face</button><button data-v="side">Profil</button><button data-v="back">Dos</button><button data-v="top">Dessus</button></div>
   <h2>Fiche</h2>
   <div id="info"></div>
-  <h2>Fichier</h2>
-  <a class="btn" id="dl" download="Lyra_Fia.glb">Télécharger le GLB</a>
 </div>
 <div id="bar" class="panel"><button id="play">⏸</button><input type="range" id="scrub" min="0" max="1" step="0.001" value="0"><span id="time">0,00 s</span></div>
 <div class="hitflag" id="hitflag">FRAPPE</div>
@@ -65,12 +63,12 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 const GLB = '__GLB__';
 const MOVES = __MOVES__;
-const NAMES_FR = { IDLE: 'Attente', WALK: 'Marche', RUN: 'Course', DODGE_ROLL: 'Roulade', COMBO_1_2_3: 'Combo 1-2-3', CHARGED_SPIN_SLASH: 'Coup chargé', WAVE_OF_LIGHT: 'Onde de lumière', LIGHT_GRAPPLE: 'Grappin de lumière', HIT_REACTION: 'Coup reçu', DEFEATED: 'Défaite' };
+const NAMES_FR = { IDLE: 'Attente', WALK: 'Marche', RUN: 'Course', DODGE_ROLL: 'Roulade', COMBO_1_2_3: 'Combo 1-2-3', CHARGED_SPIN_SLASH: 'Coup chargé', WAVE_OF_LIGHT: 'Onde de lumière', LIGHT_GRAPPLE: 'Grappin de lumière', USE_ITEM: 'Utiliser un objet', HIT_REACTION: 'Coup reçu', DEFEATED: 'Défaite' };
 const $ = (s) => document.querySelector(s);
 const renderer = new THREE.WebGLRenderer({ canvas: $('#c'), antialias: true, preserveDrawingBuffer: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
-renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.15;
+renderer.toneMapping = THREE.NoToneMapping;
 renderer.shadowMap.enabled = true;
 const scene = new THREE.Scene();
 const dark = () => document.documentElement.dataset.theme ? document.documentElement.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
@@ -78,10 +76,10 @@ const camera = new THREE.PerspectiveCamera(35, 1, 0.05, 100);
 camera.position.set(1.9, 1.45, 3.6);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.target.set(0, 0.8, 0); controls.enableDamping = true; controls.minDistance = 1.2; controls.maxDistance = 12;
-scene.add(new THREE.HemisphereLight(0xfff4e0, 0x4a3f6a, 1.6));
-const sun = new THREE.DirectionalLight(0xfff0d8, 2.4); sun.position.set(2.5, 4, 3); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
+scene.add(new THREE.HemisphereLight(0xffffff, 0xc4c0d6, 2.75));
+const sun = new THREE.DirectionalLight(0xfff6e8, 1.2); sun.position.set(2.5, 4, 3); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
 Object.assign(sun.shadow.camera, { left: -4, right: 4, top: 4, bottom: -4 }); scene.add(sun);
-const rim = new THREE.DirectionalLight(0xb9c8ff, 0.9); rim.position.set(-3, 2, -3); scene.add(rim);
+const rim = new THREE.DirectionalLight(0xcfd8ff, 0.5); rim.position.set(-3, 2, -3); scene.add(rim);
 // petite île facettée sous les pieds
 const isle = new THREE.Group(); scene.add(isle);
 const top = new THREE.Mesh(new THREE.CylinderGeometry(3.4, 3.2, 0.3, 9), new THREE.MeshStandardMaterial({ color: 0x7cbf6a, flatShading: true, roughness: 1 })); top.position.y = -0.15; top.receiveShadow = true; isle.add(top);
@@ -94,7 +92,8 @@ const fx = { group: new THREE.Group() }; scene.add(fx.group);
 const ADD = THREE.AdditiveBlending;
 const gold = (hex, op = 0.9) => new THREE.MeshBasicMaterial({ color: new THREE.Color(hex).multiplyScalar(1.6), transparent: true, opacity: op, blending: ADD, depthWrite: false, side: THREE.DoubleSide });
 
-new GLTFLoader().load(GLB, (g) => {
+const glbBytes = Uint8Array.from(atob(GLB.split(',')[1]), (ch) => ch.charCodeAt(0));
+new GLTFLoader().parse(glbBytes.buffer, '', (g) => {
   model = g.scene; scene.add(model);
   model.traverse((o) => {
     if (o.name) nodes[o.name] = o;
@@ -112,7 +111,7 @@ new GLTFLoader().load(GLB, (g) => {
   Object.keys(NAMES_FR).forEach((n) => { if (!actions[n]) return; const b = document.createElement('button'); b.textContent = NAMES_FR[n]; b.dataset.a = n; b.onclick = () => play(n); box.appendChild(b); });
   play('IDLE');
 });
-$('#dl').href = GLB;
+
 
 function play(name) {
   if (current) actions[current].stop();
@@ -148,7 +147,7 @@ function clearFx() {
 }
 function spark(p, hex, v = 0.25) { const m = new THREE.Mesh(sparkGeo, gold(hex)); m.position.copy(p); fx.group.add(m); sparks.push({ m, v: new THREE.Vector3((Math.random() - 0.5) * v, Math.random() * v + 0.1, (Math.random() - 0.5) * v), life: 0.9 + Math.random() * 0.6, t: 0 }); }
 function puff(p) { const m = new THREE.Mesh(puffGeo, new THREE.MeshBasicMaterial({ color: 0xe6dfd3, transparent: true, opacity: 0.7, depthWrite: false })); m.position.copy(p); m.position.y = 0.04; fx.group.add(m); puffs.push({ m, t: 0, v: new THREE.Vector3((Math.random() - 0.5) * 0.4, 0.25, (Math.random() - 0.5) * 0.4) }); }
-const tipLocal = new THREE.Vector3(0.05, 0.8, 0);
+const tipLocal = new THREE.Vector3(0.055, 0.9, 0);
 function tipWorld(out) { return nodes.Staff ? nodes.Staff.localToWorld(out.copy(tipLocal)) : out.set(0, 1, 0); }
 function trailPush(kind, a, b, hex) {
   const list = trails[kind];

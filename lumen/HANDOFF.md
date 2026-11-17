@@ -330,3 +330,11 @@ Mise à jour du 06/11/2026 (session de stabilisation) :
 - **Textes** : plus aucune mention de rotation de caméra (le test grep le code, les docs et les CSS). Contrôles : haut = nord vérifié (marche, esquive, orientation pour grappin / plané).
 - **Test** : `QA_PORT=8876 flock /tmp/lumen-chrome.lock timeout 900 python3 -u tests/qa_camera_fixe.py [île…]`. `qa_desert_full.py` : coordonnée de l'abri des Dunes corrigée (échec déjà présent avant l'audit : la case était donnée hors de la zone).
 - **Reste** : un objet clé derrière un grand décor reste caché tant que Lyra est loin (le trou ne suit que Lyra et le PNJ en dialogue) ; les ennemis derrière un arbre sont parfois masqués.
+
+## Annexe LYRA v2 (branche lyra-modele-v2)
+- Modèle de Lyra refait d'après la planche de référence validée par Kéliann ; source unique `tools/lyra3d/lyra.mjs`, copie de jeu `js/world/lyra.js`.
+- `Lyra.animate` termine chaque pose par `finishPose` (pans, bras, bâton, sol, Fia, cape) : ne pas l'enlever, c'est ce qui empêche les traversées en pose mélangée.
+- Nouvel état `use` (geste « utiliser un objet ») : `interact()` pose `P.useT = 1,2` pour les objets, portes, coffres, lampions, prisme.
+- Tests : `tests/qa_lyra_v2.py` ; contrôle hors jeu `node tools/lyra3d/clip.mjs all 1` (TOTAL 0) ; non-régression passée : qa_aube1, qa_death, qa_touch.
+- Méthode pour les autres personnages, mobs, boss, objets : planche de référence, modèle par code, animations, contrôle des traversées, aperçu, puis intégration.
+- Limites : rendu contrôlé en logiciel seulement ; coût des correcteurs non mesuré sur téléphone ; les armes autres que le bâton utilisent les témoins du bâton.

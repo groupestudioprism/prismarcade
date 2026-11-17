@@ -1,4 +1,6 @@
-# Lyra et Fia : modèle 3D pour LUMEN
+# Lyra et Fia : modèle 3D pour LUMEN (v2, 17/11/2026)
+
+> Modèle refait d'après la planche de référence. 11 animations (ajout de `USE_ITEM`), environ 5 460 triangles, 1,61 m de haut. Pièces en plus : `Flap_FL/FR/BL/BR/SL/SR` (pans de tunique, enfants de `Pelvis`). Contrôle automatique des traversées : zéro sur toutes les images (`tools/lyra3d/clip.mjs`). Les chiffres plus bas datent de la v1 quand ils diffèrent.
 
 ## Fichiers
 - `Lyra_Fia.glb` : le modèle (Lyra + Fia + bâton), les contours noirs et les 10 animations, prêt pour Unity, Godot, Unreal ou Blender.
