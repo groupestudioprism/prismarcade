@@ -14,6 +14,7 @@ import { heightOf, levelAt } from '../altitude.js';   /* ALTITUDE */
 import { buildReliefMesh } from './relief.js';
 import { hole } from './hole.js';
 import { DESERT_THEMES, buildSplitter, buildSocle, desertTrees, desertProp, tickDesert } from './desert-props.js';   /* ACTE III */
+import { createDecor2 } from './decor2.js';   /* DÉCOR V2 : sol et nature dans le style de Lyra (Île de l'Aube pour l'instant) */
 
 const C = (hex) => new THREE.Color(hex);
 const mat = (hex, o = {}) => new THREE.MeshStandardMaterial(Object.assign({ color: hex, flatShading: true, roughness: 0.9 }, o));
@@ -132,11 +133,15 @@ export function buildWorld(scene, isl, def, opts = {}) {
   const pebbleGeo = new THREE.DodecahedronGeometry(0.16, 0);
   const ronceGeo = new THREE.IcosahedronGeometry(0.75, 0), thornGeo = new THREE.ConeGeometry(0.07, 0.4, 4);
 
+  /* DÉCOR V2 : drapeau unique. Les zones dont le thème est pris en charge (puzzle, village, lande) sont dessinées par decor2.js ; tout le reste est inchangé. */
+  const GFX2 = def.id === 'aube';
+  const D2 = GFX2 ? createDecor2({ isl, M, LOW, terr, isLand, depthOf, instanced, detail, shafts, themeOf }) : null;
   zones.forEach((z, zi) => {
     const th = THEMES[themeOf(z)] || THEMES.puzzle, G = zoneGroups[zi];
     const cells = [];
     z.map.forEach((row, ly) => { for (let lx = 0; lx < row.length; lx++) { const x = z.ox + lx, y = z.oy + ly; if (isl.zoneAt[y][x] === zi && isLand(x, y)) cells.push([x, y]); } });
     cells.forEach(([x, y]) => { let d = 0; for (let r = 1; r <= 4; r++) { let ok = true; for (let dy = -r; dy <= r && ok; dy++) for (let dx = -r; dx <= r; dx++) if (!isLand(x + dx, y + dy)) { ok = false; break; } if (!ok) break; d = r; } depthOf[x + ',' + y] = d; });
+    if (D2 && D2.zone(z, zi, G, cells)) return;   /* DÉCOR V2 */
     const wallTheme = th.floor;   // sanctuaire / intérieur : '#' = murs hauts
     const floorCells = cells.filter(([x, y]) => !(wallTheme && terr(x, y) === '#'));
     const patch = (x, y) => (Math.sin(x * 0.33 + y * 0.21) + Math.sin(x * 0.12 - y * 0.29 + 1.7) + Math.sin((x + y) * 0.07)) * 0.022;
@@ -314,6 +319,7 @@ export function buildWorld(scene, isl, def, opts = {}) {
     }
   });
   function removeCell(kind, x, y) {
+    if (D2 && D2.remove(kind, x, y)) return;   /* DÉCOR V2 */
     const r = cellIndex[kind][x + ',' + y]; if (!r) return;
     const hide = (mesh, i) => { if (!mesh) return; mesh.getMatrixAt(i, dummy.matrix); dummy.matrix.makeScale(0, 0, 0); mesh.setMatrixAt(i, dummy.matrix); mesh.instanceMatrix.needsUpdate = true; };
     hide(r.m, r.i);
