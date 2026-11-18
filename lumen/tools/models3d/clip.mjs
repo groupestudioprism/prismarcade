@@ -1,11 +1,12 @@
-/* Contrôle des traversées : node clip.mjs <id> [pas=1] [-v]
+/* Contrôle des traversées : node clip.mjs <id> [pas=1] [-v]   (<id> = fichier, ou fichier:variante, ex. villageois:selene)
    Pour chaque image de chaque animation : points de surface d'une pièce à l'intérieur d'une autre (ou collés à une coque
    ouverte), et ce qui passe sous le sol. Paires ignorées : parent/enfant direct (articulations) + model.ignore.
    Le résultat attendu est « TOTAL 0 ». */
 import * as THREE from 'three';
 import { sample, applyPose, D2R } from '../../js/world/kit3d.js';
 const id = process.argv[2], STEP = +(process.argv[3] || 1) || 1, verbose = process.argv.includes('-v');
-const { model } = await import(`../../js/world/models/${id}.js`);
+const [file, variant] = id.split(':'), mod = await import(`../../js/world/models/${file}.js`), model = variant ? mod.models[variant] : mod.model;   // « fichier:variante » pour un fichier à plusieurs modèles
+if (!model) { console.error('modèle inconnu :', id); process.exit(2); }
 const { root, nodes } = model.build(model.PALETTE);
 const parts = []; root.traverse((o) => { if (o.isMesh && !o.name.endsWith('_Outline') && !o.userData.glow) parts.push(o); });
 const meshParent = (o) => { let p = o.parent; while (p && !p.isMesh) p = p.parent; return p; };

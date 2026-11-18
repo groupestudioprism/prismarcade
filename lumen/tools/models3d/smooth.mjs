@@ -1,7 +1,7 @@
 /* Fluidité : node smooth.mjs <id> — plus grand saut d'une image à l'autre (degrés pour les pièces, cm pour la racine), par animation. */
 import * as THREE from 'three';
 import { sample, applyPose } from '../../js/world/kit3d.js';
-const { model } = await import(`../../js/world/models/${process.argv[2]}.js`), { root, nodes } = model.build(model.PALETTE);
+const [mfile, variant] = process.argv[2].split(':'), mod = await import(`../../js/world/models/${mfile}.js`), model = variant ? mod.models[variant] : mod.model, { root, nodes } = model.build(model.PALETTE);
 for (const name of Object.keys(model.ANIMS)) {
   const S = sample(model, name), prev = {}, worst = {};
   S.frames.forEach((f, i) => { const p = {}; for (const [j, v] of Object.entries(f.j)) { const R = model.REST[j]; p[j] = { r: v.r.map((x, k) => x - R.r[k]), p: v.p.map((x, k) => x - R.p[k]), s: Array.isArray(v.s) ? v.s.map((x) => x / (R.s || 1)) : v.s / (R.s || 1) }; }
