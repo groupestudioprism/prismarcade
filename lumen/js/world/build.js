@@ -14,6 +14,7 @@ import { heightOf, levelAt } from '../altitude.js';   /* ALTITUDE */
 import { buildReliefMesh } from './relief.js';
 import { hole } from './hole.js';
 import { DESERT_THEMES, buildSplitter, buildSocle, desertTrees, desertProp, tickDesert } from './desert-props.js';   /* ACTE III */
+import { createMeca2 } from './mecanismes2.js';   /* mécanismes v2 (monde 1) */
 
 const C = (hex) => new THREE.Color(hex);
 const mat = (hex, o = {}) => new THREE.MeshStandardMaterial(Object.assign({ color: hex, flatShading: true, roughness: 0.9 }, o));
@@ -54,6 +55,8 @@ export const themeOf = (z) => (z && z.theme) || 'puzzle';
 
 export function buildWorld(scene, isl, def, opts = {}) {
   const LOW = !!opts.low;
+  const GFX2 = def.id === 'aube';   /* nouveau rendu (style Lyra) : monde 1 seulement pour l'instant */
+  const meca = GFX2 ? createMeca2({ COLORS, BEAM_Y, haloSprite, shaftTexture }) : null;
   const root = new THREE.Group(); scene.add(root);
   const ALT = !!isl.alt;   /* ALTITUDE : vrai si l'île a du relief ; sinon H() vaut 0 partout et rien ne change */
   const H = (wx, wz) => (ALT ? heightOf(isl, wx, wz) : 0);
@@ -364,8 +367,10 @@ export function buildWorld(scene, isl, def, opts = {}) {
         if (gt.kind === 'bridge' || terr(x, y) === '=') {
           const along = isl.gateCell[(x + 1) + ',' + y] === gt.id || isl.gateCell[(x - 1) + ',' + y] === gt.id || isLand(x + 1, y) || isLand(x - 1, y);
           const grp = new THREE.Group();
+          if (GFX2) meca.bridge(grp); else {
           [-0.62, 0, 0.62].forEach((o) => { const p = new THREE.Mesh(plank, M.wood); p.position.set(o, -0.07, 0); p.castShadow = true; p.receiveShadow = true; grp.add(p); });
           [-0.95, 0.95].forEach((z) => { const r = new THREE.Mesh(rail, M.wood); r.position.set(0, 0.55, z); grp.add(r); const p = new THREE.Mesh(post, M.wood); p.position.set(-0.85, 0.25, z); grp.add(p); });
+          }
           const by = H(W(x), W(y));   /* ALTITUDE : pont posé sur le relief, incliné selon sa pente */
           grp.position.set(W(x), by, W(y)); if (!along) grp.rotation.y = Math.PI / 2;
           if (ALT) { grp.rotation.order = 'YXZ'; const sl = along ? (H(W(x) + 1, W(y)) - H(W(x) - 1, W(y))) / 2 : -(H(W(x), W(y) + 1) - H(W(x), W(y) - 1)) / 2; grp.rotation.z = Math.atan(sl); }
@@ -377,7 +382,10 @@ export function buildWorld(scene, isl, def, opts = {}) {
         } else {
           const grp = new THREE.Group(); grp.position.set(W(x), H(W(x), W(y)), W(y));
           let m = null;
-          if (gt.look === 'seal') {
+          if (GFX2) {
+            meca.gate(grp, gt.look, i === 1 || gt.cells.length === 1);
+            if (gt.look === 'door' && !(terr(x + 1, y) === '#' || terr(x - 1, y) === '#')) grp.rotation.y = Math.PI / 2;
+          } else if (gt.look === 'seal') {
             m = new THREE.MeshBasicMaterial({ color: new THREE.Color('#b39cff').multiplyScalar(1.4), transparent: true, opacity: 0.55, depthWrite: false, side: THREE.DoubleSide });
             for (let k = 0; k < 3; k++) { const p = new THREE.Mesh(new THREE.IcosahedronGeometry(0.8 - k * 0.15, 0), m); p.position.y = 0.7 + k * 0.7; p.userData.spin = (k % 2 ? -1 : 1) * (0.6 + k * 0.3); grp.add(p); }
           } else if (gt.look === 'door') {
@@ -425,7 +433,7 @@ export function buildWorld(scene, isl, def, opts = {}) {
     const g = new THREE.Group();
     g.position.set(W(e.x), H(W(e.x), W(e.y)), W(e.y));   /* ALTITUDE */
     const v = { e, g };
-    if (e.t === 'lantern') {
+    if (GFX2 && meca.ent(e, g, v, dirAngle)) { /* monde 1 : vue construite par mecanismes2.js */ } else if (e.t === 'lantern') {
       pedestal(g, e.rot);
       const post = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.13, 0.5, 6), M.metal); post.position.y = 0.66; g.add(post);
       const head = new THREE.Group(); head.position.y = BEAM_Y; g.add(head);
@@ -803,6 +811,7 @@ export function buildWorld(scene, isl, def, opts = {}) {
   function makeChest(c, z, zi) {
     const g = new THREE.Group(); g.position.set(W(z.ox + c.x), H(W(z.ox + c.x), W(z.oy + c.y)), W(z.oy + c.y));
     const rare = c.item && ['marteau', 'sceptre', 'fragment_coeur', 'anneau_vie', 'amulette_lume'].includes(c.item);
+    if (GFX2) { const cv = meca.chest(g, rare); detail(zi, g.position.x, g.position.z).add(g); return { c, z, zi, g, lid: cv.lid, sparkle: cv.sparkle, open: false, anim: 0, x: z.ox + c.x, y: z.oy + c.y }; }
     const b = new THREE.Mesh(chestGeo, rare ? mat('#5a4a8a') : M.wood); b.position.y = 0.35; b.castShadow = true; g.add(b);
     const band = new THREE.Mesh(new THREE.BoxGeometry(1.14, 0.12, 0.84), M.gold); band.position.y = 0.45; g.add(band);
     const lidP = new THREE.Group(); lidP.position.set(0, 0.7, -0.4); g.add(lidP);
@@ -819,6 +828,7 @@ export function buildWorld(scene, isl, def, opts = {}) {
   zones.forEach((z, zi) => (z.pickups || []).forEach((pk) => {
     const g = new THREE.Group(); g.position.set(W(z.ox + pk.x), H(W(z.ox + pk.x), W(z.oy + pk.y)), W(z.oy + pk.y));
     let f;
+    if (GFX2) { f = meca.pickup(g, pk); detail(zi, g.position.x, g.position.z).add(g); pickupViews[pk.id] = { pk, z, zi, g, f, x: z.ox + pk.x, y: z.oy + pk.y }; return; }
     if (pk.item === 'fleur_miel') {
       f = new THREE.Group();
       const st = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.6, 4), mat('#5fae76')); st.position.y = 0.3; f.add(st);
