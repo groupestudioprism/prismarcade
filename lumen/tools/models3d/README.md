@@ -49,6 +49,12 @@ node clip.mjs <id> 1                       # contrôle des traversées sur chaqu
 node smooth.mjs <id>                       # plus grand saut d'une image à l'autre
 node mkviewer.mjs <id>                     # aperçu animé out/<id>/index.html
 ```
+`<id>` est le nom du fichier de `js/world/models/`. Un fichier qui contient plusieurs modèles (exemple : `villageois.js`, les onze
+habitants de Havre-Aube) exporte `models` (un modèle par nom) et s'utilise avec `<fichier>:<nom>` : `node clip.mjs villageois:selene 1`,
+`python3 shot.py /tmp/x.png "m=villageois:bran"`.
+Planche de groupe (même échelle, trois quarts, couleurs du jeu, Lyra pour l'échelle) :
+`python3 shot.py /tmp/tous.png "m=villageois:selene,villageois:bran&lyra=1" groupe.html 2400 1160` (options `v` = q, f, b, g (vue du jeu), `pose=ANIM:t`, `cols`).
+
 Options de `shot.py` : `z` (zoom), `cy`, `cx` (point visé), `w` (demi-hauteur en mètres).
 
 ## Définition de « terminé »
@@ -58,3 +64,11 @@ Options de `shot.py` : `z` (zoom), `cy`, `cx` (point visé), `w` (demi-hauteur e
    retournée, sans trou, sans contour parasite, et chaque pose se lit.
 4. `node smooth.mjs <id>` ne montre aucun saut anormal (un coup rapide peut dépasser 40° par image, pas une attente).
 5. Le fichier du modèle ne dépend que de `kit3d.js`.
+
+## Personnages non joueurs (`villageois.js`)
+Une fabrique `makeModel(id)` et une fiche par habitant (`FICHES` : morphologie, coiffure, tenue, couleurs, objet de métier).
+Animations : `IDLE` (respiration, clignement, geste de métier), `TALK`, `WALK` pour ceux qui se promènent, `WAVE` (Tobias).
+Le correcteur `finish` garde l'objet tenu dans son orientation (perche droite, plateau à plat), laisse pendre tresse, queue de cheval
+et cape à la verticale, et pose le pied le plus bas au sol. Vue de jeu : `createVillager(id)` (même interface que `Character`
+pour un habitant : `root`, `animate(dt, { move, talking, wave })`). Contrôle en jeu : `tests/qa_pnj_monde1.py`.
+

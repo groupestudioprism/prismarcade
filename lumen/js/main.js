@@ -24,6 +24,7 @@ import { audio, music } from './engine/audio.js';
 import { createInput } from './engine/input.js';
 import { buildWorld, glow, themeOf } from './world/build.js';
 import { Character } from './world/character.js';
+import { createVillager, isVillager } from './world/models/villageois.js';   // habitants v2 de l'Île de l'Aube
 import { Lyra } from './world/lyra.js';
 import { ITEMS, UPGRADES, RECIPES } from './data/items.js';
 import { ENEMIES } from './data/enemies.js';
@@ -305,8 +306,8 @@ function updateWeaponModel() { const w = ITEMS[st.equip.weapon]; hero.setWeapon(
 const npcs = [];
 zones.forEach((z, zi) => (z.npcs || []).forEach((n) => {
   const d = NPCS[n.id]; if (!d) return;
-  const c = new Character(d.look);
-  if (d.look.staff) c.arms[0].rotation.x = -0.3;
+  const c = isVillager(n.id) ? createVillager(n.id) : new Character(d.look);   // les onze habitants de Havre-Aube ont leur modèle v2
+  if (d.look.staff && c.arms) c.arms[0].rotation.x = -0.3;
   const x = W(z.ox + n.x), zz = W(z.oy + n.y);
   c.root.position.set(x, 0, zz);
   c.root.rotation.y = n.face === 'N' ? Math.PI : n.face === 'E' ? Math.PI / 2 : n.face === 'W' ? -Math.PI / 2 : 0;
@@ -1475,7 +1476,7 @@ function update(dt) {
     if (dP < 5.5 || n.talking) n.face += angleTo(n.face, Math.atan2(P.x - n.x, P.z - n.z)) * damp(4, dt);
     else if (!n.wander) n.face += angleTo(n.face, n.baseFace) * damp(2, dt);
     n.c.root.position.set(n.x, 0, n.z); n.c.root.rotation.y = n.face;
-    n.c.animate(dt, { move: mv, talk: n.talking && Math.sin(t * 2) > -0.3, wave: !n.talking && dP < 3.2 && dP > 2.2 && n.id === 'tobias' });
+    n.c.animate(dt, { move: mv, talking: n.talking, talk: n.talking && Math.sin(t * 2) > -0.3, wave: !n.talking && dP < 3.2 && dP > 2.2 && n.id === 'tobias' });
     n.mk.position.set(n.x, 2.65 * (n.d.look.scale || 1) + 0.25 + Math.sin(t * 3) * 0.1, n.z); n.gem.rotation.y += dt * 2;
   });
   /* -------- caméra -------- */
