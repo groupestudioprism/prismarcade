@@ -1,0 +1,24 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="margin:0;background:#fff;font:600 22px system-ui,sans-serif;color:#1f1a3d">
+<script type="importmap">{"imports":{"three":"/vendor/three.module.min.js","three/addons/":"/vendor/addons/"}}</script>
+<script type="module">
+/* Planche de groupe : ?m=<id>,<id>,… [&lyra=1] [&cols=6] [&v=q] [&pose=ANIM:t] [&w=demi-hauteur en m] [&cy=hauteur visée]
+   Tous les modèles à la même échelle, de trois quarts, couleurs comme dans le jeu (linéaire → sRGB). Lyra en dernier pour l'échelle. */
+import * as THREE from 'three';
+import { applyPose, poseAt, setLinear } from '/js/world/kit3d.js';
+setLinear(true);
+const q = new URLSearchParams(location.search), ids = q.get('m').split(','), cols = +(q.get('cols') || 6), [anim, at] = (q.get('pose') || '').split(':');
+const items = [];
+for (const id of ids) { const [f, v] = id.split(':'), mod = await import(`/js/world/models/${f}.js`), model = v ? mod.models[v] : mod.model, b = model.build(model.PALETTE); if (anim && model.ANIMS[anim]) applyPose(model, b.nodes, poseAt(model, anim, +at || 0)); items.push({ name: model.name, root: b.root }); }
+if (q.get('lyra')) { const L = await import('/js/world/lyra.js'), g = new THREE.Group(); g.add(L.buildLyra().root); items.push({ name: 'Lyra (échelle)', root: g }); }
+const n = items.length, rows = Math.ceil(n / cols), W = innerWidth, H = innerHeight, cw = W / cols, ch = H / rows;
+const r = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true }); r.setSize(W, H); document.body.appendChild(r.domElement); r.domElement.style.display = 'block';
+r.setClearColor(0xf3f1fa); r.autoClear = false; r.setScissorTest(true);
+const sc = new THREE.Scene(); sc.add(new THREE.HemisphereLight(0xffffff, 0xd8d8ea, 2.8)); const d = new THREE.DirectionalLight(0xffffff, 1.6); d.position.set(1.5, 3, 2.5); sc.add(d);
+const VW = { f: [0, 0, 1], b: [0, 0, -1], q: [-0.7, 0.25, 1], t: [0, 1, 0.55], g: [0, 1.15, 1] }, v = VW[q.get('v') || 'q'], half = +(q.get('w') || 1.05), cy = +(q.get('cy') || 0.86);
+r.setScissorTest(false); r.clear(); r.setScissorTest(true);
+items.forEach((it, i) => { items.forEach((o) => sc.remove(o.root)); sc.add(it.root);
+  const cam = new THREE.OrthographicCamera(-half * cw / ch, half * cw / ch, half, -half, 0.1, 50); cam.position.set(v[0] * 10, cy + v[1] * 10, v[2] * 10); cam.lookAt(0, cy, 0);
+  const x = (i % cols) * cw, y = H - ch - Math.floor(i / cols) * ch; r.setViewport(x, y, cw, ch); r.setScissor(x, y, cw, ch); r.render(sc, cam);
+  const l = document.createElement('div'); l.textContent = it.name; l.style.cssText = `position:absolute;left:${x}px;top:${Math.floor(i / cols) * ch + ch - 40}px;width:${cw}px;text-align:center`; document.body.appendChild(l); });
+window.done = true;
+</script></body></html>

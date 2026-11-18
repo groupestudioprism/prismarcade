@@ -6,7 +6,7 @@
 import * as THREE from 'three';
 import { applyPose, sample } from '/js/world/kit3d.js';
 THREE.ColorManagement.enabled = false;
-const q = new URLSearchParams(location.search), { model } = await import(`/js/world/models/${q.get('m')}.js`);
+const q = new URLSearchParams(location.search), [mfile, variant] = q.get('m').split(':'), mod = await import(`/js/world/models/${mfile}.js`), model = variant ? mod.models[variant] : mod.model;   // m=fichier ou m=fichier:variante
 const W = 2000, H = 1240, cw = W / 3, ch = H / 2;
 const r = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true }); r.setSize(W, H); r.outputColorSpace = THREE.LinearSRGBColorSpace; document.body.appendChild(r.domElement);
 r.setClearColor(0xffffff); r.autoClear = false; r.setScissorTest(true);
