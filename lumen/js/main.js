@@ -1477,7 +1477,7 @@ function update(dt) {
     else if (!n.wander) n.face += angleTo(n.face, n.baseFace) * damp(2, dt);
     n.c.root.position.set(n.x, 0, n.z); n.c.root.rotation.y = n.face;
     n.c.animate(dt, { move: mv, talking: n.talking, talk: n.talking && Math.sin(t * 2) > -0.3, wave: !n.talking && dP < 3.2 && dP > 2.2 && n.id === 'tobias' });
-    n.mk.position.set(n.x, 2.65 * (n.d.look.scale || 1) + 0.25 + Math.sin(t * 3) * 0.1, n.z); n.gem.rotation.y += dt * 2;
+    n.mk.position.set(n.x, (n.c.height ? n.c.height + 0.2 : 2.65 * (n.d.look.scale || 1)) + 0.25 + Math.sin(t * 3) * 0.1, n.z); n.gem.rotation.y += dt * 2;
   });
   /* -------- caméra -------- */
   const cam = input.camera();

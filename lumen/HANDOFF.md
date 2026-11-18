@@ -348,3 +348,12 @@ Mise à jour du 06/11/2026 (session de stabilisation) :
   `anim.atk` et `anim.phase` (attaques et rage du Colosse).
 - Outils et règles : `tools/models3d/README.md`. Test en jeu : `tests/qa_creatures_v2.py`.
 - Non fait : variantes teintées en v2, mesure de fluidité sur téléphone, parcours complet des six actes.
+
+## Annexe — MONDE 1 v2 (sol, nature, mécanismes, habitants)
+
+- Drapeau unique dans `js/world/build.js` : `GFX2 = def.id === 'aube'`. Les cinq autres mondes gardent l'ancien rendu.
+- `js/world/decor2.js` : sol fusionné par zone, bords d'île, eau, rochers, arbres, ronces, semis. Test : `tests/qa_decor2.py`.
+- `js/world/mecanismes2.js` : lanternes, miroirs, récepteurs, prisme, relais, balise, coffres, ponts, portes, sceaux, objets.
+- `js/world/models/villageois.js` : les onze habitants (une fabrique, onze fiches) ; adultes agrandis de 20 % par rapport à Lyra,
+  `view.height` sert à poser le marqueur de quête. Test : `tests/qa_pnj_monde1.py`.
+- Reste à faire : maisons et accessoires du village, intérieurs, sanctuaire ; Mira est posée sur une case non praticable (`tools/areas.mjs`).
