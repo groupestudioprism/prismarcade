@@ -69,6 +69,15 @@ Fichiers concernés : `js/cloud.js` (connexion, synchronisation, classements), `
 - **Seul fichier lié à la plateforme :** `lumen/js/platform.js`. Le remplacer suffira pour les futures versions PC et mobile.
 - **Énigmes :** générées et vérifiées par `node lumen/tools/build-aube.mjs` (Aube) et `node lumen/tools/build-foret.mjs` (Forêt), `node lumen/tools/build-abysses.mjs` (Abysses, vérifiées par exploration d’états : `tools/analyse-abysses.mjs`), `build-pics.mjs` (Pics) et `build-zenith.mjs` (Zénith). La commande `node lumen/tools/verify.mjs` contrôle que chaque énigme a une solution et que tout est accessible.
 
+## Mods & extensions : WAKE (version 1.0)
+
+`wake/` contient la page produit de **WAKE**, l'extension gratuite de Prism Game pour le jeu PC **Design it, Drive it : Speedboats** (Steam). On la trouve sur `/wake/` et dans la section « Mods & extensions » de l'accueil.
+
+- **Contenu du mod :** nouveaux menus (accueil, pause, réglages, chargement, commandes), créateur de circuits sur carte satellite avec obstacles, mode « Partout dans le monde » (relief et photos satellite réels téléchargés à la demande), bots de course, HUD (compteur, mini-carte, classement), livrée par zone et autocollants sponsors, touches modifiables et pilotage au clavier.
+- **Téléchargements :** `wake/download/WAKE-Setup.exe` (installateur Windows, détecte le jeu via Steam, installe BepInEx et le mod, inscrit la désinstallation dans Windows), `WAKE-1.0.0-manuel.zip` (installation manuelle) et `SHA256SUMS.txt`.
+- **Code source du mod et de l'installateur :** hors de ce dépôt (mod BepInEx en C#, .NET 3.5 ; installateur WinForms .NET 4.8). Pour une nouvelle version, remplacer les fichiers de `wake/download/`, mettre à jour les empreintes et le numéro de version de la page.
+- **Licences :** BepInEx (LGPL-2.1) est redistribué avec sa licence ; imagerie © Esri, Maxar, Earthstar Geographics ; altitudes Mapzen / AWS Terrain Tiles ; recherche © contributeurs OpenStreetMap.
+
 ## Structure
 
 ```
@@ -81,6 +90,7 @@ js/app.js             interface, navigation, lanceur de jeux (pause, résultats)
 js/games/*.js         un fichier par jeu
 assets/logo.svg       logo complet
 assets/logo-mark.svg  icône (favicon)
+wake/                 page produit de WAKE (mod gratuit) et téléchargements
 ```
 
 Aucune dépendance, aucune étape de compilation : le site est en HTML, CSS et JavaScript pur. Les sons sont générés par Web Audio, sans aucun fichier audio.
