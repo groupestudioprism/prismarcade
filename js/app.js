@@ -146,17 +146,6 @@
           <p class="big-meta">${esc(prog)}</p>
           <span class="btn primary">${st && st.plays ? 'Continuer' : 'Jouer'}</span>
         </div>
-      </a>
-      <div class="section-head"><div><h2>Mods &amp; extensions</h2><p>Nos créations gratuites pour d’autres jeux PC.</p></div></div>
-      <a class="big-game wake" href="wake/">
-        <img src="wake/assets/cover.webp" alt="WAKE, l’extension pour Design it, Drive it : Speedboats" loading="lazy" width="1280" height="720">
-        <div class="big-body">
-          <span class="badge">Gratuit · PC (Steam)</span>
-          <h3>WAKE <span>: pour Design it, Drive it : Speedboats</span></h3>
-          <p>Crée tes circuits sur carte satellite, navigue n’importe où dans le monde (relief et photos réels), affronte jusqu’à 7 bots, ajoute rampes et obstacles, personnalise ta livrée avec tes sponsors, avec des menus entièrement repensés.</p>
-          <p class="big-meta">Version 1.0 · installateur Windows en 1 clic</p>
-          <span class="btn primary">Découvrir et télécharger</span>
-        </div>
       </a>`;
   }
 

@@ -321,9 +321,6 @@ main { flex: 1; width: 100%; max-width: 1180px; margin: 0 auto; padding: 28px 16
 .big-body .big-meta { font-size: 13px; color: var(--text); opacity: .85; }
 .big-body .btn { align-self: flex-start; margin-top: 6px; }
 .badge { align-self: flex-start; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; padding: 4px 10px; border-radius: 999px; background: linear-gradient(110deg, #f6a5c8, #ffc861); color: #2a1838; }
-.big-game.wake:hover { box-shadow: 0 24px 60px -24px rgba(53, 208, 255, .5); }
-.big-game.wake .big-body { background: linear-gradient(140deg, rgba(53,208,255,.13), rgba(139,92,246,.12) 50%, rgba(236,72,153,.08)); }
-.big-game.wake .badge { background: linear-gradient(100deg, #35d0ff, #8b5cf6 45%, #ec4899 75%, #ff9f1c); color: #fff; }
 
 /* ---------- Classements ---------- */
 .game-picker { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin-bottom: 14px; }
