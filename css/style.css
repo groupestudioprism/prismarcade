@@ -465,3 +465,4 @@ main { flex: 1; width: 100%; max-width: 1180px; margin: 0 auto; padding: 28px 16
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+.footer a{color:inherit}

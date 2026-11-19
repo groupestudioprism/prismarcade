@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://prismarcade.studio-prism.com/sitemap.xml
