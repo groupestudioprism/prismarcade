@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>WAKE — l'extension pour Design it, Drive it : Speedboats · Prism Arcade</title>
+  <meta name="description" content="WAKE, extension gratuite de Studio Prism pour Design it, Drive it : Speedboats : créateur de circuits, navigation partout dans le monde, bots de course, obstacles, livrée sponsor, HUD et nouveaux menus.">
+  <meta name="theme-color" content="#060b16">
+  <meta property="og:title" content="WAKE — l'extension pour Design it, Drive it : Speedboats">
+  <meta property="og:description" content="Gratuit. Circuits, monde entier, bots de course, livrée sponsor et nouveaux menus.">
+  <meta property="og:image" content="assets/cover.webp">
+  <link rel="icon" type="image/png" href="assets/icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #060b16; --bg2: #0c2236; --card: rgba(255,255,255,.045); --card-hi: rgba(255,255,255,.08);
+      --line: rgba(255,255,255,.09); --line-hi: rgba(255,255,255,.2);
+      --text: #f1f5fb; --mut: #93a4bc; --dim: #66758c;
+      --cyan: #35d0ff; --violet: #8b5cf6; --magenta: #ec4899; --orange: #ff9f1c; --ok: #34d399;
+      --grad: linear-gradient(100deg, var(--cyan), var(--violet) 38%, var(--magenta) 70%, var(--orange));
+      --font-h: 'Sora', 'Inter', system-ui, sans-serif; --font: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.6 var(--font); }
+    a { color: inherit; text-decoration: none; }
+    h1, h2, h3 { font-family: var(--font-h); line-height: 1.15; margin: 0; letter-spacing: -.01em; }
+    img, svg { display: block; }
+    :focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; border-radius: 8px; }
+    .bg { position: fixed; inset: 0; z-index: -1; pointer-events: none;
+      background: radial-gradient(800px 500px at 8% 110%, rgba(53,208,255,.18), transparent 70%),
+                  radial-gradient(700px 480px at 92% -10%, rgba(139,92,246,.22), transparent 70%),
+                  radial-gradient(500px 380px at 85% 85%, rgba(236,72,153,.10), transparent 70%),
+                  linear-gradient(180deg, #03070f, #0a1a2c); }
+    .wrap { width: min(1160px, 100% - 40px); margin: 0 auto; }
+
+    /* barre du haut */
+    .top { display: flex; align-items: center; gap: 16px; padding: 18px 0; }
+    .back { display: inline-flex; align-items: center; gap: 8px; color: var(--mut); font-weight: 600; font-size: 14px; padding: 8px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); transition: .15s; }
+    .back:hover { color: var(--text); border-color: var(--line-hi); }
+    .back svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+    .top .sp { flex: 1; }
+    .top small { color: var(--dim); font-weight: 600; letter-spacing: .08em; text-transform: uppercase; font-size: 11px; }
+
+    /* héros */
+    .hero { display: grid; grid-template-columns: 1.05fr 1fr; gap: 40px; align-items: center; padding: 40px 0 64px; }
+    .brand { display: flex; align-items: center; gap: 18px; }
+    .brand img { width: 84px; height: 84px; border-radius: 22px; box-shadow: 0 18px 50px -14px rgba(53,208,255,.55); }
+    .brand h1 { font-size: clamp(54px, 8vw, 86px); font-weight: 800; letter-spacing: -.02em; }
+    .bar { width: 96px; height: 5px; border-radius: 3px; background: var(--grad); margin: 18px 0 20px; }
+    .kicker { font: 700 12px/1 var(--font-h); letter-spacing: .14em; text-transform: uppercase; color: var(--cyan); margin-bottom: 18px; }
+    .lead { font-size: 18px; color: #c8d3e3; max-width: 540px; margin: 0 0 26px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 28px; }
+    .chip { font-size: 12.5px; font-weight: 600; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); color: #d6deea; }
+    .chip.free { border: 0; background: var(--grad); color: #fff; }
+    .actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+    .btn { display: inline-flex; align-items: center; gap: 10px; padding: 14px 22px; border-radius: 14px; font: 700 15px/1 var(--font-h); border: 1px solid var(--line-hi); background: var(--card); transition: transform .15s, box-shadow .15s, background .15s; }
+    .btn:hover { transform: translateY(-2px); background: var(--card-hi); }
+    .btn.primary { border: 0; background: var(--grad); color: #fff; box-shadow: 0 16px 40px -14px rgba(139,92,246,.75); font-size: 16px; padding: 17px 26px; }
+    .btn.primary:hover { box-shadow: 0 22px 54px -14px rgba(236,72,153,.75); }
+    .btn svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+    .meta { color: var(--dim); font-size: 13px; margin-top: 14px; }
+    .shot { position: relative; border-radius: 24px; overflow: hidden; border: 1px solid var(--line-hi); box-shadow: 0 40px 90px -30px rgba(0,0,0,.8), 0 0 0 1px rgba(53,208,255,.08); }
+    .shot img { width: 100%; height: auto; }
+    .shot::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 60%, rgba(6,11,22,.4)); pointer-events: none; }
+
+    /* sections */
+    section.block { padding: 56px 0; border-top: 1px solid var(--line); }
+    .head { margin-bottom: 28px; }
+    .head h2 { font-size: clamp(26px, 3.4vw, 36px); }
+    .head p { color: var(--mut); margin: 10px 0 0; max-width: 680px; }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .card { position: relative; padding: 24px; border-radius: 20px; border: 1px solid var(--line); background: var(--card); transition: border-color .15s, transform .15s; overflow: hidden; }
+    .card:hover { border-color: var(--line-hi); transform: translateY(-2px); }
+    .card .ic { width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; margin-bottom: 16px; background: rgba(255,255,255,.06); border: 1px solid var(--line); }
+    .card .ic svg { width: 24px; height: 24px; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .card h3 { font-size: 18px; margin-bottom: 8px; }
+    .card p { margin: 0; color: var(--mut); font-size: 14.5px; }
+    .card ul { margin: 10px 0 0; padding-left: 18px; color: var(--mut); font-size: 14px; }
+    .card.wide { grid-column: span 2; }
+
+    .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; counter-reset: s; }
+    .step { padding: 24px; border-radius: 20px; border: 1px solid var(--line); background: var(--card); }
+    .step::before { counter-increment: s; content: counter(s); display: grid; place-items: center; width: 38px; height: 38px; border-radius: 12px; background: var(--grad); font: 800 17px/1 var(--font-h); margin-bottom: 14px; }
+    .step h3 { font-size: 17px; margin-bottom: 6px; }
+    .step p { margin: 0; color: var(--mut); font-size: 14.5px; }
+    .note { margin-top: 16px; padding: 16px 18px; border-radius: 16px; border: 1px solid rgba(255,159,28,.35); background: rgba(255,159,28,.07); color: #f3d9b6; font-size: 14px; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+    td, th { padding: 12px 14px; border-bottom: 1px solid var(--line); text-align: left; }
+    th { color: var(--mut); font-weight: 600; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
+    kbd { font: 700 12.5px/1 var(--font-h); padding: 5px 9px; border-radius: 8px; border: 1px solid var(--line-hi); background: rgba(255,255,255,.06); }
+    .two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .panel { padding: 22px 24px; border-radius: 20px; border: 1px solid var(--line); background: var(--card); }
+    .panel h3 { font-size: 18px; margin-bottom: 10px; }
+    .panel ul { margin: 0; padding-left: 18px; color: var(--mut); }
+    details { border: 1px solid var(--line); border-radius: 16px; background: var(--card); padding: 16px 20px; margin-bottom: 10px; }
+    details[open] { border-color: var(--line-hi); }
+    summary { cursor: pointer; font: 700 15.5px/1.4 var(--font-h); list-style: none; display: flex; justify-content: space-between; gap: 12px; }
+    summary::-webkit-details-marker { display: none; }
+    summary::after { content: "+"; color: var(--cyan); font-size: 20px; line-height: 1; }
+    details[open] summary::after { content: "−"; }
+    details p { color: var(--mut); margin: 10px 0 0; }
+    code { font-size: 13px; background: rgba(255,255,255,.07); padding: 2px 6px; border-radius: 6px; }
+    .cta { text-align: center; padding: 64px 24px; border-radius: 28px; border: 1px solid var(--line-hi); background: linear-gradient(140deg, rgba(53,208,255,.12), rgba(139,92,246,.12) 45%, rgba(236,72,153,.1)); margin: 24px 0 56px; }
+    .cta h2 { font-size: clamp(28px, 4vw, 40px); margin-bottom: 10px; }
+    .cta p { color: var(--mut); margin: 0 0 26px; }
+    footer { border-top: 1px solid var(--line); padding: 28px 0 40px; color: var(--dim); font-size: 13px; display: flex; flex-wrap: wrap; gap: 10px 24px; justify-content: space-between; }
+    footer b { color: var(--mut); }
+
+    @media (max-width: 920px) {
+      .hero { grid-template-columns: 1fr; padding-top: 16px; }
+      .grid { grid-template-columns: 1fr 1fr; }
+      .card.wide { grid-column: span 2; }
+      .steps, .two { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 600px) {
+      .grid { grid-template-columns: 1fr; }
+      .card.wide { grid-column: auto; }
+      .brand img { width: 64px; height: 64px; }
+      td:first-child { white-space: nowrap; }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg" aria-hidden="true"></div>
+  <div class="wrap">
+    <header class="top">
+      <a class="back" href="../"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>Prism Arcade</a>
+      <span class="sp"></span>
+      <small>Prism Game · Studio Prism</small>
+    </header>
+
+    <!-- Héros -->
+    <section class="hero">
+      <div>
+        <p class="kicker">Extension PC · Mod gratuit</p>
+        <div class="brand">
+          <img src="assets/icon.png" alt="" width="84" height="84">
+          <h1>WAKE</h1>
+        </div>
+        <div class="bar"></div>
+        <p class="lead">L'extension qui transforme <b>Design it, Drive it : Speedboats</b> : dessine tes circuits, navigue n'importe où sur la planète, affronte des bots, personnalise ta livrée façon sponsor, avec une interface entièrement repensée.</p>
+        <div class="chips">
+          <span class="chip free">100 % gratuit</span>
+          <span class="chip">Windows 10 / 11</span>
+          <span class="chip">Version Steam du jeu</span>
+          <span class="chip">v1.0.0</span>
+        </div>
+        <div class="actions">
+          <a class="btn primary" href="download/WAKE-Setup.exe" download>
+            <svg viewBox="0 0 24 24"><path d="M12 3v12m0 0l-5-5m5 5l5-5M4 19h16"/></svg>Télécharger WAKE
+          </a>
+          <a class="btn" href="#installer">Comment installer</a>
+        </div>
+        <p class="meta">Installateur 0,8 Mo · <a href="download/WAKE-1.0.0-manuel.zip" style="text-decoration:underline">archive pour installation manuelle</a> · <a href="download/SHA256SUMS.txt" style="text-decoration:underline">empreintes SHA-256</a></p>
+      </div>
+      <div class="shot"><img src="assets/cover.webp" alt="WAKE, l'extension pour Design it, Drive it : Speedboats" width="1280" height="720"></div>
+    </section>
+
+    <!-- Fonctions -->
+    <section class="block" id="fonctions">
+      <div class="head">
+        <h2>Tout ce que WAKE ajoute</h2>
+        <p>Le jeu garde sa physique et ses bateaux. WAKE ajoute tout le reste.</p>
+      </div>
+      <div class="grid">
+        <article class="card wide">
+          <div class="ic"><svg viewBox="0 0 24 24" stroke="#35d0ff"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.2 3 14.8 0 18M12 3c-3 3.2-3 14.8 0 18"/></svg></div>
+          <h3>Partout dans le monde</h3>
+          <p>Choisis n'importe quel lac, baie ou côte sur une carte satellite de la Terre, ou cherche un lieu par son nom. WAKE télécharge le relief réel et les photos satellite, puis génère un plan d'eau navigable de 2 à 8 km : rade de Cherbourg, lac d'Annecy, Monaco, Lake Havasu…</p>
+        </article>
+        <article class="card">
+          <div class="ic"><svg viewBox="0 0 24 24" stroke="#8b5cf6"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg></div>
+          <h3>Créateur de circuits</h3>
+          <p>Pose tes bouées sur une carte satellite (touche F7), choisis boucle ou point à point et le nombre de tours, puis lance la course. Records personnels inclus.</p>
+        </article>
+        <article class="card">
+          <div class="ic"><svg viewBox="0 0 24 24" stroke="#ec4899"><path d="M4 16l5-5 4 4 7-7"/><path d="M15 8h5v5"/></svg></div>
+          <h3>Bots de course</h3>
+          <p>Jusqu'à 7 adversaires, 4 niveaux, compte à rebours, classement en direct et écran de résultats. Ils s'adaptent à la vitesse de ton bateau.</p>
+        </article>
+        <article class="card">
+          <div class="ic"><svg viewBox="0 0 24 24" stroke="#ff9f1c"><path d="M3 18l6-10 4 6 2-3 6 7z"/></svg></div>
+          <h3>Obstacles</h3>
+          <p>Rampes de saut, pontons, troncs, barges, grosses bouées et lignes de bouées à placer sur tes circuits.</p>
+        </article>
+        <article class="card">
+          <div class="ic"><svg viewBox="0 0 24 24" stroke="#35d0ff"><path d="M3 15l3 4h12l3-4z"/><path d="M8 15V9h6l2 6"/></svg></div>
+          <h3>Livrée & sponsors</h3>
+          <p>Peins chaque zone du bateau (coque, pont, sièges, moteur…), choisis la finition (mate, satinée, brillante, métallisée) et colle tes autocollants sponsors et ton numéro, avec un aperçu à 360°.</p>
+        </article>
+        <article class="card">
+          <div class="ic"><svg viewBox="0 0 24 24" stroke="#8b5cf6"><circle cx="12" cy="13" r="8"/><path d="M12 13l4-3"/></svg></div>
+          <h3>HUD de course</h3>
+          <p>Compteur de vitesse et compte-tours, mini-carte avec bouées et bots, chrono, position. Taille réglable, masquable avec la touche H.</p>
+        </article>
+        <article class="card wide">
+          <div class="ic"><svg viewBox="0 0 24 24" stroke="#ec4899"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M8 4v16"/></svg></div>
+          <h3>Interface entièrement repensée</h3>
+          <p>Nouveau menu principal, menu pause, écran de chargement et écran des commandes, dans le style Studio Prism : polices modernes, fond animé, panneaux en verre et dégradé « Prism ».</p>
+          <ul>
+            <li>Réglages complets : résolution, images par seconde, VSync, volume (moteurs compris), champ de vision, moment de la journée, brume.</li>
+            <li>Toutes les touches du jeu sont modifiables, et on peut piloter au clavier (Z/Q/S/D par défaut).</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <!-- Installation -->
+    <section class="block" id="installer">
+      <div class="head">
+        <h2>Installation en 1 minute</h2>
+        <p>L'installateur trouve le jeu tout seul dans ta bibliothèque Steam.</p>
+      </div>
+      <div class="steps">
+        <div class="step"><h3>Télécharge</h3><p>Récupère <b>WAKE-Setup.exe</b> (0,8 Mo) et ferme le jeu s'il est ouvert.</p></div>
+        <div class="step"><h3>Installe</h3><p>Lance l'installateur, vérifie le dossier du jeu détecté et clique sur <b>Installer WAKE</b>.</p></div>
+        <div class="step"><h3>Joue</h3><p>Clique sur <b>Lancer le jeu</b> : le nouveau menu WAKE s'ouvre au démarrage.</p></div>
+      </div>
+      <p class="note">Windows SmartScreen peut afficher « Windows a protégé votre ordinateur » car l'installateur n'est pas signé. Clique sur <b>Informations complémentaires</b> puis <b>Exécuter quand même</b>. L'installateur demande les droits administrateur, car le jeu est installé dans « Program Files ».</p>
+    </section>
+
+    <!-- Touches -->
+    <section class="block" id="touches">
+      <div class="head">
+        <h2>Touches par défaut</h2>
+        <p>Toutes modifiables dans <b>Réglages › Commandes</b>.</p>
+      </div>
+      <div class="panel" style="padding:6px 8px">
+        <table>
+          <thead><tr><th>Touche</th><th>Action</th></tr></thead>
+          <tbody>
+            <tr><td><kbd>Z</kbd> <kbd>S</kbd></td><td>Gaz (la manette reste en position) · ralentir</td></tr>
+            <tr><td><kbd>Q</kbd> <kbd>D</kbd></td><td>Tourner à gauche · à droite</td></tr>
+            <tr><td><kbd>E</kbd> <kbd>A</kbd></td><td>Trim moteur + / −</td></tr>
+            <tr><td><kbd>F7</kbd></td><td>Carte et éditeur de circuit</td></tr>
+            <tr><td><kbd>F6</kbd></td><td>Poser une bouée sur la position du bateau</td></tr>
+            <tr><td><kbd>F10</kbd></td><td>Recommencer la course</td></tr>
+            <tr><td><kbd>H</kbd></td><td>Masquer / afficher le HUD</td></tr>
+            <tr><td><kbd>Échap</kbd></td><td>Menu pause</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Config + FAQ -->
+    <section class="block" id="faq">
+      <div class="two" style="margin-bottom:28px">
+        <div class="panel">
+          <h3>Configuration requise</h3>
+          <ul>
+            <li><b>Design it, Drive it : Speedboats</b> (Steam), déjà installé</li>
+            <li>Windows 10 ou 11 (.NET Framework 4.8, déjà présent dans Windows)</li>
+            <li>Connexion Internet uniquement pour le mode « Partout dans le monde » (les lieux visités restent en cache)</li>
+          </ul>
+        </div>
+        <div class="panel">
+          <h3>Ce que l'installateur fait</h3>
+          <ul>
+            <li>Ajoute le chargeur de mods <b>BepInEx</b> (libre, LGPL-2.1) dans le dossier du jeu</li>
+            <li>Ajoute WAKE dans <code>BepInEx/plugins/WAKE</code></li>
+            <li>Inscrit WAKE dans « Applications installées » de Windows pour pouvoir le désinstaller</li>
+            <li>Ne modifie aucun fichier d'origine du jeu</li>
+          </ul>
+        </div>
+      </div>
+      <div class="head"><h2>Questions fréquentes</h2></div>
+      <details><summary>Est-ce vraiment gratuit ?</summary><p>Oui. WAKE est une création Studio Prism (branche Prism Game), offerte sans publicité ni achat intégré.</p></details>
+      <details><summary>Mes temps vont-ils dans les classements Steam ?</summary><p>Les temps de tes circuits perso et des lieux du monde ne sont jamais envoyés aux classements Steam. Sur les courses officielles du jeu, ton temps est envoyé comme d'habitude.</p></details>
+      <details><summary>Où sont enregistrés mes circuits et mes livrées ?</summary><p>Dans <code>BepInEx/config/CircuitCreator/</code>, à l'intérieur du dossier du jeu. Ils sont conservés lors des mises à jour, et aussi à la désinstallation si tu coches l'option.</p></details>
+      <details><summary>Comment désinstaller WAKE ?</summary><p>Par Paramètres Windows › Applications › « WAKE pour Design it, Drive it: Speedboats », ou en relançant WAKE-Setup.exe et en cliquant sur Désinstaller. Le jeu retrouve alors ses menus d'origine.</p></details>
+      <details><summary>Je préfère installer à la main</summary><p>Télécharge l'<a href="download/WAKE-1.0.0-manuel.zip" style="text-decoration:underline">archive manuelle</a> et extrais tout son contenu dans le dossier du jeu, celui qui contient <code>DIDIBoats.exe</code>.</p></details>
+      <details><summary>Le mode « Partout dans le monde » ne charge rien</summary><p>Il faut une connexion Internet à la première visite d'un lieu. Clique bien sur de l'eau (lac, baie, mer) ; le réglage « Niveau de l'eau » permet de corriger un lac mal détecté.</p></details>
+    </section>
+
+    <section class="cta">
+      <h2>Prêt à prendre le large ?</h2>
+      <p>Gratuit, installé en une minute, désinstallable en un clic.</p>
+      <a class="btn primary" href="download/WAKE-Setup.exe" download><svg viewBox="0 0 24 24"><path d="M12 3v12m0 0l-5-5m5 5l5-5M4 19h16"/></svg>Télécharger WAKE 1.0</a>
+    </section>
+
+    <footer>
+      <span>WAKE · une création <b>Prism Game</b> de <b>Studio Prism</b></span>
+      <span>Mod gratuit et non officiel, sans lien avec Performance Simulations. « Design it, Drive it : Speedboats » appartient à ses ayants droit.</span>
+      <span>Imagerie © Esri, Maxar, Earthstar Geographics · Altitudes : Mapzen / AWS Terrain Tiles · Recherche © contributeurs OpenStreetMap · BepInEx (LGPL-2.1)</span>
+    </footer>
+  </div>
+</body>
+</html>
